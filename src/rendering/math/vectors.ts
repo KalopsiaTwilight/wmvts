@@ -308,6 +308,16 @@ export namespace Float3 {
         dest[2] = vecA[2] + coEff * (vecB[2] - vecA[2]);
         return dest;
     }
+
+    
+    export function fromSpherical(radius: number, theta: number, phi: number, dest?: Float3) {
+        dest = dest ? dest : zero();
+
+        dest[0] = radius * Math.sin(theta) * Math.cos(phi); 
+        dest[1] = radius * Math.sin(theta) * Math.sin(phi);
+        dest[2] = radius * Math.cos(theta);
+        return dest;
+    }
 }
 
 export namespace Float2 {

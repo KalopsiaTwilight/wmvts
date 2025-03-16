@@ -1,9 +1,10 @@
 import { Float4, Float44 } from "./math";
-import { Camera, StaticCamera } from "./camera";
+import { Camera } from "./camera";
 import { RenderObject, IDisposable } from "./objects";
 import { IGraphics } from "./graphics";
 
 export class RenderingEngine implements IDisposable {
+    containerElement?: HTMLElement;
     graphics: IGraphics;
 
     isDisposing: boolean;
@@ -21,10 +22,10 @@ export class RenderingEngine implements IDisposable {
     width: number;
     height: number;
 
-    constructor(graphics: IGraphics) {
+    constructor(graphics: IGraphics, container?: HTMLElement) {
         this.graphics = graphics;
+        this.containerElement = container;
 
-        this.sceneCamera = new StaticCamera();
         this.sceneObjects = [];
 
         this.viewMatrix = Float44.identity();

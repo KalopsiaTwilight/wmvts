@@ -693,48 +693,26 @@ export namespace Float44 {
     }
 
     export function lookAt(eye: Float3, target: Float3, up: Float3, dest?: Float44): Float44 {
-        // https://medium.com/@carmencincotti/lets-look-at-magic-lookat-matrices-c77e53ebdf78
-        dest = dest ? dest : identity();
+        // https://webglfundamentals.org/webgl/lessons/webgl-3d-camera.html
+        const zAxis = Float3.normalize(Float3.subtract(eye, target));
+        const xAxis = Float3.normalize(Float3.cross(up, zAxis));
+        const yAxis = Float3.normalize(Float3.cross(zAxis, xAxis));
 
-        let fwVector = Float3.zero();
-        Float3.subtract(eye, target, fwVector);
-        Float3.normalize(fwVector, fwVector);
-
-        let rightVector = Float3.zero();
-        Float3.cross(up, fwVector, rightVector);
-        if (Float3.length(rightVector)) {
-            Float3.normalize(rightVector, rightVector);
-        } else {
-            Float3.zero(rightVector);
-        }
-
-        let upVec = Float3.zero();
-        Float3.cross(fwVector, rightVector, upVec);
-        if (Float3.length(upVec)) {
-            Float3.normalize(upVec, upVec);
-        } else {
-            Float3.zero(upVec);
-        }
-
-        let transX = Float3.dot(eye, rightVector);
-        let transY = Float3.dot(eye, upVec);
-        let transZ = Float3.dot(eye, fwVector);
-
-        dest[0] = rightVector[0];
-        dest[1] = upVec[0];
-        dest[2] = fwVector[0];
+        dest[0] = xAxis[0];
+        dest[1] = xAxis[1];
+        dest[2] = xAxis[2];
         dest[3] = 0;
-        dest[4] = rightVector[1];
-        dest[5] = upVec[1];
-        dest[6] = fwVector[1];
+        dest[4] = yAxis[0];
+        dest[5] = yAxis[1];
+        dest[6] = yAxis[2];
         dest[7] = 0;
-        dest[8] = rightVector[2];
-        dest[9] = upVec[2];
-        dest[10] = fwVector[2];
+        dest[8] = zAxis[0];
+        dest[9] = zAxis[1];
+        dest[10] = zAxis[2];
         dest[11] = 0;
-        dest[12] = -transX;
-        dest[13] = -transY;
-        dest[14] = -transZ;
+        dest[12] = eye[0];
+        dest[13] = eye[1];
+        dest[14] = eye[2];
         dest[15] = 1;
 
         return dest;

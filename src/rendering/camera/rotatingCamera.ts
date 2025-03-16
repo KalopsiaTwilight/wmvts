@@ -1,37 +1,7 @@
-import { IDisposable } from "./objects";
-import { Float3, Float44 } from "./math";
-import { RenderingEngine } from "./engine";
+import { RenderingEngine } from "../engine";
+import { Float3, Float44 } from "../math";
+import { Camera } from "./base";
 
-export abstract class Camera implements IDisposable {
-    viewMatrix: Float44;
-    engine: RenderingEngine;
-
-    constructor() {
-        this.viewMatrix = Float44.identity();
-    }
-
-    initialize(engine: RenderingEngine) {
-        this.engine = engine;
-    }
-
-    update(deltaTime: number) { 
-
-    }
-
-    dispose() {
-        this.viewMatrix = null;
-    }
-
-    getViewMatrix() {
-        return this.viewMatrix;
-    }
-}
-
-export class StaticCamera extends Camera {
-    getViewMatrix(): Float44 {
-        return Float44.identity();
-    }
-}
 
 export class RotatingCamera extends Camera {
 
@@ -63,9 +33,5 @@ export class RotatingCamera extends Camera {
 
         // // Make a view matrix from the camera matrix
         Float44.invert(cameraMatrix, this.viewMatrix);
-    }
-    
-    getViewMatrix(): Float44 {
-        return this.viewMatrix;
     }
 }

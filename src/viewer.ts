@@ -1,4 +1,4 @@
-import { RenderingEngine, RotatingCamera, RenderObject, Camera, WebGlGraphics } from "./rendering";
+import { RenderingEngine, OrbitalCamera, RenderObject, Camera, WebGlGraphics } from "./rendering";
 
 // TODO: Remove this
 require("./webgl-debug.js");
@@ -56,9 +56,10 @@ export class WoWModelViewer {
 
         const graphics = new WebGlGraphics(gl);
         this.renderEngine = new RenderingEngine(graphics);
+        this.renderEngine.containerElement = this.canvas;
         this.resize(this.containerWidth, this.containerHeight);
 
-        this.renderEngine.sceneCamera = this.options.scene?.camera ?? new RotatingCamera();
+        this.renderEngine.sceneCamera = this.options.scene?.camera ?? new OrbitalCamera();
         if (this.options.scene && this.options.scene.objects) {
             for(const obj of this.options.scene.objects) {
                 this.renderEngine.addSceneObject(obj, 0);
