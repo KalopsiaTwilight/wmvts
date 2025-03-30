@@ -11,6 +11,7 @@ export enum BufferDataType {
 }
 
 export enum ColorMask {
+    None = 0,
     Red = 1,
     Green = 2,
     Blue = 4,
@@ -34,6 +35,22 @@ export enum GxBlend {
     GxBlend_Screen = 12,
     GxBlend_BlendAdd = 13
 }
+
+const blendModeMapping = [
+    GxBlend.GxBlend_Opaque,
+    GxBlend.GxBlend_AlphaKey,
+    GxBlend.GxBlend_Alpha,
+    GxBlend.GxBlend_NoAlphaAdd,
+    GxBlend.GxBlend_Add,
+    GxBlend.GxBlend_Mod,
+    GxBlend.GxBlend_Mod2x,
+    GxBlend.GxBlend_BlendAdd,
+]
+
+export const M2BlendModeToEGxBlend = (blendMode: number) => {
+    return blendModeMapping[blendMode];
+}
+
 
 export interface IBindable {
     bind(): void;
@@ -80,6 +97,7 @@ export interface IGraphics {
     startFrame(width: number, height: number): void;
     clearFrame(color: Float4): void;
 
+    useBlendMode(blendMode: GxBlend): void 
     useDepthWrite(val: boolean): void;
     useDepthTest(val: boolean): void;
     useBackFaceCulling(val: boolean): void;

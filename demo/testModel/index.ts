@@ -1,4 +1,4 @@
-import { BufferDataType, Float44, IShaderProgram, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderingEngine, RenderObject } from "@app/index";
+import { BufferDataType, Float44, GxBlend, IShaderProgram, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderingEngine, RenderObject } from "@app/index";
 
 import fs from "./testModel.frag";
 import vs from "./testModel.vert";
@@ -61,6 +61,7 @@ export class TestModel implements RenderObject {
             return;
         }
 
+        this.engine.graphics.useBlendMode(GxBlend.GxBlend_Opaque);
         this.engine.graphics.useBackFaceCulling(true);
         this.engine.graphics.useDepthTest(true);
         this.engine.graphics.useShaderProgram(this.program);
@@ -69,6 +70,7 @@ export class TestModel implements RenderObject {
         this.program.useUniforms(this.uniforms);
 
         this.engine.graphics.drawIndexedTriangles(0, 16 * 6);
+        this.engine.graphics.useVertexArrayObject();
     }
 
     dispose(): void {

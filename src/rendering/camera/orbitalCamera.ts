@@ -43,7 +43,7 @@ export class OrbitalCamera extends Camera {
         this.upDir = Float3.create(0, 0, 1);
 
         this.cameraTranslation = Float3.zero();
-        this.theta = 0.01;//Math.PI / 2;
+        this.theta = Math.PI / 2;
         this.phi = 1.5 * Math.PI;
         this.radius = 500;
         
@@ -136,9 +136,8 @@ export class OrbitalCamera extends Camera {
         const xPct = (currentX - this.lastDragX) / this.containerWidth
         const yPct = (currentY - this.lastDragY) / this.containerHeight
         if (this.currentDragOpartion === DragOperation.Translation) {
-            const translationScale = 100;
             
-            Float3.add(this.cameraTranslation, Float3.create(xPct * translationScale, yPct * translationScale, 0), this.cameraTranslation);
+            Float3.add(this.cameraTranslation, Float3.create(xPct * this.radius, 0, -yPct * this.radius), this.cameraTranslation);
         } else {
             const rotationScale = Math.PI;
             const deltaPhi = xPct * rotationScale;
@@ -161,5 +160,15 @@ export class OrbitalCamera extends Camera {
 
     handleWheel(eventArgs: WheelEvent) {
         this.currentZoom = eventArgs.deltaY < 0 ? -1 : 1;
+    }
+
+    override setDistance(distance: number): void {
+        this.radius = distance;
+        this.minRadius = 0.25 * distance;
+        this.maxRadius = 2 * distance;
+        this.zoomFactor = this.maxRadius / 50;
+
+        Float3.fromSpherical(this.radius, this.theta, this.phi, this.cameraPosition);
+        Float3.add(this.cameraPosition, this.targetLocation);
     }
 }

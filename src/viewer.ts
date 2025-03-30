@@ -1,3 +1,4 @@
+import { IDataLoader } from "./iDataLoader";
 import { RenderingEngine, OrbitalCamera, RenderObject, Camera, WebGlGraphics } from "./rendering";
 
 // TODO: Remove this
@@ -6,6 +7,7 @@ require("./webgl-debug.js");
 
 export interface WoWModelViewerOptions {
     container: HTMLElement,
+    dataLoader: IDataLoader
     scene?: {
         camera?: Camera;
         objects?: RenderObject[]
@@ -55,8 +57,7 @@ export class WoWModelViewer {
         // gl = webGlDebug.makeDebugContext(gl, undefined, logGLCall);
 
         const graphics = new WebGlGraphics(gl);
-        this.renderEngine = new RenderingEngine(graphics);
-        this.renderEngine.containerElement = this.canvas;
+        this.renderEngine = new RenderingEngine(graphics, this.options.dataLoader, this.canvas);
         this.resize(this.containerWidth, this.containerHeight);
 
         this.renderEngine.sceneCamera = this.options.scene?.camera ?? new OrbitalCamera();

@@ -14,14 +14,19 @@ export namespace Float4 {
             return dest;
         }
 
-        const result = new FloatArrayType(4);
-        if (FloatArrayType != Float32Array) {
-            result[0] = 0;
-            result[1] = 0;
-            result[2] = 0;
-            result[3] = 0;
+        return create(0,0,0,0);
+    }
+
+    export function one(dest?: Float4): Float4 {
+        if (dest) {
+            dest[0] = 1;
+            dest[1] = 1;
+            dest[2] = 1;
+            dest[3] = 1;
+            return dest;
         }
-        return result as Float4;
+
+        return create(1,1,1,1);
     }
 
     export function identity(dest?: Float4): Float4 {
@@ -194,13 +199,17 @@ export namespace Float3 {
             dest[2] = 0;
             return dest;
         }
-        const result = new FloatArrayType(3);
-        if (FloatArrayType != Float32Array) {
-            result[0] = 0;
-            result[1] = 0;
-            result[2] = 0;
+        return create(0,0,0);
+    }
+
+    export function one(dest?: Float3): Float3 {
+        if (dest) {
+            dest[0] = 1;
+            dest[1] = 1;
+            dest[2] = 1;
+            return dest;
         }
-        return result as Float3;
+        return create(1,1,1);
     }
 
     export function create(x: number, y: number, z: number): Float3 {

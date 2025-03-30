@@ -1,4 +1,4 @@
-import { WoWModelViewer } from "../src/index"
+import { WoWModelViewer, WoWModelServerDataProvider, M2Model } from "../src/index"
 
 import { TestModel } from "./testModel"
 
@@ -10,9 +10,10 @@ document.body.append(containerElement);
 
 new WoWModelViewer({
     container: containerElement,
+    dataLoader: new WoWModelServerDataProvider("https://localhost:7074"),
     scene: {
         objects: [
-            new TestModel()
+            new M2Model(2120018),
         ]
     }
 })

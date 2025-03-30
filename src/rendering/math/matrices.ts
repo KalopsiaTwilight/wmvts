@@ -236,6 +236,7 @@ export namespace Float44 {
         dest[13] = input[13];
         dest[14] = input[14];
         dest[15] = input[15];
+        return dest;
     }
 
     export function tranpose(input: Float44, dest?: Float44) {
@@ -572,7 +573,7 @@ export namespace Float44 {
         return dest;
     }
 
-    export function fromQuatAndTranslation(quat: Float4, translate: Float3, dest?: Float44) {
+    export function fromQuat(quat: Float4,  dest?: Float44) {
         dest = dest ? dest : identity();
 
         const x = quat[0];
@@ -606,9 +607,9 @@ export namespace Float44 {
         dest[9] = yzyz - xwxw;
         dest[10] = 1 - (x2x2 + y2y2);
         dest[11] = 0;
-        dest[12] = translate[0];
-        dest[13] = translate[1];
-        dest[14] = translate[2];
+        dest[12] = 0;
+        dest[13] = 0;
+        dest[14] = 0;
         dest[15] = 1;
 
         return dest;

@@ -129,7 +129,7 @@ export abstract class CachedGraphics implements IGraphics {
         if (vao) {
             vao.bind();
         } else {
-            this.lastUsedVertexDataBuffer.unbind();
+            this.lastUsedVertexArrayObject.unbind();
         }
 
         this.lastUsedVertexArrayObject = vao;

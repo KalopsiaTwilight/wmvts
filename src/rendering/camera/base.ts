@@ -25,4 +25,8 @@ export abstract class Camera implements IDisposable {
     getViewMatrix() {
         return this.viewMatrix;
     }
+
+    setDistance(distance: number) {
+        
+    }
 }

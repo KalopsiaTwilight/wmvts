@@ -7,5 +7,5 @@ export interface IDisposable {
 export interface RenderObject extends IDisposable {
     initialize(engine: RenderingEngine): void;
     update(deltaTime: number): void;
-    draw(depthTest: boolean): void;
+    draw(secondPass: boolean): void;
 }

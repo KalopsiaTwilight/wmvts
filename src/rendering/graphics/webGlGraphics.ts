@@ -25,6 +25,8 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
         
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
         this.gl.viewport(0, 0, width, height);
+        
+        this.gl.depthFunc(this.gl.LEQUAL);
     }
 
     clearFrame(color: Float4): void {
@@ -131,7 +133,7 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
     }
 
     createSolidColorTexture(color: Float4): ITexture {
-        return new WebGLTextureAbstraction(this.gl, createTexture(this.gl, { src: color }));
+        return new WebGLTextureAbstraction(this.gl, createTexture(this.gl, { color: color, width: 1, height: 1 }));
     }
 
     createTextureFromImg(img: HTMLImageElement): ITexture {
@@ -140,7 +142,6 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
             premultiplyAlpha: 0,
             src: img,
             auto: true,
-            wrap: this.gl.CLAMP_TO_EDGE
         }));
     }
     createVertexIndexBuffer(dynamic: boolean): IVertexIndexBuffer {
@@ -309,6 +310,11 @@ export class WebGLShaderProgram implements IShaderProgram
     }
 
     useUniforms(uniforms: IUniformsData) {
+        for(let prop in uniforms) {
+            if (uniforms[prop] && uniforms[prop].texture) {
+                uniforms[prop] = uniforms[prop].texture;
+            }
+        }
         setUniforms(this.programInfo, uniforms);
     }
 
@@ -327,6 +333,7 @@ export class WebGlNativeVertexArrayObject implements IVertexArrayObject {
         this.gl = gl;
 
         this.glVaoExt = glVaoExt;
+        this.webGlVAO = glVaoExt.createVertexArrayOES();
     }
 
     setIndexBuffer(buffer: IVertexIndexBuffer): void {
