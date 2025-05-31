@@ -1,5 +1,5 @@
 import { CharacterCustomizationMetadata, CharacterMetadata, ItemMetadata, ItemVisualMetadata } from "./metadata";
-import { WoWBoneFileData, WoWModelData } from "./wowData";
+import { WoWBoneFileData, WoWModelData, WoWWorldModelData } from "./wowData";
 
 export interface IDataLoader {
     loadModelFile(fileId: number): Promise<WoWModelData>
@@ -9,6 +9,7 @@ export interface IDataLoader {
     loadCharacterCustomizationMetadata(modelId: number): Promise<CharacterCustomizationMetadata>;
     loadCharacterMetadata(modelId: number): Promise<CharacterMetadata>;
     loadItemMetadata(displayId: number): Promise<ItemMetadata>;
+    loadWorldModelFile(fileId: number): Promise<WoWWorldModelData>
 }
 
 export interface IProgressReporter {

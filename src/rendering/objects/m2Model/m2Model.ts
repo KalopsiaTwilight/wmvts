@@ -7,7 +7,8 @@ import { AnimationState } from "./animatedValue";
 
 import fragmentShaderProgramText from "./m2Model.frag"; 
 import vertexShaderProgramText from "./m2Model.vert";
-import { getPixelShaderId, getVertexShaderId} from "./m2Shaders";
+import { getM2PixelShaderId, getM2VertexShaderId} from "./m2Shaders";
+import { BaseRenderObject } from "../baseRenderObject";
 
 const MAX_BONES = 256;
 
@@ -25,10 +26,9 @@ export interface BoneData {
     positionMatrix: Float44;
 }
 
-export class M2Model implements RenderObject
+export class M2Model extends BaseRenderObject
 {
     isLoaded: boolean;
-    engine: RenderingEngine;
 
     fileId: number;
     modelData: WoWModelData;
@@ -44,29 +44,28 @@ export class M2Model implements RenderObject
     textureUnitData: TextureUnitData[]
     boneData: BoneData[];
 
-    modelMatrix: Float44;
     modelViewMatrix: Float44;
-    invModelMatrix: Float44;
     invModelViewMatrix: Float44;
     isMirrored: boolean;
     drawOrderTexUnits: WoWTextureUnitData[];
 
     constructor(fileId: number) {
+        super();
         this.fileId = fileId;
         this.isLoaded = false;
+        this.isDisposing = false;
         this.isMirrored = false;
-
-        this.modelMatrix = Float44.identity();
-        this.invModelMatrix = Float44.invert(this.modelMatrix);
 
         this.modelViewMatrix = Float44.identity();
         this.invModelViewMatrix = Float44.identity();
         this.bonePositionBuffer = new Float32Array(16 * MAX_BONES);
+
+        this.children = [];
     }
 
 
-    initialize(engine: RenderingEngine): void {
-        this.engine = engine;
+    override initialize(engine: RenderingEngine): void {
+        super.initialize(engine);
         // TODO: Cache this?
         this.shaderProgram = this.engine.graphics.createShaderProgram(vertexShaderProgramText, fragmentShaderProgramText);
 
@@ -86,7 +85,7 @@ export class M2Model implements RenderObject
     }
 
     update(deltaTime: number): void {
-        if (!this.isLoaded) {
+        if (!this.isLoaded || this.isDisposing) {
             return;
         }
 
@@ -108,7 +107,7 @@ export class M2Model implements RenderObject
     }
 
     draw(secondPass: boolean): void {
-        if (!this.isLoaded) {
+        if (!this.isLoaded || this.isDisposing) {
             return;
         }
 
@@ -476,9 +475,9 @@ export class M2Model implements RenderObject
             "u_textureTransformMatrix1": data.textureMatrices[0],
             "u_textureTransformMatrix2": data.textureMatrices[1],
             "u_color": data.color,
-            "u_vertexShader": getVertexShaderId(texUnit.shaderId, texUnit.textureCount), 
+            "u_vertexShader": getM2VertexShaderId(texUnit.shaderId, texUnit.textureCount), 
             "u_blendMode": blendMode,
-            "u_pixelShader": getPixelShaderId(texUnit.shaderId, texUnit.textureCount),
+            "u_pixelShader": getM2PixelShaderId(texUnit.shaderId, texUnit.textureCount),
             "u_unlit": 0 != (WoWMaterialFlags.Unlit & material.flags),
             "u_texture1": data.textures[0],
             "u_texture2": data.textures[1],
@@ -497,11 +496,25 @@ export class M2Model implements RenderObject
         const diff = Float3.subtract(max, min);
 
         this.engine.sceneCamera.setDistance(Float3.length(diff));
-
-        Float44.identity(this.modelMatrix);
     }
 
-    dispose(): void {
+    override dispose(): void {
+        super.dispose();
+        this.modelData = null;
+        this.shaderProgram = null;
+        this.vertexDataBuffer = null;
+        this.vertexIndexBuffer = null;
+        this.vao = null;
+        this.bonePositionBuffer = null;
+        this.animationState = null;
+        this.loadedTextures = null;
+        this.textureUnitData = null;
+        this.boneData = null;
+        this.modelMatrix = null;
+        this.modelViewMatrix = null;
+        this.invModelMatrix = null;
+        this.invModelViewMatrix = null;
+        this.drawOrderTexUnits = null;
     }
 
     onModelLoaded(data: WoWModelData) {
@@ -509,7 +522,9 @@ export class M2Model implements RenderObject
 
         this.animationState = new AnimationState(this);
         this.animationState.useAnimation(0);
-        this.calculateBounds();
+        if (!this.parent) {
+            this.calculateBounds();
+        }
 
         this.loadedTextures = new Array(data.textures.length);
         for (let i = 0; i < data.textures.length; i++) {

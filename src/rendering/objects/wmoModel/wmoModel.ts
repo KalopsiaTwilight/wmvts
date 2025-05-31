@@ -1,0 +1,304 @@
+import { BufferDataType, Float3, Float4, Float44, GxBlend, IShaderProgram, ITexture, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, M2BlendModeToEGxBlend, M2Model, RenderingEngine, RenderObject } from "@app/rendering";
+import { BinaryWriter } from "@app/utils";
+import { WoWWorldModelData, WowWorldModelGroupFlags, WoWWorldModelMaterialMaterialFlags } from "@app/wowData";
+
+import fragmentShaderProgramText from "./wmoModel.frag";
+import vertexShaderProgramText from "./wmoModel.vert";
+import { getWMOPixelShader, getWMOVertexShader } from "./wmoShaders";
+import { BaseRenderObject } from "../baseRenderObject";
+
+export class WMOModel extends BaseRenderObject {
+    isModelDataLoaded: boolean;
+    isTexturesLoaded: boolean;
+
+    fileId: number;
+    modelData: WoWWorldModelData;
+    doodadSetId: number;
+    // Used to cull / load doodads based on group
+    groupDoodads: { [key: number]: number[] }
+    loadedTextures: { [key: number]: ITexture }
+
+    shaderProgram: IShaderProgram;
+
+    groupVaos: IVertexArrayObject[]
+
+    constructor(fileId: number) {
+        super();
+        this.isModelDataLoaded = false;
+        this.isTexturesLoaded = false;
+        this.fileId = fileId;
+
+        this.doodadSetId = 0; //TODO: Investigate what this means.
+        
+        this.loadedTextures = {};
+        this.groupDoodads = {};
+    }
+
+    override initialize(engine: RenderingEngine): void {
+        super.initialize(engine);
+        // TODO: Cache this?
+        this.shaderProgram = this.engine.graphics.createShaderProgram(vertexShaderProgramText, fragmentShaderProgramText);
+
+        this.engine.dataLoader.loadWorldModelFile(this.fileId).then(this.onModelLoaded.bind(this))
+    }
+
+    update(deltaTime: number): void {
+        if (!this.isLoaded || this.isDisposing) {
+            return;
+        }
+
+        // Todo: cull visible objects/groups
+
+        for (const child of this.children) {
+            child.update(deltaTime);
+        }
+    }
+
+    draw(secondPass: boolean): void {
+        if (!this.isLoaded || this.isDisposing) {
+            return;
+        }
+        this.engine.graphics.useShaderProgram(this.shaderProgram);
+        const cameraPos = this.engine.sceneCamera.getPosition();
+        this.shaderProgram.useUniforms({
+            "u_light1Color": this.engine.lightColor1,
+            "u_light2Color": this.engine.lightColor2,
+            "u_light3Color": this.engine.lightColor3,
+            "u_lightDir1": this.engine.lightDir1,
+            "u_lightDir2": this.engine.lightDir2,
+            "u_lightDir3": this.engine.lightDir3,
+            "u_modelMatrix": this.modelMatrix,
+            "u_ambientColor": this.engine.ambientColor,
+            "u_viewMatrix": this.engine.viewMatrix,
+            "u_projectionMatrix": this.engine.projectionMatrix,
+            "u_cameraPos": cameraPos,
+        })
+
+        for (let i = 0; i < this.modelData.groups.length; i++) {
+            this.drawGroup(i, secondPass);
+        }
+    }
+
+    private drawGroup(groupIndex: number, secondPass: boolean): void {
+        const groupData = this.modelData.groups[groupIndex];
+
+        for (let i = 0; i < groupData.batches.length; i++) {
+            this.drawBatch(groupIndex, i, secondPass);
+        }
+    }
+
+    private drawBatch(groupIndex: number, batchIndex: number, secondPass: boolean) {
+        const groupData = this.modelData.groups[groupIndex];
+        const batchData = groupData.batches[batchIndex];
+        const material = this.modelData.materials[batchData.materialId];
+
+        const blendMode = M2BlendModeToEGxBlend(material.blendMode);
+        if (blendMode <= GxBlend.GxBlend_AlphaKey) {
+            if (secondPass) {
+                return;
+            }
+        } else {
+            if (!secondPass) {
+                return;
+            }
+        }
+
+        const vs = getWMOVertexShader(material.shader);
+        const ps = getWMOPixelShader(material.shader);
+        const unlit = (material.flags & WoWWorldModelMaterialMaterialFlags.Unlit) ? true : false
+        this.shaderProgram.useUniforms({
+            "u_pixelShader": ps,
+            "u_vertexShader": vs,
+            "u_blendMode": material.blendMode,
+            "u_unlit": unlit
+        });
+
+        const doubleSided = (material.flags & WoWWorldModelMaterialMaterialFlags.Unculled) != 0;
+        this.engine.graphics.useBackFaceCulling(!doubleSided);
+        this.engine.graphics.useBlendMode(blendMode)
+
+        // TODO: Is this set by material flags?
+        this.engine.graphics.useDepthTest(true);
+        this.engine.graphics.useDepthWrite(true);
+        this.shaderProgram.useUniforms({
+            "u_texture1": this.loadedTextures[material.texture1],
+            "u_texture2": this.loadedTextures[material.texture2],
+            "u_texture3": this.loadedTextures[material.texture3]
+        });
+
+        this.engine.graphics.useVertexArrayObject(this.groupVaos[groupIndex]);
+        this.engine.graphics.drawIndexedTriangles(batchData.startIndex * 2, batchData.indexCount);
+    }
+
+    override dispose(): void {
+        super.dispose();
+        this.modelData = null;
+        for (let i = 0; i < this.groupVaos.length; i++) {
+            this.groupVaos[i] = null;
+        }
+        this.groupVaos = null;
+        this.shaderProgram = null;
+    }
+
+    get isLoaded() {
+        return this.isModelDataLoaded && this.isTexturesLoaded && this.children.every((x) => x.isLoaded);
+    }
+
+    onModelLoaded(data: WoWWorldModelData) {
+        this.modelData = data;
+
+        if (!this.parent) {
+            this.calculateBounds();
+        }
+
+        this.loadTextures();
+        this.loadDoodads();
+
+        this.groupVaos = new Array(this.modelData.groups.length);
+        for (let i = 0; i < this.modelData.groups.length; i++) {
+            const vao = this.engine.graphics.createVertexArrayObject();
+
+            const vb = this.uploadVertexDataForGroup(i);
+            const ib = this.engine.graphics.createVertexIndexBuffer(true);
+            ib.setData(new Uint16Array(this.modelData.groups[i].indices));
+
+            vao.setIndexBuffer(ib);
+            vao.addVertexDataBuffer(vb);
+
+            this.groupVaos[i] = vao;
+        }
+        this.isModelDataLoaded = true;
+    }
+
+    private uploadVertexDataForGroup(index: number) {
+        const group = this.modelData.groups[index];
+
+        const vertexDataSize = 56;
+
+        const vb = this.engine.graphics.createVertexDataBuffer([
+            { index: this.shaderProgram.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 0 },
+            { index: this.shaderProgram.getAttribLocation('a_normal'), size: 3, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 12 },
+            { index: this.shaderProgram.getAttribLocation('a_color1'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: vertexDataSize, offset: 24 },
+            { index: this.shaderProgram.getAttribLocation('a_color2'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: vertexDataSize, offset: 28 },
+            { index: this.shaderProgram.getAttribLocation('a_texCoord1'), size: 2, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 32 },
+            { index: this.shaderProgram.getAttribLocation('a_texCoord2'), size: 2, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 40 },
+            { index: this.shaderProgram.getAttribLocation('a_texCoord3'), size: 2, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 48 },
+        ], true)
+
+        const numVertices = group.vertices.length;
+        const bufferSize = vertexDataSize * numVertices;
+        const buffer = new Uint8Array(bufferSize);
+        const writer = new BinaryWriter(buffer.buffer);
+
+        const numColors = group.vertexColors.length / group.vertices.length;
+        if (numColors != Math.floor(numColors)) {
+            throw new Error("Unexpected situation. Number of Vertex Colors is not cleanly divisible by number of vertices.")
+        }
+
+        const numUv = group.uvList.length / group.vertices.length;
+        if (numUv != Math.floor(numUv)) {
+            throw new Error("Unexpected situation. Number of UV coordinates is not cleanly divisible by number of vertices.");
+        }
+
+        for (let j = 0; j < group.vertices.length; j++) {
+            writer.writeFloatLE(group.vertices[j][0]);
+            writer.writeFloatLE(group.vertices[j][1]);
+            writer.writeFloatLE(group.vertices[j][2]);
+            writer.writeFloatLE(group.normals[j][0]);
+            writer.writeFloatLE(group.normals[j][1]);
+            writer.writeFloatLE(group.normals[j][2]);
+            writer.writeUInt8(numColors > 0 ? group.vertexColors[j][0] : 0);
+            writer.writeUInt8(numColors > 0 ? group.vertexColors[j][1] : 0);
+            writer.writeUInt8(numColors > 0 ? group.vertexColors[j][2] : 0);
+            writer.writeUInt8(numColors > 0 ? group.vertexColors[j][3] : 255);
+            writer.writeUInt8(numColors > 1 ? group.vertexColors[j + group.vertices.length][0] : 0);
+            writer.writeUInt8(numColors > 1 ? group.vertexColors[j + group.vertices.length][1] : 0);
+            writer.writeUInt8(numColors > 1 ? group.vertexColors[j + group.vertices.length][2] : 0);
+            writer.writeUInt8(numColors > 1 ? group.vertexColors[j + group.vertices.length][3] : 255);
+            writer.writeFloatLE(numUv > 0 ? group.uvList[j][0] : 0);
+            writer.writeFloatLE(numUv > 0 ? group.uvList[j][1] : 0);
+            writer.writeFloatLE(numUv > 1 ? group.uvList[j + group.vertices.length][0] : 0);
+            writer.writeFloatLE(numUv > 1 ? group.uvList[j + group.vertices.length][1] : 0);
+            writer.writeFloatLE(numUv > 2 ? group.uvList[j + 2 * group.vertices.length][0] : 0);
+            writer.writeFloatLE(numUv > 2 ? group.uvList[j + 2 * group.vertices.length][1] : 0);
+        }
+        vb.setData(buffer);
+        return vb;
+    }
+
+    private loadDoodads() {
+        const refs = this.getDoodadSetRefs();
+        for (let i = 0; i < this.modelData.groups.length; i++) {
+            this.groupDoodads[i] = [];
+            const groupRefs = this.modelData.groups[i].doodadReferences;
+            for (let ref of groupRefs) {
+                if (refs.indexOf(ref) !== -1) {
+                    this.groupDoodads[i].push(ref);
+                }
+            }
+        }
+
+        for (const ref of refs) {
+            const doodadDef = this.modelData.doodadDefs[ref];
+            const modelId = this.modelData.doodadIds[doodadDef.nameOffset];
+            const doodadModel = new M2Model(modelId);
+            doodadModel.parent = this;
+            const scale = Float3.create(doodadDef.scale, doodadDef.scale, doodadDef.scale);
+            doodadModel.setModelMatrix(doodadDef.position, doodadDef.rotation, scale);
+            doodadModel.initialize(this.engine);
+            this.children.push(doodadModel);
+        }
+
+        // Some stuff in rust about tying a model to group based on closest group, only used for determining interior light?
+    }
+
+    private calculateBounds() {
+        const max = this.modelData.maxBoundingBox
+        const min = this.modelData.minBoundingBox
+        const diff = Float3.subtract(max, min);
+
+        this.engine.sceneCamera.setDistance(Float3.length(diff));
+    }
+
+    private loadTextures() {
+        const loadingPromises: Promise<void>[] = []
+        this.loadedTextures[0] = this.engine.getUnknownTexture();
+        for (let i = 0; i < this.modelData.groups.length; i++) {
+            const group = this.modelData.groups[i];
+            for (let j = 0; j < group.batches.length; j++) {
+                const batch = group.batches[j];
+                const material = this.modelData.materials[batch.materialId];
+                for (const fileId of [material.texture1, material.texture2, material.texture3]) {
+                    if (fileId !== 0) {
+                        const clampS = (material.flags & WoWWorldModelMaterialMaterialFlags.ClampS) > 0;
+                        const clampT = (material.flags & WoWWorldModelMaterialMaterialFlags.ClampT) > 0;
+                        const texturePromise = this.engine.getTexture(fileId, {
+                            clampS, clampT
+                        }).then((texture) => {
+                            this.loadedTextures[fileId] = texture
+                        }).catch(() => {
+                            this.loadedTextures[fileId] = this.engine.getUnknownTexture();
+                        });
+                        loadingPromises.push(texturePromise)
+                    }
+                }
+            }
+        }
+        Promise.all(loadingPromises).then(() => {
+            this.isTexturesLoaded = true;
+        })
+    }
+
+    private getDoodadSetRefs() {
+        let defaultSet = this.modelData.doodadSets[0];
+        if (this.doodadSetId > this.modelData.doodadSets.length) {
+            this.doodadSetId = 0;
+        }
+        let refs = Array.from({ length: defaultSet.count }, (x, i) => i + defaultSet.startIndex);
+        if (this.doodadSetId != 0) {
+            const set = this.modelData.doodadSets[this.doodadSetId];
+            refs.concat(Array.from({ length: set.count }, (x, i) => i + set.startIndex));
+        }
+        return refs;
+    }
+}

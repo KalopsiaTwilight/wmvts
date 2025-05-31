@@ -1,13 +1,15 @@
 import { RenderingEngine } from "../engine";
-import { Float44 } from "../math";
+import { Float3, Float44 } from "../math";
 import { IDisposable } from "../objects";
 
 export abstract class Camera implements IDisposable {
     viewMatrix: Float44;
+    position: Float3;
     engine: RenderingEngine;
 
     constructor() {
         this.viewMatrix = Float44.identity();
+        this.position = Float3.zero();
     }
 
     initialize(engine: RenderingEngine) {
@@ -24,6 +26,10 @@ export abstract class Camera implements IDisposable {
 
     getViewMatrix() {
         return this.viewMatrix;
+    }
+
+    getPosition() {
+        return this.position;
     }
 
     setDistance(distance: number) {

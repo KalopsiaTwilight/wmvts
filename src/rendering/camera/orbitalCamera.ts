@@ -18,7 +18,6 @@ export class OrbitalCamera extends Camera {
 
     cameraMatrix: Float44;
 
-    cameraPosition: Float3;
     targetLocation: Float3;
     upDir: Float3;
 
@@ -54,10 +53,10 @@ export class OrbitalCamera extends Camera {
         this.zoomDecay = 0.7;
 
         // Spherical to cartesian 
-        this.cameraPosition = Float3.fromSpherical(this.radius, this.theta, this.phi);
-        Float3.add(this.cameraPosition, this.targetLocation);
+        this.position = Float3.fromSpherical(this.radius, this.theta, this.phi);
+        Float3.add(this.position, this.targetLocation);
 
-        Float44.lookAt(this.cameraPosition, this.targetLocation, this.upDir, this.cameraMatrix);
+        Float44.lookAt(this.position, this.targetLocation, this.upDir, this.cameraMatrix);
     }
 
     override initialize(engine: RenderingEngine) {
@@ -91,11 +90,11 @@ export class OrbitalCamera extends Camera {
                 this.currentZoom = 0;
             }
 
-            Float3.fromSpherical(this.radius, this.theta, this.phi, this.cameraPosition)
-            Float3.add(this.cameraPosition, this.targetLocation);
+            Float3.fromSpherical(this.radius, this.theta, this.phi, this.position)
+            Float3.add(this.position, this.targetLocation);
         }
 
-        Float44.lookAt(this.cameraPosition, this.targetLocation, this.upDir, this.cameraMatrix);
+        Float44.lookAt(this.position, this.targetLocation, this.upDir, this.cameraMatrix);
         Float44.invert(this.cameraMatrix, this.viewMatrix);
         Float44.translate(this.viewMatrix, this.cameraTranslation, this.viewMatrix);
     }
@@ -146,8 +145,8 @@ export class OrbitalCamera extends Camera {
             this.theta = Math.min(Math.max(this.theta - deltaTheta - deltaTheta, 0.01), Math.PI);
             this.phi -= deltaPhi;
 
-            Float3.fromSpherical(this.radius, this.theta, this.phi, this.cameraPosition);
-            Float3.add(this.cameraPosition, this.targetLocation);
+            Float3.fromSpherical(this.radius, this.theta, this.phi, this.position);
+            Float3.add(this.position, this.targetLocation);
         }
 
         this.lastDragX = currentX;
@@ -168,7 +167,7 @@ export class OrbitalCamera extends Camera {
         this.maxRadius = 2 * distance;
         this.zoomFactor = this.maxRadius / 50;
 
-        Float3.fromSpherical(this.radius, this.theta, this.phi, this.cameraPosition);
-        Float3.add(this.cameraPosition, this.targetLocation);
+        Float3.fromSpherical(this.radius, this.theta, this.phi, this.position);
+        Float3.add(this.position, this.targetLocation);
     }
 }

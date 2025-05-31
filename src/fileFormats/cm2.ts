@@ -1,7 +1,14 @@
 import { inflate } from "pako";
 
-import { WoWModelData, Float3, WoWAnimationData, Float2, WoWVertexData, Float4, WoWLocalTrackData, WoWTrackData, WoWBoneData, WoWSubmeshData, WoWTextureUnitData, WoWMaterialData, WoWTextureData, WoWTextureTransformData, WoWAttachmentData, WoWColorData, WoWTextureWeightData, WoWParticleEmitterData, WoWExtendedParticleData, WoWRibbonEmiterData, WoWAnimatedValue, Float44, WoWBoneFileData } from "@app/index";
-import { BinaryReader } from "../utils";
+import { 
+    WoWModelData, WoWAnimationData, WoWVertexData, WoWLocalTrackData, WoWTrackData, WoWBoneData, 
+    WoWSubmeshData, WoWTextureUnitData, WoWMaterialData, WoWTextureData, WoWTextureTransformData, 
+    WoWAttachmentData, WoWColorData, WoWTextureWeightData, WoWParticleEmitterData, WoWExtendedParticleData, 
+    WoWRibbonEmiterData, WoWAnimatedValue, WoWBoneFileData 
+} from "@app/wowData";
+import { BinaryReader } from "@app/utils";
+
+import { readArray, readFloat2, readFloat3, readFloat4, readFloat44, readQuaternion } from "./compressedReading";
 
 export function parseCM2File(data: ArrayBuffer) {
     let reader = new BinaryReader(data);
@@ -149,43 +156,6 @@ export function parseCM2BoneFile(data: ArrayBuffer) {
         boneOffsetMatrices
     }
     return boneData;
-}
-
-function readArray<T>(reader: BinaryReader, deserializeFn: (binaryReader: BinaryReader, index?: number) => T): T[] {
-    const numElems = reader.readInt32LE();
-    if (numElems > 0) {
-        const result = new Array(numElems);
-        for (let i = 0; i < numElems; i++) {
-            result[i] = deserializeFn(reader, i);
-        }
-        return result;
-    }
-    return [];
-}
-
-function readFloat2(reader: BinaryReader) {
-    return Float2.create(reader.readFloatLE(), reader.readFloatLE());
-}
-
-function readFloat3(reader: BinaryReader) {
-    return Float3.create(reader.readFloatLE(), reader.readFloatLE(), reader.readFloatLE())
-}
-
-function readFloat4(reader: BinaryReader) {
-    return Float4.create(reader.readFloatLE(), reader.readFloatLE(), reader.readFloatLE(), reader.readFloatLE())
-}
-
-function readQuaternion(reader: BinaryReader) {
-    return Float4.create(-reader.readFloatLE(), -reader.readFloatLE(), -reader.readFloatLE(), reader.readFloatLE())
-}
-
-function readFloat44(reader: BinaryReader) {
-    return Float44.create(
-        reader.readFloatLE(), reader.readFloatLE(), reader.readFloatLE(), reader.readFloatLE(),
-        reader.readFloatLE(), reader.readFloatLE(), reader.readFloatLE(), reader.readFloatLE(),
-        reader.readFloatLE(), reader.readFloatLE(), reader.readFloatLE(), reader.readFloatLE(),
-        reader.readFloatLE(), reader.readFloatLE(), reader.readFloatLE(), reader.readFloatLE()
-    )
 }
 
 function readLocalTrack<T>(reader: BinaryReader, deserializeFn: (binaryReader: BinaryReader, index?: number) => T) {

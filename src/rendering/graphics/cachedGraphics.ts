@@ -1,5 +1,5 @@
 import { Float4 } from "../math";
-import { IGraphics, IShaderProgram, ITexture, IVertexArrayObject, IVertexAttributePointer, IVertexDataBuffer, IVertexIndexBuffer, ColorMask, GxBlend } from "./abstractions";
+import { IGraphics, IShaderProgram, ITexture, IVertexArrayObject, IVertexAttributePointer, IVertexDataBuffer, IVertexIndexBuffer, ColorMask, GxBlend, ITextureOptions } from "./abstractions";
 
 export abstract class CachedGraphics implements IGraphics {
     lastUsedVertexDataBuffer?: IVertexDataBuffer;
@@ -138,7 +138,7 @@ export abstract class CachedGraphics implements IGraphics {
     abstract drawTriangles(offset: number, count: number): void;
     abstract drawIndexedTriangles(offset: number, count: number): void;
 
-    abstract createTextureFromImg(img: HTMLImageElement): ITexture;
+    abstract createTextureFromImg(img: HTMLImageElement, opts?: ITextureOptions): ITexture;
     abstract createSolidColorTexture(color: Float4): ITexture;
 
     abstract createVertexArrayObject(): IVertexArrayObject;

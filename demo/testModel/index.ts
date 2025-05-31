@@ -1,12 +1,11 @@
-import { BufferDataType, Float44, GxBlend, IShaderProgram, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderingEngine, RenderObject } from "@app/index";
+import { BaseRenderObject, BufferDataType, Float44, GxBlend, IShaderProgram, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderingEngine, RenderObject } from "@app/index";
 
 import fs from "./testModel.frag";
 import vs from "./testModel.vert";
 
 
-export class TestModel implements RenderObject {
-    engine: RenderingEngine;
-
+export class TestModel extends BaseRenderObject {
+    isLoaded: boolean;
     program: IShaderProgram;
 
     colors: IVertexDataBuffer;
@@ -22,7 +21,8 @@ export class TestModel implements RenderObject {
     viewProjectionMatrix: Float44;
 
     initialize(engine: RenderingEngine): void {
-        this.engine = engine;
+        super.initialize(engine);
+        this.isLoaded = true;
 
         this.program = engine.graphics.createShaderProgram(vs, fs);
 
@@ -73,10 +73,7 @@ export class TestModel implements RenderObject {
         this.engine.graphics.useVertexArrayObject();
     }
 
-    dispose(): void {
-
-    }
-
+    
     getVertexIndices() {
         return new Uint16Array([
             // left column front

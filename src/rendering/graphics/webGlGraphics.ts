@@ -1,7 +1,8 @@
 import { createProgramInfo, createTexture, ProgramInfo, setUniforms } from "twgl.js";
 import { IGraphics, IVertexDataBuffer, IVertexIndexBuffer, IShaderProgram, 
     IUniformsData, IVertexAttributePointer, ITexture, IVertexArrayObject,
-    GxBlend, ColorMask, BufferDataType
+    GxBlend, ColorMask, BufferDataType,
+    ITextureOptions
 } from "./abstractions";
 import { CachedGraphics } from "./cachedGraphics";
 import { Float4 } from "../math";
@@ -136,12 +137,14 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
         return new WebGLTextureAbstraction(this.gl, createTexture(this.gl, { color: color, width: 1, height: 1 }));
     }
 
-    createTextureFromImg(img: HTMLImageElement): ITexture {
+    createTextureFromImg(img: HTMLImageElement, opts: ITextureOptions): ITexture {
         // TODO: use anisoptropy ext?
         return new WebGLTextureAbstraction(this.gl, createTexture(this.gl, {
             premultiplyAlpha: 0,
             src: img,
             auto: true,
+            wrapS: opts?.clampS ? this.gl.CLAMP_TO_EDGE : this.gl.REPEAT,
+            wrapT: opts?.clampT ? this.gl.CLAMP_TO_EDGE : this.gl.REPEAT
         }));
     }
     createVertexIndexBuffer(dynamic: boolean): IVertexIndexBuffer {

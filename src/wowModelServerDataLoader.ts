@@ -1,7 +1,8 @@
 import { parseCM2BoneFile, parseCM2File } from "./fileFormats";
+import { parseCWMOFile } from "./fileFormats/cwmo";
 import { IDataLoader, IProgressReporter } from "./iDataLoader";
 import { CharacterCustomizationMetadata, CharacterMetadata, ItemMetadata, ItemVisualMetadata } from "./metadata";
-import { WoWBoneFileData, WoWModelData } from "./wowData";
+import { WoWBoneFileData, WoWModelData, WoWWorldModelData } from "./wowData";
 
 
 export class WoWModelServerDataProvider implements IDataLoader {
@@ -26,6 +27,14 @@ export class WoWModelServerDataProvider implements IDataLoader {
         const data = await resp.arrayBuffer();
 
         return parseCM2File(data);
+    }
+
+    async loadWorldModelFile(fileId: number): Promise<WoWWorldModelData> {
+        const url = `${this.rootPath}/modelviewer/models/${fileId}.cwmo`;
+        const resp = await fetch(url);
+        const data = await resp.arrayBuffer();
+
+        return parseCWMOFile(data);
     }
 
     async loadCharacterCustomizationMetadata(modelId: number): Promise<CharacterCustomizationMetadata> {

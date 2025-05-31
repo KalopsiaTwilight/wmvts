@@ -1,7 +1,7 @@
 import { Float3, Float4, Float44 } from "./math";
 import { Camera } from "./camera";
 import { RenderObject, IDisposable } from "./objects";
-import { IGraphics, ITexture } from "./graphics";
+import { IGraphics, ITexture, ITextureOptions } from "./graphics";
 import { IDataLoader } from "@app/iDataLoader";
 
 
@@ -118,7 +118,7 @@ export class RenderingEngine implements IDisposable {
         this.sceneObjects.push(object);
     }
 
-    getTexture(fileId: number): Promise<ITexture> {
+    getTexture(fileId: number, opts?: ITextureOptions): Promise<ITexture> {
         return new Promise<ITexture>((res, rej) => {
             if(this.textureCache[fileId]) {
                 res(this.textureCache[fileId]);
@@ -127,7 +127,7 @@ export class RenderingEngine implements IDisposable {
             this.dataLoader.loadTexture(fileId).then((imgData) => {
                 const img = new Image();
                 img.onload = () => {
-                    res(this.graphics.createTextureFromImg(img));
+                    res(this.graphics.createTextureFromImg(img, opts));
                 }
                 img.onerror = (err) => {
                     rej(err)

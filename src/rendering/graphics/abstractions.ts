@@ -93,6 +93,12 @@ export interface IVertexArrayObject extends IBindable {
     addVertexDataBuffer(buffer: IVertexDataBuffer): void;
 }
 
+
+export interface ITextureOptions {
+    clampS?: boolean,
+    clampT?: boolean,
+}
+
 export interface IGraphics {
     startFrame(width: number, height: number): void;
     clearFrame(color: Float4): void;
@@ -112,7 +118,7 @@ export interface IGraphics {
     drawTriangles(offset: number, count: number): void;
     drawIndexedTriangles(offset: number, count: number): void;
 
-    createTextureFromImg(img: HTMLImageElement): ITexture;
+    createTextureFromImg(img: HTMLImageElement, opts?: ITextureOptions): ITexture;
     createSolidColorTexture(color: Float4): ITexture;
 
     createVertexArrayObject(): IVertexArrayObject;

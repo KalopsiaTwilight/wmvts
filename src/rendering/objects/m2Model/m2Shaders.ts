@@ -102,7 +102,7 @@ const M2ShaderTable: [M2PixelShader, M2VertexShader][] = [
     [ M2PixelShader.NewUnkCombiner,                              M2VertexShader.Diffuse_EdgeFade_T1_T2 ],
 ]
 
-export const getShaderTableEntry = (shaderId: number) => {
+export const getM2ShaderTableEntry = (shaderId: number) => {
     const actualShaderId = shaderId & 0x7FFF;
     if (actualShaderId >= M2ShaderTable.length) {
         throw "Wrong shaderId for vertex shader"
@@ -110,10 +110,10 @@ export const getShaderTableEntry = (shaderId: number) => {
     return M2ShaderTable[actualShaderId];
 }
 
-export const getVertexShaderId = (shaderId: number, textureCount: number) => {
+export const getM2VertexShaderId = (shaderId: number, textureCount: number) => {
     if (shaderId & 0x8000)
     {
-        getShaderTableEntry(shaderId)[1];
+        getM2ShaderTableEntry(shaderId)[1];
     }
     if (textureCount == 1)
     {
@@ -133,9 +133,9 @@ export const getVertexShaderId = (shaderId: number, textureCount: number) => {
     return shaderId & 0x8 ? M2VertexShader.Diffuse_T1_Env : shaderId & 0x4000 ? M2VertexShader.Diffuse_T1_T2 : M2VertexShader.Diffuse_T1_T1;
 }
 
-export const getPixelShaderId = (shaderId: number, textureCount: number) => {
+export const getM2PixelShaderId = (shaderId: number, textureCount: number) => {
     if (shaderId & 0x8000) {
-        return getShaderTableEntry(shaderId)[0];
+        return getM2ShaderTableEntry(shaderId)[0];
     }
     if (textureCount === 1) {
         if (shaderId & 0x70) {

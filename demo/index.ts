@@ -1,6 +1,6 @@
-import { WoWModelViewer, WoWModelServerDataProvider, M2Model } from "../src/index"
+import { WoWModelViewer, WoWModelServerDataProvider, M2Model, WMOModel } from "../src/index"
 
-import { TestModel } from "./testModel"
+// import { TestModel } from "./testModel"
 
 const containerElement = document.createElement("div");
 containerElement.style.width = "800px"
@@ -13,7 +13,8 @@ new WoWModelViewer({
     dataLoader: new WoWModelServerDataProvider("https://localhost:7074"),
     scene: {
         objects: [
-            new M2Model(2120018),
+            // new M2Model(2120018),
+            new WMOModel(106698)
         ]
     }
 })
