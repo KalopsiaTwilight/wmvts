@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "webpack serve -c webpack.dev.config.js"
+    "dev": "webpack serve -c webpack/webpack.dev.config.js",
+    "build": "npm run standalone && npm run library",
+    "library": "webpack -c webpack/webpack.library.config.js",
+    "standalone": "webpack -c webpack/webpack.standalone.config.js"
   },
   "author": "KalopsiaTwilight",
   "license": "MIT",
@@ -19,7 +22,8 @@
     "typescript": "^5.7.3",
     "webpack": "^5.98.0",
     "webpack-cli": "^6.0.1",
-    "webpack-dev-server": "^5.2.0"
+    "webpack-dev-server": "^5.2.0",
+    "webpack-merge": "^6.0.1"
   },
   "dependencies": {
     "pako": "^2.1.0",

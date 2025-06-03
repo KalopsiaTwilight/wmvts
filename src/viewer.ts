@@ -1,10 +1,6 @@
 import { IDataLoader } from "./iDataLoader";
 import { RenderingEngine, OrbitalCamera, RenderObject, Camera, WebGlGraphics } from "./rendering";
 
-// TODO: Remove this
-require("./webgl-debug.js");
-
-
 export interface WoWModelViewerOptions {
     container: HTMLElement,
     dataLoader: IDataLoader
@@ -41,20 +37,6 @@ export class WoWModelViewer {
 
 
         let gl = this.canvas.getContext("webgl", { alpha: true, premultipliedAlpha: false });
-
-        // Uncomment for debug purposes
-
-        // let webGlDebug = (window as any).WebGLDebugUtils;
-        // function logGLCall(functionName: string, args: any[]) {   
-        //     const maxLog = 100;
-        //     (window as any).debugGLCalls = (window as any).debugGLCalls || 0;
-
-        //     if ((window as any).debugGLCalls < maxLog) {
-        //         console.log("gl." + functionName + "(" + webGlDebug.glFunctionArgsToString(functionName, args) + ")");  
-        //         (window as any).debugGLCalls++;
-        //     }
-        //  } 
-        // gl = webGlDebug.makeDebugContext(gl, undefined, logGLCall);
 
         const graphics = new WebGlGraphics(gl);
         this.renderEngine = new RenderingEngine(graphics, this.options.dataLoader, this.canvas);
