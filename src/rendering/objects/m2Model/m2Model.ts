@@ -28,7 +28,8 @@ export interface BoneData {
 
 export class M2Model extends BaseRenderObject
 {
-    isLoaded: boolean;
+    isModelDataLoaded: boolean;
+    isTexturesLoaded: boolean;
 
     fileId: number;
     modelData: WoWModelData;
@@ -52,7 +53,8 @@ export class M2Model extends BaseRenderObject
     constructor(fileId: number) {
         super();
         this.fileId = fileId;
-        this.isLoaded = false;
+        this.isModelDataLoaded = false;
+        this.isTexturesLoaded = false;
         this.isDisposing = false;
         this.isMirrored = false;
 
@@ -63,6 +65,9 @@ export class M2Model extends BaseRenderObject
         this.children = [];
     }
 
+    get isLoaded() {
+        return this.isModelDataLoaded && this.isTexturesLoaded;
+    }
 
     override initialize(engine: RenderingEngine): void {
         super.initialize(engine);
@@ -526,20 +531,7 @@ export class M2Model extends BaseRenderObject
             this.calculateBounds();
         }
 
-        this.loadedTextures = new Array(data.textures.length);
-        for (let i = 0; i < data.textures.length; i++) {
-            const textureId = data.textures[i].textureId
-            if(textureId > 0) {
-                this.engine.getTexture(textureId).then((texture) => {
-                    this.loadedTextures[textureId] = texture
-                }).catch(() => {
-                    this.loadedTextures[textureId] = this.engine.getUnknownTexture();
-                });
-            } else {
-                this.loadedTextures[i] = undefined;
-            }
-        }
-
+        this.loadTextures();
         this.uploadVertexData(this.modelData.vertices);
         this.vertexIndexBuffer.setData(new Uint16Array(this.modelData.skinTriangles));
         this.vao.setIndexBuffer(this.vertexIndexBuffer);
@@ -570,10 +562,31 @@ export class M2Model extends BaseRenderObject
                 : this.modelData.submeshes[a.skinSectionIndex].submeshId - this.modelData.submeshes[b.skinSectionIndex].submeshId
         );
 
-        this.isLoaded = true;
+        this.isModelDataLoaded = true;
     }
 
-    uploadVertexData(vertices: WoWVertexData[]) {
+    private loadTextures() {
+        this.loadedTextures = { }
+        const loadingPromises: Promise<void>[] = []
+        for (let i = 0; i < this.modelData.textures.length; i++) {
+            const textureId = this.modelData.textures[i].textureId
+            if(textureId > 0) {
+                this.engine.getTexture(textureId).then((texture) => {
+                    this.loadedTextures[textureId] = texture
+                }).catch(() => {
+                    this.loadedTextures[textureId] = this.engine.getUnknownTexture();
+                });
+            } else {
+                this.loadedTextures[i] = undefined;
+            }
+        }
+
+        Promise.all(loadingPromises).then(() => {
+            this.isTexturesLoaded = true;
+        })
+    }
+
+    private uploadVertexData(vertices: WoWVertexData[]) {
         const bufferSize = 48 * vertices.length;
         const buffer = new Uint8Array(bufferSize);
 
