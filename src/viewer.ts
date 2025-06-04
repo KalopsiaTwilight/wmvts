@@ -1,9 +1,10 @@
-import { IDataLoader } from "./iDataLoader";
+import { IDataLoader, IProgressReporter } from "./iDataLoader";
 import { RenderingEngine, OrbitalCamera, RenderObject, Camera, WebGlGraphics } from "./rendering";
 
 export interface WoWModelViewerOptions {
     container: HTMLElement,
-    dataLoader: IDataLoader
+    dataLoader: IDataLoader,
+    progressReporter?: IProgressReporter,
     scene?: {
         camera?: Camera;
         objects?: RenderObject[]
@@ -39,7 +40,7 @@ export class WoWModelViewer {
         let gl = this.canvas.getContext("webgl", { alpha: true, premultipliedAlpha: false });
 
         const graphics = new WebGlGraphics(gl);
-        this.renderEngine = new RenderingEngine(graphics, this.options.dataLoader, this.canvas);
+        this.renderEngine = new RenderingEngine(graphics, this.options.dataLoader, this.options.progressReporter, this.canvas);
         this.resize(this.containerWidth, this.containerHeight);
 
         this.renderEngine.sceneCamera = this.options.scene?.camera ?? new OrbitalCamera();

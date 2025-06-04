@@ -90,4 +90,8 @@ export class WoWModelServerDataProvider implements IDataLoader {
         const data = await resp.json() as ItemVisualMetadata;
         return data;
     }
+
+    useProgressReporter(progress?: IProgressReporter): void {
+        this.progress = progress;
+    }
 }

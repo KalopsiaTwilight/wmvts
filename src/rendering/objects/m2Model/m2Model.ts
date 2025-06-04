@@ -86,7 +86,7 @@ export class M2Model extends BaseRenderObject
         ], true);
 
 
-        this.engine.dataLoader.loadModelFile(this.fileId).then(this.onModelLoaded.bind(this));
+        this.engine.getM2ModelFile(this.fileId).then(this.onModelLoaded.bind(this));
     }
 
     update(deltaTime: number): void {

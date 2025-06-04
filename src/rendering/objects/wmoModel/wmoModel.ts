@@ -39,7 +39,7 @@ export class WMOModel extends BaseRenderObject {
         // TODO: Cache this?
         this.shaderProgram = this.engine.graphics.createShaderProgram(vertexShaderProgramText, fragmentShaderProgramText);
 
-        this.engine.dataLoader.loadWorldModelFile(this.fileId).then(this.onModelLoaded.bind(this))
+        this.engine.getWMOModelFile(this.fileId).then(this.onModelLoaded.bind(this))
     }
 
     update(deltaTime: number): void {

@@ -2,14 +2,14 @@ import { Float3, Float4, Float44 } from "./math";
 import { Camera } from "./camera";
 import { RenderObject, IDisposable } from "./objects";
 import { IGraphics, ITexture, ITextureOptions } from "./graphics";
-import { IDataLoader } from "@app/iDataLoader";
-
+import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData } from "..";
 
 const UNKNOWN_TEXTURE_ID = -123;
 export class RenderingEngine implements IDisposable {
     containerElement?: HTMLElement;
     graphics: IGraphics;
     dataLoader: IDataLoader;
+    progress?: IProgressReporter;
 
     isDisposing: boolean;
     lastTime: number;
@@ -35,10 +35,12 @@ export class RenderingEngine implements IDisposable {
 
     textureCache: { [key: number]: ITexture }
 
-    constructor(graphics: IGraphics, dataLoader: IDataLoader, container?: HTMLElement) {
+    constructor(graphics: IGraphics, dataLoader: IDataLoader, progress?: IProgressReporter, container?: HTMLElement) {
         this.graphics = graphics;
         this.containerElement = container;
         this.dataLoader = dataLoader;
+        this.dataLoader.useProgressReporter(progress);
+        this.progress = progress;
 
         this.sceneObjects = [];
 
@@ -124,7 +126,10 @@ export class RenderingEngine implements IDisposable {
                 res(this.textureCache[fileId]);
             }
             
+            this.progress.setOperation('Loading textures...');
+            this.progress.addFileIdToOperation(fileId);
             this.dataLoader.loadTexture(fileId).then((imgData) => {
+                this.progress.removeFileIdFromOperation(fileId);
                 const img = new Image();
                 img.onload = () => {
                     res(this.graphics.createTextureFromImg(img, opts));
@@ -144,5 +149,19 @@ export class RenderingEngine implements IDisposable {
 
         this.textureCache[UNKNOWN_TEXTURE_ID] = this.graphics.createSolidColorTexture(Float4.create(0, 1, 0, 1));
         return this.textureCache[UNKNOWN_TEXTURE_ID];
+    }
+
+    async getM2ModelFile(fileId: number): Promise<WoWModelData> {
+        this.progress.setOperation('Loading model data...');
+        const data = await this.dataLoader.loadModelFile(fileId);
+        this.progress.finishOperation();
+        return data;
+    }
+
+    async getWMOModelFile(fileId: number): Promise<WoWWorldModelData> {
+        this.progress.setOperation('Loading model data...');
+        const data = await this.dataLoader.loadWorldModelFile(fileId);
+        this.progress.finishOperation();
+        return data;
     }
 }

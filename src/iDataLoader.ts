@@ -10,8 +10,13 @@ export interface IDataLoader {
     loadCharacterMetadata(modelId: number): Promise<CharacterMetadata>;
     loadItemMetadata(displayId: number): Promise<ItemMetadata>;
     loadWorldModelFile(fileId: number): Promise<WoWWorldModelData>
+    useProgressReporter(progress?: IProgressReporter): void;
 }
 
 export interface IProgressReporter {
     update(fileId: number, progress: number): void;
+    setOperation(name: string): void;
+    addFileIdToOperation(fileId: number): void;
+    removeFileIdFromOperation(fileId: number): void;
+    finishOperation(): void;
 }
