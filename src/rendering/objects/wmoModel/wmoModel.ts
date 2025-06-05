@@ -36,8 +36,7 @@ export class WMOModel extends BaseRenderObject {
 
     override initialize(engine: RenderingEngine): void {
         super.initialize(engine);
-        // TODO: Cache this?
-        this.shaderProgram = this.engine.graphics.createShaderProgram(vertexShaderProgramText, fragmentShaderProgramText);
+        this.shaderProgram = this.engine.getShaderProgram("WMO", vertexShaderProgramText, fragmentShaderProgramText);
 
         this.engine.getWMOModelFile(this.fileId).then(this.onModelLoaded.bind(this))
     }
@@ -78,7 +77,6 @@ export class WMOModel extends BaseRenderObject {
                 batchRequest.useCounterClockWiseFrontFaces(true);
                 batchRequest.useBackFaceCulling(!doubleSided);
                 batchRequest.useBlendMode(blendMode)
-                // TODO: Is this set by material flags?
                 batchRequest.useDepthTest(true);
                 batchRequest.useDepthWrite(true);
 

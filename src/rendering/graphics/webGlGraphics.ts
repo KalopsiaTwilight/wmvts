@@ -139,7 +139,6 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
     }
 
     createTextureFromImg(img: HTMLImageElement, opts: ITextureOptions): ITexture {
-        // TODO: use anisoptropy ext?
         return new WebGLTextureAbstraction(this.gl, createTexture(this.gl, {
             premultiplyAlpha: 0,
             src: img,

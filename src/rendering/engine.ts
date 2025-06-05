@@ -1,7 +1,7 @@
 import { Float3, Float4, Float44 } from "./math";
 import { Camera } from "./camera";
 import { RenderObject, IDisposable } from "./objects";
-import { GxBlend, IGraphics, ITexture, ITextureOptions, RenderingBatchRequest } from "./graphics";
+import { GxBlend, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest } from "./graphics";
 import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData } from "..";
 
 const UNKNOWN_TEXTURE_ID = -123;
@@ -34,6 +34,7 @@ export class RenderingEngine implements IDisposable {
     lightDir3: Float3;
 
     textureCache: { [key: number]: ITexture }
+    shaderCache: { [key: string]: IShaderProgram }
     batchRequests: RenderingBatchRequest[];
 
     constructor(graphics: IGraphics, dataLoader: IDataLoader, progress?: IProgressReporter, container?: HTMLElement) {
@@ -51,6 +52,7 @@ export class RenderingEngine implements IDisposable {
         this.clearColor = Float4.create(0.1, 0.1, 0.1, 1);
 
         this.textureCache = { };
+        this.shaderCache = { };
         this.batchRequests = [];
 
         // TODO: Allow options to set this somewhere
@@ -181,7 +183,7 @@ export class RenderingEngine implements IDisposable {
 
     submitBatchRequest(request: RenderingBatchRequest) {
         request.useUniforms({
-            "u_ambientColor": this.ambientColor, //TODO: SCENEUNIFORMS;
+            "u_ambientColor": this.ambientColor,
             "u_light1Color": this.lightColor1,
             "u_light2Color": this.lightColor2,
             "u_light3Color": this.lightColor3,
@@ -192,6 +194,16 @@ export class RenderingEngine implements IDisposable {
             "u_projectionMatrix": this.projectionMatrix,
         });
         this.batchRequests.push(request);
+    }
+
+    getShaderProgram(key: string, vertexShader: string, fragmentShader: string): IShaderProgram {
+        if (this.shaderCache[key]) {
+            return this.shaderCache[key];
+        }
+
+        const program = this.graphics.createShaderProgram(vertexShader, fragmentShader);
+        this.shaderCache[key] = program;
+        return program;
     }
 
     async getM2ModelFile(fileId: number): Promise<WoWModelData> {

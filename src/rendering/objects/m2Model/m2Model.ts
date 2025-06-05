@@ -72,8 +72,7 @@ export class M2Model extends BaseRenderObject
 
     override initialize(engine: RenderingEngine): void {
         super.initialize(engine);
-        // TODO: Cache this?
-        this.shaderProgram = this.engine.graphics.createShaderProgram(vertexShaderProgramText, fragmentShaderProgramText);
+        this.shaderProgram = this.engine.getShaderProgram("M2", vertexShaderProgramText, fragmentShaderProgramText);
 
         this.vao = this.engine.graphics.createVertexArrayObject();
         this.vertexIndexBuffer = this.engine.graphics.createVertexIndexBuffer(true);
@@ -189,8 +188,6 @@ export class M2Model extends BaseRenderObject
                 if (1 & bone.flags) {
                     translate = Float44.getColumn(this.modelViewMatrix, 3);
                 } else {
-                    // TODO: Is this not just equal to take parent translation?
-                    
                     const pivotVec4 = Float4.create(bone.pivot[0], bone.pivot[1], bone.pivot[2], 1);
                     const pivotVec3 = Float4.create(bone.pivot[0], bone.pivot[1], bone.pivot[2], 0);
 
