@@ -50,19 +50,21 @@ export class WoWModelViewer {
             }
         }
         this.renderEngine.start();
+
+        window.onresize = () => {    
+            this.containerWidth = this.options.container.getBoundingClientRect().width;
+            this.containerHeight = this.options.container.getBoundingClientRect().height;
+            this.resize(this.containerWidth, this.containerHeight);
+        };
     }
 
-    // TODO: Handle window resize events when not using fixed width/height
     resize(width: number, height: number) {
         if (this.renderEngine && this.renderEngine.width === width && this.renderEngine.height === height) {
             return;
         }
 
-        this.renderEngine.width = width;
-        this.renderEngine.height = height;
-        this.canvas.setAttribute('width', width.toString());
-        this.canvas.setAttribute('height', height.toString());
-        this.canvas.style.width = width + "px";
-        this.canvas.style.height = height + "px";
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.renderEngine.resize(width, height);
     }
 }

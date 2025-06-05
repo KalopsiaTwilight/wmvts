@@ -135,6 +135,14 @@ export class RenderingEngine implements IDisposable {
         drawFrame();
     }
 
+    resize(width: number, height: number) {
+        this.height = height;
+        this.width = width;
+
+        var aspect = this.width / this.height;
+        Float44.perspective(Math.PI / 180 * this.fov, aspect, 0.1, 2000, this.projectionMatrix);
+    }
+
     addSceneObject(object: RenderObject, priority: number) {
         object.initialize(this);
         this.sceneObjects.push(object);
