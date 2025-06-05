@@ -12,6 +12,8 @@ export class TestModel extends BaseRenderObject {
     indices: IVertexIndexBuffer;
     vertices: IVertexDataBuffer;
 
+
+    fileId: number;
     vao: IVertexArrayObject;
 
     uniforms: {
@@ -19,6 +21,11 @@ export class TestModel extends BaseRenderObject {
     }
 
     viewProjectionMatrix: Float44;
+
+    constructor() {
+        super();
+        this.fileId = -1;
+    }
 
     initialize(engine: RenderingEngine): void {
         super.initialize(engine);

@@ -4,6 +4,7 @@ import { RenderObject } from "./interfaces";
 
 export abstract class BaseRenderObject implements RenderObject {
     isDisposing: boolean;
+    abstract fileId: number;
 
     parent?: RenderObject;
     children: RenderObject[];

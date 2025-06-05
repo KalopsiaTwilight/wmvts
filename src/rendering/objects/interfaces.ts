@@ -11,6 +11,7 @@ export interface RenderObject extends IDisposable {
     draw(): void;
     setModelMatrix(position: Float3, rotation: Float4, scale: Float3): void;
 
+    fileId: number;
     isLoaded: boolean;
     parent?: RenderObject;
     children: RenderObject[];

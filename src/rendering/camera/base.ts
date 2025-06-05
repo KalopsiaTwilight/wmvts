@@ -6,6 +6,7 @@ export abstract class Camera implements IDisposable {
     viewMatrix: Float44;
     position: Float3;
     engine: RenderingEngine;
+    distance: number;
 
     constructor() {
         this.viewMatrix = Float44.identity();
@@ -32,7 +33,7 @@ export abstract class Camera implements IDisposable {
         return this.position;
     }
 
-    setDistance(distance: number) {
-        
-    }
+    abstract setDistance(distance: number): void;
+
+    abstract getDistance(): number;
 }

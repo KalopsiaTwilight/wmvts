@@ -17,21 +17,30 @@ export class RotatingCamera extends Camera {
         super.initialize(engine);
 
         this.time = 0;
-        this.radius = 250;
-        this.rotateSpeed = 50 * (1/1000);
+        this.radius = 50;
+        this.rotateSpeed = 50 * 1/1000;
     }
 
     override update(deltaTime: number) {
-        this.time = (this.time + deltaTime) % (360 * this.rotateSpeed)
-        let currentAngle = Math.floor(this.time / this.rotateSpeed);
+        this.time = (this.time + deltaTime) % (360 * 1/this.rotateSpeed)
+        let currentAngle = Math.floor(this.time / (1/this.rotateSpeed));
         
         // // Compute a matrix for the camera
         var cameraAngleRadians = currentAngle * Math.PI / 180;
         var cameraMatrix = Float44.identity();
+        Float44.rotateX(cameraMatrix, 90 * Math.PI / 180, cameraMatrix);
         Float44.rotateY(cameraMatrix, cameraAngleRadians, cameraMatrix);
-        Float44.translate(cameraMatrix, Float3.create(0, 0, this.radius * 1.5), cameraMatrix);
+        Float44.translate(cameraMatrix, Float3.create(0, 0, this.radius), cameraMatrix);
 
         // // Make a view matrix from the camera matrix
         Float44.invert(cameraMatrix, this.viewMatrix);
+    }
+
+    setDistance(distance: number): void {
+        this.radius = distance;
+    }
+
+    getDistance(): number {
+        return this.radius;
     }
 }

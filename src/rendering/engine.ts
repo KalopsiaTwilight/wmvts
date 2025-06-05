@@ -142,6 +142,11 @@ export class RenderingEngine implements IDisposable {
         this.sceneObjects.push(object);
     }
 
+    removeSceneObject(object: RenderObject) {
+        this.sceneObjects = this.sceneObjects.filter((x) => x != object);
+        object.dispose();
+    }
+
     getTexture(fileId: number, opts?: ITextureOptions): Promise<ITexture> {
         return new Promise<ITexture>((res, rej) => {
             if(this.textureCache[fileId]) {

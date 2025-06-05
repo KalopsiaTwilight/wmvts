@@ -1,24 +1,18 @@
-import { WoWModelViewer, WoWModelServerDataProvider, M2Model, WMOModel, SimpleProgressReporter } from "../src/index"
-
-// import { TestModel } from "./testModel"
+import { WoWModelViewer, WoWModelServerDataProvider, SimpleProgressReporter } from "../src/index"
 
 const containerElement = document.createElement("div");
-containerElement.style.width = "800px"
-containerElement.style.height = "600px";
+containerElement.style.width = "100%"
+containerElement.style.height = "100vh";
 containerElement.style.background = "red";
 document.body.append(containerElement);
 
 var progress = new SimpleProgressReporter(containerElement);
 
-new WoWModelViewer({
+const viewer = new WoWModelViewer({
     container: containerElement,
     dataLoader: new WoWModelServerDataProvider("https://localhost:7074"),
     progressReporter: progress,
-    scene: {
-        objects: [
-            // new M2Model(2120018),
-            new WMOModel(106698)
-        ]
-    }
-})
+});
 
+// viewer.addM2Model(2120018);
+viewer.addWMOModel(106698); 

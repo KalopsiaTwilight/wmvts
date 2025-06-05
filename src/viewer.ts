@@ -1,5 +1,5 @@
 import { IDataLoader, IProgressReporter } from "./iDataLoader";
-import { RenderingEngine, OrbitalCamera, RenderObject, Camera, WebGlGraphics } from "./rendering";
+import { RenderingEngine, OrbitalCamera, RenderObject, Camera, WebGlGraphics, M2Model, WMOModel } from "./rendering";
 
 export interface WoWModelViewerOptions {
     container: HTMLElement,
@@ -27,6 +27,35 @@ export class WoWModelViewer {
 
         this.options = options;
         this.initialize();
+    }
+
+    addM2Model(fileId: number) {
+        this.addSceneObject(new M2Model(fileId));
+    }
+
+    addWMOModel(fileId: number) {
+        this.addSceneObject(new WMOModel(fileId))
+    }
+
+    addSceneObject(object: RenderObject) {
+        this.renderEngine.addSceneObject(object, 0);
+    }
+
+    removeModelByFileId(fileId: number) {
+        const model = this.renderEngine.sceneObjects.find(x => x.fileId === fileId);
+        if (model) {
+            this.removeSceneObject(model);
+        }
+    }
+
+    removeSceneObject(object: RenderObject) {
+        this.renderEngine.removeSceneObject(object);
+    }
+
+    useCamera(camera: Camera) {
+        camera.initialize(this.renderEngine);
+        camera.setDistance(this.renderEngine.sceneCamera.getDistance());
+        this.renderEngine.sceneCamera = camera;
     }
 
     private initialize() {
@@ -58,7 +87,7 @@ export class WoWModelViewer {
         };
     }
 
-    resize(width: number, height: number) {
+    private resize(width: number, height: number) {
         if (this.renderEngine && this.renderEngine.width === width && this.renderEngine.height === height) {
             return;
         }
