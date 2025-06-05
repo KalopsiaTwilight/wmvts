@@ -1,4 +1,4 @@
-import { BaseRenderObject, BufferDataType, Float44, GxBlend, IShaderProgram, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderingEngine, RenderObject } from "@app/index";
+import { BaseRenderObject, BufferDataType, Float44, GxBlend, IShaderProgram, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderingBatchRequest, RenderingEngine, RenderObject } from "@app/index";
 
 import fs from "./testModel.frag";
 import vs from "./testModel.vert";
@@ -56,21 +56,21 @@ export class TestModel extends BaseRenderObject {
         Float44.multiply(this.engine.projectionMatrix, this.engine.viewMatrix, this.viewProjectionMatrix);
     }
 
-    draw(depthTest: boolean): void {
-        if (depthTest) {
-            return;
-        }
+    draw() {
+        const batchRequest = new RenderingBatchRequest();
 
-        this.engine.graphics.useBlendMode(GxBlend.GxBlend_Opaque);
-        this.engine.graphics.useBackFaceCulling(true);
-        this.engine.graphics.useDepthTest(true);
-        this.engine.graphics.useShaderProgram(this.program);
-        this.engine.graphics.useVertexArrayObject(this.vao);
+        batchRequest.useBlendMode(GxBlend.GxBlend_Opaque);
+        batchRequest.useBackFaceCulling(true);
+        batchRequest.useDepthTest(true);
+        batchRequest.useShaderProgram(this.program);
+        batchRequest.useVertexArrayObject(this.vao);
         
-        this.program.useUniforms(this.uniforms);
+        batchRequest.useUniforms(this.uniforms);
 
-        this.engine.graphics.drawIndexedTriangles(0, 16 * 6);
-        this.engine.graphics.useVertexArrayObject();
+        batchRequest.drawIndexedTriangles(0, 16 * 6);
+        batchRequest.useVertexArrayObject();
+
+        this.engine.submitBatchRequest(batchRequest);
     }
 
     

@@ -32,6 +32,7 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
 
     clearFrame(color: Float4): void {
         this.gl.clearColor(color[0], color[1], color[2], color[3]);
+        this.gl.depthMask(true);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
     }
     

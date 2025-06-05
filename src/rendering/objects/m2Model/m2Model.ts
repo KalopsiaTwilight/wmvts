@@ -1,7 +1,8 @@
 import { WoWBoneData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureUnitData, WoWVertexData } from "@app/wowData";
 import { BinaryWriter } from "@app/utils";
 import { RenderingEngine, BufferDataType, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderObject, ColorMask, 
-    Float4, Float3, ITexture, Float44, IShaderProgram, GxBlend, M2BlendModeToEGxBlend 
+    Float4, Float3, ITexture, Float44, IShaderProgram, GxBlend, M2BlendModeToEGxBlend, 
+    RenderingBatchRequest
 } from "@app/rendering";
 import { AnimationState } from "./animatedValue";
 
@@ -111,7 +112,7 @@ export class M2Model extends BaseRenderObject
         }
     }
 
-    draw(secondPass: boolean): void {
+    draw(): void {
         if (!this.isLoaded || this.isDisposing) {
             return;
         }
@@ -121,27 +122,9 @@ export class M2Model extends BaseRenderObject
             this.bonePositionBuffer.set(this.boneData[i].positionMatrix, 16 * i);
         }
 
-        this.engine.graphics.useVertexArrayObject(this.vao);
-        this.engine.graphics.useShaderProgram(this.shaderProgram);
-        this.shaderProgram.useUniforms({
-            "u_ambientColor": this.engine.ambientColor, //TODO: SCENEUNIFORMS;
-            "u_light1Color": this.engine.lightColor1,
-            "u_light2Color": this.engine.lightColor2,
-            "u_light3Color": this.engine.lightColor3,
-            "u_lightDir1": this.engine.lightDir1,
-            "u_lightDir2": this.engine.lightDir2,
-            "u_lightDir3": this.engine.lightDir3,
-            "u_boneMatrices": this.bonePositionBuffer,
-            "u_modelMatrix": this.modelMatrix,
-            "u_viewMatrix": this.engine.viewMatrix,
-            "u_projMatrix": this.engine.projectionMatrix,
-        })
-
         for(let i = 0; i < this.modelData.textureUnits.length; i++) {
-            this.drawTextureUnit(this.modelData.textureUnits[i], i, secondPass);
+            this.drawTextureUnit(this.modelData.textureUnits[i], i);
         }
-
-        this.engine.graphics.useVertexArrayObject();
     }
 
     // Referenced from https://github.com/Deamon87/WebWowViewerCpp/blob/master/wowViewerLib/src/engine/managers/animationManager.cpp#L398
@@ -450,7 +433,7 @@ export class M2Model extends BaseRenderObject
         }
     }
 
-    private drawTextureUnit(texUnit: WoWTextureUnitData, index: number, secondPass: boolean) {
+    private drawTextureUnit(texUnit: WoWTextureUnitData, index: number) {
         const material = this.modelData.materials[texUnit.materialIndex];
         const data = this.textureUnitData[index];
 
@@ -459,24 +442,20 @@ export class M2Model extends BaseRenderObject
             return;
         }
 
-        if (blendMode <= GxBlend.GxBlend_AlphaKey) {
-            if (secondPass) {
-                return;
-            }
-        } else {
-            if (!secondPass) {
-                return;
-            }
-        }
+        const batchRequest = new RenderingBatchRequest();
+        batchRequest.useVertexArrayObject(this.vao);
+        batchRequest.useShaderProgram(this.shaderProgram);
 
-        this.engine.graphics.useBackFaceCulling((4 & material.flags) == 0);
-        this.engine.graphics.useCounterClockWiseFrontFaces(!this.isMirrored);
-        this.engine.graphics.useBlendMode(blendMode);
-        // TODO: This is set by material flags but can't seem to get it to work right?
-        this.engine.graphics.useDepthTest(true);
-        this.engine.graphics.useDepthWrite(true);
-        this.engine.graphics.useColorMask(ColorMask.Alpha | ColorMask.Blue | ColorMask.Green | ColorMask.Red);
-        this.shaderProgram.useUniforms({
+        batchRequest.useBackFaceCulling((4 & material.flags) == 0);
+        batchRequest.useCounterClockWiseFrontFaces(!this.isMirrored);
+        batchRequest.useBlendMode(blendMode);
+        batchRequest.useDepthTest((WoWMaterialFlags.DepthTest & material.flags) == 0);
+        batchRequest.useDepthWrite((WoWMaterialFlags.DepthWrite & material.flags) == 0);
+
+        batchRequest.useColorMask(ColorMask.Alpha | ColorMask.Blue | ColorMask.Green | ColorMask.Red);
+        batchRequest.useUniforms({
+            "u_boneMatrices": this.bonePositionBuffer,
+            "u_modelMatrix": this.modelMatrix,
             "u_textureTransformMatrix1": data.textureMatrices[0],
             "u_textureTransformMatrix2": data.textureMatrices[1],
             "u_color": data.color,
@@ -492,7 +471,8 @@ export class M2Model extends BaseRenderObject
         })
 
         const subMesh = this.modelData.submeshes[texUnit.skinSectionIndex];
-        this.engine.graphics.drawIndexedTriangles(2 * (subMesh.triangleStart + 65536 * subMesh.level), subMesh.triangleCount)
+        batchRequest.drawIndexedTriangles(2 * (subMesh.triangleStart + 65536 * subMesh.level), subMesh.triangleCount);
+        this.engine.submitBatchRequest(batchRequest);
     }
 
     private calculateBounds() {

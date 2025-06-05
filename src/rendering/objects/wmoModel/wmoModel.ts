@@ -1,4 +1,4 @@
-import { BufferDataType, Float3, Float4, Float44, GxBlend, IShaderProgram, ITexture, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, M2BlendModeToEGxBlend, M2Model, RenderingEngine, RenderObject } from "@app/rendering";
+import { BufferDataType, Float3, Float4, Float44, GxBlend, IShaderProgram, ITexture, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, M2BlendModeToEGxBlend, M2Model, RenderingBatchRequest, RenderingEngine, RenderObject } from "@app/rendering";
 import { BinaryWriter } from "@app/utils";
 import { WoWWorldModelData, WowWorldModelGroupFlags, WoWWorldModelMaterialMaterialFlags } from "@app/wowData";
 
@@ -29,7 +29,7 @@ export class WMOModel extends BaseRenderObject {
         this.fileId = fileId;
 
         this.doodadSetId = 0; //TODO: Investigate what this means.
-        
+
         this.loadedTextures = {};
         this.groupDoodads = {};
     }
@@ -54,80 +54,52 @@ export class WMOModel extends BaseRenderObject {
         }
     }
 
-    draw(secondPass: boolean): void {
+    draw(): void {
         if (!this.isLoaded || this.isDisposing) {
             return;
         }
-        this.engine.graphics.useShaderProgram(this.shaderProgram);
+
         const cameraPos = this.engine.sceneCamera.getPosition();
-        this.shaderProgram.useUniforms({
-            "u_light1Color": this.engine.lightColor1,
-            "u_light2Color": this.engine.lightColor2,
-            "u_light3Color": this.engine.lightColor3,
-            "u_lightDir1": this.engine.lightDir1,
-            "u_lightDir2": this.engine.lightDir2,
-            "u_lightDir3": this.engine.lightDir3,
-            "u_modelMatrix": this.modelMatrix,
-            "u_ambientColor": this.engine.ambientColor,
-            "u_viewMatrix": this.engine.viewMatrix,
-            "u_projectionMatrix": this.engine.projectionMatrix,
-            "u_cameraPos": cameraPos,
-        })
 
         for (let i = 0; i < this.modelData.groups.length; i++) {
-            this.drawGroup(i, secondPass);
-        }
-    }
+            const groupData = this.modelData.groups[i];
 
-    private drawGroup(groupIndex: number, secondPass: boolean): void {
-        const groupData = this.modelData.groups[groupIndex];
+            for (let j = 0; j < groupData.batches.length; j++) {
+                const batchData = groupData.batches[j];
+                const material = this.modelData.materials[batchData.materialId];
 
-        for (let i = 0; i < groupData.batches.length; i++) {
-            this.drawBatch(groupIndex, i, secondPass);
-        }
-    }
+                const blendMode = M2BlendModeToEGxBlend(material.blendMode);
+                const vs = getWMOVertexShader(material.shader);
+                const ps = getWMOPixelShader(material.shader);
+                const unlit = (material.flags & WoWWorldModelMaterialMaterialFlags.Unlit) ? true : false
+                const doubleSided = (material.flags & WoWWorldModelMaterialMaterialFlags.Unculled) != 0;
 
-    private drawBatch(groupIndex: number, batchIndex: number, secondPass: boolean) {
-        const groupData = this.modelData.groups[groupIndex];
-        const batchData = groupData.batches[batchIndex];
-        const material = this.modelData.materials[batchData.materialId];
+                const batchRequest = new RenderingBatchRequest();
+                batchRequest.useCounterClockWiseFrontFaces(true);
+                batchRequest.useBackFaceCulling(!doubleSided);
+                batchRequest.useBlendMode(blendMode)
+                // TODO: Is this set by material flags?
+                batchRequest.useDepthTest(true);
+                batchRequest.useDepthWrite(true);
 
-        const blendMode = M2BlendModeToEGxBlend(material.blendMode);
-        if (blendMode <= GxBlend.GxBlend_AlphaKey) {
-            if (secondPass) {
-                return;
+                batchRequest.useShaderProgram(this.shaderProgram);
+                batchRequest.useUniforms({
+                    "u_modelMatrix": this.modelMatrix,
+                    "u_cameraPos": cameraPos,
+                    "u_pixelShader": ps,
+                    "u_vertexShader": vs,
+                    "u_blendMode": material.blendMode,
+                    "u_unlit": unlit,
+                    "u_texture1": this.loadedTextures[material.texture1],
+                    "u_texture2": this.loadedTextures[material.texture2],
+                    "u_texture3": this.loadedTextures[material.texture3]
+                });
+
+                batchRequest.useVertexArrayObject(this.groupVaos[i]);
+                batchRequest.drawIndexedTriangles(batchData.startIndex * 2, batchData.indexCount);
+                this.engine.submitBatchRequest(batchRequest);
             }
-        } else {
-            if (!secondPass) {
-                return;
-            }
         }
-
-        const vs = getWMOVertexShader(material.shader);
-        const ps = getWMOPixelShader(material.shader);
-        const unlit = (material.flags & WoWWorldModelMaterialMaterialFlags.Unlit) ? true : false
-        this.shaderProgram.useUniforms({
-            "u_pixelShader": ps,
-            "u_vertexShader": vs,
-            "u_blendMode": material.blendMode,
-            "u_unlit": unlit
-        });
-
-        const doubleSided = (material.flags & WoWWorldModelMaterialMaterialFlags.Unculled) != 0;
-        this.engine.graphics.useBackFaceCulling(!doubleSided);
-        this.engine.graphics.useBlendMode(blendMode)
-
-        // TODO: Is this set by material flags?
-        this.engine.graphics.useDepthTest(true);
-        this.engine.graphics.useDepthWrite(true);
-        this.shaderProgram.useUniforms({
-            "u_texture1": this.loadedTextures[material.texture1],
-            "u_texture2": this.loadedTextures[material.texture2],
-            "u_texture3": this.loadedTextures[material.texture3]
-        });
-
-        this.engine.graphics.useVertexArrayObject(this.groupVaos[groupIndex]);
-        this.engine.graphics.drawIndexedTriangles(batchData.startIndex * 2, batchData.indexCount);
     }
 
     override dispose(): void {

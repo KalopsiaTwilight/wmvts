@@ -8,7 +8,7 @@ export interface IDisposable {
 export interface RenderObject extends IDisposable {
     initialize(engine: RenderingEngine): void;
     update(deltaTime: number): void;
-    draw(secondPass: boolean): void;
+    draw(): void;
     setModelMatrix(position: Float3, rotation: Float4, scale: Float3): void;
 
     isLoaded: boolean;

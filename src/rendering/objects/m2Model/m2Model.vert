@@ -13,7 +13,7 @@ uniform mat4 u_textureTransformMatrix1;
 uniform mat4 u_textureTransformMatrix2;
 uniform mat4 u_modelMatrix;
 uniform mat4 u_viewMatrix;
-uniform mat4 u_projMatrix;
+uniform mat4 u_projectionMatrix;
 uniform vec4 u_color;
 uniform int u_vertexShader;
 
@@ -97,7 +97,7 @@ void main(void) {
 
     mat4 posMatrix = u_viewMatrix * u_modelMatrix * boneTransformMatrix;
     vec4 pos = posMatrix * vec4(a_position, 1);
-    gl_Position = u_projMatrix * pos;
+    gl_Position = u_projectionMatrix * pos;
 
     mat4 normalMatrix = transpose(invert(posMatrix));
     v_normal = normalize((normalMatrix * vec4(a_normal, 0.0)).xyz);

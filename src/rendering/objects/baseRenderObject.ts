@@ -22,7 +22,7 @@ export abstract class BaseRenderObject implements RenderObject {
         this.engine = engine;
     }
     abstract update(deltaTime: number): void;
-    abstract draw(secondPass: boolean): void;
+    abstract draw(): void;
     abstract get isLoaded(): boolean;
     
     dispose(): void {
