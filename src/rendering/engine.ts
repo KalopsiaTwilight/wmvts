@@ -146,10 +146,10 @@ export class RenderingEngine implements IDisposable {
                 res(this.textureCache[fileId]);
             }
             
-            this.progress.setOperation('Loading textures...');
-            this.progress.addFileIdToOperation(fileId);
+            this.progress?.setOperation('Loading textures...');
+            this.progress?.addFileIdToOperation(fileId);
             this.dataLoader.loadTexture(fileId).then((imgData) => {
-                this.progress.removeFileIdFromOperation(fileId);
+                this.progress?.removeFileIdFromOperation(fileId);
                 const img = new Image();
                 img.onload = () => {
                     res(this.graphics.createTextureFromImg(img, opts));
@@ -187,16 +187,16 @@ export class RenderingEngine implements IDisposable {
     }
 
     async getM2ModelFile(fileId: number): Promise<WoWModelData> {
-        this.progress.setOperation('Loading model data...');
+        this.progress?.setOperation('Loading model data...');
         const data = await this.dataLoader.loadModelFile(fileId);
-        this.progress.finishOperation();
+        this.progress?.finishOperation();
         return data;
     }
 
     async getWMOModelFile(fileId: number): Promise<WoWWorldModelData> {
-        this.progress.setOperation('Loading model data...');
+        this.progress?.setOperation('Loading model data...');
         const data = await this.dataLoader.loadWorldModelFile(fileId);
-        this.progress.finishOperation();
+        this.progress?.finishOperation();
         return data;
     }
 }
