@@ -10,12 +10,8 @@ uniform int u_blendMode;
 uniform int u_pixelShader;
 uniform bool u_unlit;
 uniform vec4 u_ambientColor;
-uniform vec4 u_light1Color;
-uniform vec4 u_light2Color;
-uniform vec4 u_light3Color;
-uniform vec3 u_lightDir1;
-uniform vec3 u_lightDir2;
-uniform vec3 u_lightDir3;
+uniform vec4 u_lightColor;
+uniform vec3 u_lightDir;
 uniform sampler2D u_texture1;
 uniform sampler2D u_texture2;
 uniform sampler2D u_texture3;
@@ -191,18 +187,12 @@ void main(void) {
         // Simple ambient + diffuse lighting
         // color = (ambient + diffuse) * objectColor 
         vec4 lightColor = u_ambientColor;
-        float diffStrength1 = max(0.0, dot(v_normal, u_lightDir1));
-        lightColor += u_light1Color * diffStrength1;
-        float diffStrength2 = max(0.0, dot(v_normal, u_lightDir2));
-        lightColor += u_light2Color * diffStrength2;
-        float diffStrength3 = max(0.0, dot(v_normal, u_lightDir3));
-        lightColor += u_light3Color * diffStrength3;
+        float diffStrength = max(0.0, dot(v_normal, u_lightDir));
+        lightColor += u_lightColor * diffStrength;
         lightColor = clamp(lightColor, vec4(0,0,0,0), vec4(1,1,1,1));
         outputColor.rgb *= lightColor.rgb;
     }
-    // outputColor.rgb = v_color.rgb;
     outputColor += vec4(specular, 0.0);
     
     gl_FragColor = outputColor;
-    // gl_FragColor = vec4(0, 0, 0, 1);
 }

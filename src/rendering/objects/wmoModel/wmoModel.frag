@@ -4,12 +4,8 @@ uniform vec3 u_cameraPos;
 
 // Simple lighting params
 uniform vec4 u_ambientColor;
-uniform vec4 u_light1Color;
-uniform vec4 u_light2Color;
-uniform vec4 u_light3Color;
-uniform vec3 u_lightDir1;
-uniform vec3 u_lightDir2;
-uniform vec3 u_lightDir3;
+uniform vec4 u_lightColor;
+uniform vec3 u_lightDir;
 
 uniform int u_pixelShader;
 uniform int u_blendMode;
@@ -32,10 +28,10 @@ float saturate(float v) { return clamp(v, 0.0, 1.0); }
 vec3 calculateSpecular(float texAlpha) {
     vec3 normal = normalize(v_normal);
     vec3 eyeDir = normalize(u_cameraPos - v_position.xyz);
-    vec3 halfDir = normalize(u_lightDir1 + eyeDir);
-    float attenuationDir = saturate(dot(normal, u_lightDir1));
+    vec3 halfDir = normalize(u_lightDir + eyeDir);
+    float attenuationDir = saturate(dot(normal, u_lightDir));
     float spec = (1.25 * pow(saturate(dot(normal, halfDir)), 8.0));
-    vec3 specTerm = ((((vec3(mix(pow((1.0 - saturate(dot(u_lightDir1, halfDir))), 5.0), 1.0, texAlpha)) * spec) * u_light1Color.rgb) * attenuationDir));
+    vec3 specTerm = ((((vec3(mix(pow((1.0 - saturate(dot(u_lightDir, halfDir))), 5.0), 1.0, texAlpha)) * spec) * u_lightColor.rgb) * attenuationDir));
     return specTerm;
 }
 
@@ -178,12 +174,8 @@ void main() {
 ;
     if (!u_unlit) {
         vec4 lightColor = u_ambientColor;
-        float diffStrength1 = max(0.0, dot(v_normal, u_lightDir1));
-        lightColor += u_light1Color * diffStrength1;
-        float diffStrength2 = max(0.0, dot(v_normal, u_lightDir2));
-        lightColor += u_light2Color * diffStrength2;
-        float diffStrength3 = max(0.0, dot(v_normal, u_lightDir3));
-        lightColor += u_light3Color * diffStrength3;
+        float diffStrength = max(0.0, dot(v_normal, u_lightDir));
+        lightColor += u_lightColor * diffStrength;
         lightColor = clamp(lightColor, vec4(0,0,0,0), vec4(1,1,1,1));
         outputColor.rgb = materialColor * lightColor.rgb;
         outputColor.a = 1.0;

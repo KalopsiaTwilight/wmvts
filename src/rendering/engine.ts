@@ -26,12 +26,8 @@ export class RenderingEngine implements IDisposable {
     height: number;
     clearColor: Float4;
     ambientColor: Float4;
-    lightColor1: Float4;
-    lightColor2: Float4;
-    lightColor3: Float4;
-    lightDir1: Float3;
-    lightDir2: Float3;
-    lightDir3: Float3;
+    lightColor: Float4;
+    lightDir: Float3;
 
     textureCache: { [key: number]: ITexture }
     shaderCache: { [key: string]: IShaderProgram }
@@ -58,12 +54,8 @@ export class RenderingEngine implements IDisposable {
         // TODO: Allow options to set this somewhere
         this.fov = 60;
         this.ambientColor = Float4.create(1/3, 1/3, 1/3, 1);
-        this.lightColor1 = Float4.one()
-        this.lightColor2 = Float4.create(1/3, 1/3 , 1/3, 1);
-        this.lightColor3 = Float4.create(1/4, 1/4, 1/4, 1);
-        this.lightDir1 = Float3.normalize([0, 1, 0]);
-        this.lightDir2 = Float3.normalize([0, -1, 0]);
-        this.lightDir3 = Float3.normalize([1, 1, 1]);
+        this.lightColor = Float4.one()
+        this.lightDir = Float3.normalize([0, 0, 1]);
     }
 
     dispose(): void {
@@ -184,12 +176,8 @@ export class RenderingEngine implements IDisposable {
     submitBatchRequest(request: RenderingBatchRequest) {
         request.useUniforms({
             "u_ambientColor": this.ambientColor,
-            "u_light1Color": this.lightColor1,
-            "u_light2Color": this.lightColor2,
-            "u_light3Color": this.lightColor3,
-            "u_lightDir1": this.lightDir1,
-            "u_lightDir2": this.lightDir2,
-            "u_lightDir3": this.lightDir3,
+            "u_lightColor": this.lightColor,
+            "u_lightDir": this.lightDir,
             "u_viewMatrix": this.viewMatrix,
             "u_projectionMatrix": this.projectionMatrix,
         });
