@@ -80,11 +80,14 @@ export class WoWModelViewer {
         }
         this.renderEngine.start();
 
-        window.onresize = () => {    
+        const resizeObserver = new ResizeObserver((entries) => {
+
             this.containerWidth = this.options.container.getBoundingClientRect().width;
             this.containerHeight = this.options.container.getBoundingClientRect().height;
             this.resize(this.containerWidth, this.containerHeight);
-        };
+        })
+
+        resizeObserver.observe(this.options.container);
     }
 
     private resize(width: number, height: number) {
