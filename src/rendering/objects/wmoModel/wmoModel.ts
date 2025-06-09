@@ -99,6 +99,11 @@ export class WMOModel extends BaseRenderObject {
                 this.engine.submitBatchRequest(batchRequest);
             }
         }
+
+        
+        for (const child of this.children) {
+            child.draw();
+        }
     }
 
     override dispose(): void {
