@@ -24,6 +24,10 @@ export abstract class BaseRenderObject implements RenderObject {
     }
 
     update(deltaTime: number): void {
+        if (this.isDisposing) {
+            return;
+        }
+        
         const toRemove: RenderObject[] = [];
         for (const child of this.children) {
             if (child.isDisposing) {
@@ -32,7 +36,7 @@ export abstract class BaseRenderObject implements RenderObject {
         }
         this.children = this.children.filter(x => toRemove.indexOf(x) === -1)
     }
-    
+
     abstract draw(): void;
     abstract get isLoaded(): boolean;
     

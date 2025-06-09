@@ -502,6 +502,7 @@ export class M2Model extends BaseRenderObject
 
     onModelLoaded(data: WoWModelData|null) {
         if (data === null) {
+            // TODO: Raise model loading error evt?
             this.dispose();
             return;
         }

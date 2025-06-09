@@ -104,8 +104,11 @@ export class WMOModel extends BaseRenderObject {
     override dispose(): void {
         super.dispose();
         this.modelData = null;
+        if (this.groupVaos) {
         for (let i = 0; i < this.groupVaos.length; i++) {
+                // TODO: Implement dispose
             this.groupVaos[i] = null;
+            }
         }
         this.groupVaos = null;
         this.shaderProgram = null;
@@ -117,6 +120,12 @@ export class WMOModel extends BaseRenderObject {
 
     onModelLoaded(data: WoWWorldModelData) {
         this.modelData = data;
+
+        if (this.modelData == null) {
+            // TODO: Raise model loading error evt?
+            this.dispose();
+            return;
+        }
 
         if (!this.parent) {
             this.calculateBounds();
