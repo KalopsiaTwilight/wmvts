@@ -19,8 +19,9 @@ export class WMOModel extends BaseRenderObject {
     loadedTextures: { [key: number]: ITexture }
 
     shaderProgram: IShaderProgram;
-
     groupVaos: IVertexArrayObject[]
+
+    currentLod: number;
 
     constructor(fileId: number) {
         super();
@@ -29,6 +30,7 @@ export class WMOModel extends BaseRenderObject {
         this.fileId = fileId;
 
         this.doodadSetId = 0; //TODO: Investigate what this means.
+        this.currentLod = 0;
 
         this.loadedTextures = {};
         this.groupDoodads = {};
@@ -63,7 +65,9 @@ export class WMOModel extends BaseRenderObject {
 
         for (let i = 0; i < this.modelData.groups.length; i++) {
             const groupData = this.modelData.groups[i];
-
+            if (groupData.lod !== this.currentLod) {
+                continue;
+            } 
             for (let j = 0; j < groupData.batches.length; j++) {
                 const batchData = groupData.batches[j];
                 const material = this.modelData.materials[batchData.materialId];
@@ -110,9 +114,9 @@ export class WMOModel extends BaseRenderObject {
         super.dispose();
         this.modelData = null;
         if (this.groupVaos) {
-        for (let i = 0; i < this.groupVaos.length; i++) {
+            for (let i = 0; i < this.groupVaos.length; i++) {
                 // TODO: Implement dispose
-            this.groupVaos[i] = null;
+                this.groupVaos[i] = null;
             }
         }
         this.groupVaos = null;
@@ -213,17 +217,24 @@ export class WMOModel extends BaseRenderObject {
 
     private loadDoodads() {
         const refs = this.getDoodadSetRefs();
+        const refsToLoad = []
+
+        // Calculate doodads per group and load active LOD group
         for (let i = 0; i < this.modelData.groups.length; i++) {
+            const group = this.modelData.groups[i];
             this.groupDoodads[i] = [];
-            const groupRefs = this.modelData.groups[i].doodadReferences;
+            const groupRefs = group.doodadReferences;
             for (let ref of groupRefs) {
                 if (refs.indexOf(ref) !== -1) {
                     this.groupDoodads[i].push(ref);
+                    if (group.lod === this.currentLod) {
+                        refsToLoad.push(ref);
+                    }
                 }
             }
         }
 
-        for (const ref of refs) {
+        for (const ref of refsToLoad) {
             const doodadDef = this.modelData.doodadDefs[ref];
             const modelId = this.modelData.doodadIds[doodadDef.nameOffset];
             if (modelId === 0) {
@@ -236,8 +247,6 @@ export class WMOModel extends BaseRenderObject {
             doodadModel.initialize(this.engine);
             this.children.push(doodadModel);
         }
-
-        // Some stuff in rust about tying a model to group based on closest group, only used for determining interior light?
     }
 
     private calculateBounds() {

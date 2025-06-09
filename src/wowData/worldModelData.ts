@@ -90,6 +90,7 @@ export enum WowWorldModelGroupFlags2 {
 
 export interface WoWWorldModelGroup {
     fileDataID: number;
+    lod: number;
     flags: WowWorldModelGroupFlags;
     boundingBoxMin: Float3;
     boundingBoxMax: Float3;

@@ -200,6 +200,7 @@ function readAmbientVolume(reader: BinaryReader) {
 function readGroup(reader: BinaryReader) {
     const data: WoWWorldModelGroup = {
         fileDataID: reader.readUInt32LE(),
+        lod: reader.readInt32LE(),
         flags: reader.readUInt32LE(),
         boundingBoxMin: readFloat3(reader),
         boundingBoxMax: readFloat3(reader),
