@@ -15,7 +15,7 @@ export abstract class BaseRenderObject implements RenderObject {
     constructor() {
         this.children = [];
         this.modelMatrix = Float44.identity();
-        this.invModelMatrix = Float44.tranpose(this.modelMatrix);
+        this.invModelMatrix = Float44.invert(this.modelMatrix);
         this.isDisposing = false;
     }
 
@@ -27,7 +27,7 @@ export abstract class BaseRenderObject implements RenderObject {
         if (this.isDisposing) {
             return;
         }
-        
+
         const toRemove: RenderObject[] = [];
         for (const child of this.children) {
             if (child.isDisposing) {
@@ -48,13 +48,20 @@ export abstract class BaseRenderObject implements RenderObject {
         this.children = null;
         this.engine = null;
         this.modelMatrix = null;
+        this.invModelMatrix = null;
     }
     
-    setModelMatrix(position: Float3, rotation: Float4, scale: Float3) {
+    setModelMatrix(position: Float3|null, rotation: Float4|null, scale: Float3|null) {
         Float44.identity(this.modelMatrix);
-        Float44.translate(this.modelMatrix, position, this.modelMatrix);
-        Float44.multiply(this.modelMatrix, Float44.fromQuat(rotation), this.modelMatrix);
-        Float44.scale(this.modelMatrix, scale, this.modelMatrix);
+        if (position !== null) {
+            Float44.translate(this.modelMatrix, position, this.modelMatrix);
+        }
+        if (rotation != null) {
+            Float44.multiply(this.modelMatrix, Float44.fromQuat(rotation), this.modelMatrix);
+        }
+        if (scale != null) {
+            Float44.scale(this.modelMatrix, scale, this.modelMatrix);
+        }
 
         let parent = this.parent;
         while (parent) {
@@ -62,6 +69,6 @@ export abstract class BaseRenderObject implements RenderObject {
             parent = parent.parent;
         }
 
-        Float44.tranpose(this.modelMatrix, this.invModelMatrix);
+        Float44.invert(this.modelMatrix, this.invModelMatrix);
     }
 }
