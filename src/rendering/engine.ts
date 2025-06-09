@@ -186,7 +186,7 @@ export class RenderingEngine implements IDisposable {
                 return;
             }
             
-            this.progress?.setOperation('Loading textures...');
+            this.progress?.setOperation('Loading model data...');
             this.progress?.addFileIdToOperation(fileId);
             const req = this.dataLoader.loadTexture(fileId);
             this.runningRequests[fileId] = req;

@@ -71,10 +71,17 @@ export abstract class BaseProgressReporter implements IProgressReporter {
     update(fileId: number, progress: number): void {
         this.isIndeterminate = false;
         this.progressPerFile[fileId] = progress;
+        for(const key in this.progressPerFile) {
+            if (this.progressPerFile[key] === 0) {
+                this.isIndeterminate = true;
+                break;
+            }
+        }
     }
 
     addFileIdToOperation(fileId: number): void {
         this.progressPerFile[fileId] = 0;
+        this.startDrawing();
     }
 
     removeFileIdFromOperation(fileId: number): void {
@@ -85,10 +92,8 @@ export abstract class BaseProgressReporter implements IProgressReporter {
     }
 
     setOperation(name: string): void {
-        if (this.currentOperation != name) {
-            this.resetState();
+        if (this.currentOperation === '') {
             this.currentOperation = name;
-            this.startDrawing();
         }
     }
 
@@ -98,6 +103,9 @@ export abstract class BaseProgressReporter implements IProgressReporter {
     }
 
     private startDrawing(): void {
+        if (this.show) {
+            return;
+        }
         this.show = true;
         this.lastTime = this.now();
 
