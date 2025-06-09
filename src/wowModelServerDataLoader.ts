@@ -14,51 +14,79 @@ export class WoWModelServerDataProvider implements IDataLoader {
         this.progress = progress;
     }
 
-    async loadBoneFile(fileId: number): Promise<WoWBoneFileData> {
+    async loadBoneFile(fileId: number): Promise<WoWBoneFileData|null> {
         const url = `${this.rootPath}/modelviewer/bone/${fileId}.cbone`;
+
         const resp = await fetch(url);
+        if (!resp.ok) {
+            return null;
+        }
+
         const data = await resp.arrayBuffer();
         return parseCM2BoneFile(data);
     }
 
-    async loadModelFile(fileId: number): Promise<WoWModelData> {
+    async loadModelFile(fileId: number): Promise<WoWModelData|null> {
         const url = `${this.rootPath}/modelviewer/models/${fileId}.cm2`;
         const resp = await fetch(url);
-        const data = await resp.arrayBuffer();
+        
+        if (!resp.ok) {
+            return null;
+        }
 
+        const data = await resp.arrayBuffer();
         return parseCM2File(data);
     }
 
-    async loadWorldModelFile(fileId: number): Promise<WoWWorldModelData> {
+    async loadWorldModelFile(fileId: number): Promise<WoWWorldModelData|null> {
         const url = `${this.rootPath}/modelviewer/models/${fileId}.cwmo`;
         const resp = await fetch(url);
-        const data = await resp.arrayBuffer();
 
+        if (!resp.ok) {
+            return null;
+        }
+
+        const data = await resp.arrayBuffer();
         return parseCWMOFile(data);
     }
 
-    async loadCharacterCustomizationMetadata(modelId: number): Promise<CharacterCustomizationMetadata> {
+    async loadCharacterCustomizationMetadata(modelId: number): Promise<CharacterCustomizationMetadata|null> {
         const url = `${this.rootPath}/modelviewer/meta/charactercustomization/${modelId}.json`;
         const resp = await fetch(url);
+
+        if (!resp.ok) {
+            return null;
+        }
+
         const data = await resp.json() as CharacterCustomizationMetadata;
         return data;
     }
 
-    async loadCharacterMetadata(modelId: number): Promise<CharacterMetadata> {
+    async loadCharacterMetadata(modelId: number): Promise<CharacterMetadata|null> {
         const url = `${this.rootPath}/modelviewer/meta/character/${modelId}.json`;
         const resp = await fetch(url);
+
+        if (!resp.ok) {
+            return null;
+        }
+
         const data = await resp.json() as CharacterMetadata;
         return data;
     }
 
-    async loadItemMetadata(displayId: number): Promise<ItemMetadata> {
+    async loadItemMetadata(displayId: number): Promise<ItemMetadata|null> {
         const url = `${this.rootPath}/modelviewer/meta/item/${displayId}.json`;
         const resp = await fetch(url);
+
+        if (!resp.ok) {
+            return null;
+        }
+
         const data = await resp.json() as ItemMetadata;
         return data;
     }
 
-    loadTexture(fileId: number): Promise<string> {
+    loadTexture(fileId: number): Promise<string|null> {
         return new Promise<string>((res, rej) => {
             const url = `${this.rootPath}/modelviewer/textures/${fileId}.webp`;
             const request = new XMLHttpRequest();
@@ -79,14 +107,20 @@ export class WoWModelServerDataProvider implements IDataLoader {
                 }
             }
             request.onerror = (evt) => {
+                res(null);
             }
             request.send();
         });
     }
 
-    async loadItemvisualMetadata(visualId: number): Promise<ItemVisualMetadata> {
+    async loadItemvisualMetadata(visualId: number): Promise<ItemVisualMetadata|null> {
         const url = `${this.rootPath}/modelviewer/meta/itemvisual/${visualId}.json`;
         const resp = await fetch(url);
+
+        if (!resp.ok) {
+            return null;
+        }
+
         const data = await resp.json() as ItemVisualMetadata;
         return data;
     }

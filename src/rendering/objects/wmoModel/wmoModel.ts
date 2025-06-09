@@ -42,6 +42,7 @@ export class WMOModel extends BaseRenderObject {
     }
 
     update(deltaTime: number): void {
+        super.update(deltaTime);
         if (!this.isLoaded || this.isDisposing) {
             return;
         }
@@ -211,6 +212,9 @@ export class WMOModel extends BaseRenderObject {
         for (const ref of refs) {
             const doodadDef = this.modelData.doodadDefs[ref];
             const modelId = this.modelData.doodadIds[doodadDef.nameOffset];
+            if (modelId === 0) {
+                continue;
+            }
             const doodadModel = new M2Model(modelId);
             doodadModel.parent = this;
             const scale = Float3.create(doodadDef.scale, doodadDef.scale, doodadDef.scale);

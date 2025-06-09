@@ -2,14 +2,14 @@ import { CharacterCustomizationMetadata, CharacterMetadata, ItemMetadata, ItemVi
 import { WoWBoneFileData, WoWModelData, WoWWorldModelData } from "./wowData";
 
 export interface IDataLoader {
-    loadModelFile(fileId: number): Promise<WoWModelData>
-    loadBoneFile(fileId: number): Promise<WoWBoneFileData>
-    loadTexture(fileId: number): Promise<string> 
-    loadItemvisualMetadata(visualId: number): Promise<ItemVisualMetadata>
-    loadCharacterCustomizationMetadata(modelId: number): Promise<CharacterCustomizationMetadata>;
-    loadCharacterMetadata(modelId: number): Promise<CharacterMetadata>;
-    loadItemMetadata(displayId: number): Promise<ItemMetadata>;
-    loadWorldModelFile(fileId: number): Promise<WoWWorldModelData>
+    loadModelFile(fileId: number): Promise<WoWModelData|null>
+    loadBoneFile(fileId: number): Promise<WoWBoneFileData|null>
+    loadTexture(fileId: number): Promise<string|null> 
+    loadItemvisualMetadata(visualId: number): Promise<ItemVisualMetadata|null>
+    loadCharacterCustomizationMetadata(modelId: number): Promise<CharacterCustomizationMetadata|null>;
+    loadCharacterMetadata(modelId: number): Promise<CharacterMetadata|null>;
+    loadItemMetadata(displayId: number): Promise<ItemMetadata|null>;
+    loadWorldModelFile(fileId: number): Promise<WoWWorldModelData|null>
     useProgressReporter(progress?: IProgressReporter): void;
 }
 

@@ -2,6 +2,7 @@ import { RenderingEngine } from "../engine";
 import { Float3, Float4, Float44 } from "../math";
 
 export interface IDisposable {
+    isDisposing: boolean;
     dispose(): void;
 }
 

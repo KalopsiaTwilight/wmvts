@@ -22,7 +22,17 @@ export abstract class BaseRenderObject implements RenderObject {
     initialize(engine: RenderingEngine): void {
         this.engine = engine;
     }
-    abstract update(deltaTime: number): void;
+
+    update(deltaTime: number): void {
+        const toRemove: RenderObject[] = [];
+        for (const child of this.children) {
+            if (child.isDisposing) {
+                toRemove.push(child);
+            }
+        }
+        this.children = this.children.filter(x => toRemove.indexOf(x) === -1)
+    }
+    
     abstract draw(): void;
     abstract get isLoaded(): boolean;
     

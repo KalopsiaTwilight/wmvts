@@ -90,6 +90,7 @@ export class M2Model extends BaseRenderObject
     }
 
     update(deltaTime: number): void {
+        super.update(deltaTime);
         if (!this.isLoaded || this.isDisposing) {
             return;
         }
@@ -499,7 +500,11 @@ export class M2Model extends BaseRenderObject
         this.drawOrderTexUnits = null;
     }
 
-    onModelLoaded(data: WoWModelData) {
+    onModelLoaded(data: WoWModelData|null) {
+        if (data === null) {
+            this.dispose();
+            return;
+        }
         this.modelData = data;
 
         this.animationState = new AnimationState(this);

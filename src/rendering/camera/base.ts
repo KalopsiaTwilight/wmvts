@@ -3,6 +3,7 @@ import { Float3, Float44 } from "../math";
 import { IDisposable } from "../objects";
 
 export abstract class Camera implements IDisposable {
+    isDisposing: boolean;
     viewMatrix: Float44;
     position: Float3;
     engine: RenderingEngine;
@@ -22,6 +23,7 @@ export abstract class Camera implements IDisposable {
     }
 
     dispose() {
+        this.isDisposing = true;
         this.viewMatrix = null;
     }
 
