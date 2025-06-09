@@ -31,6 +31,11 @@ export class RenderingEngine implements IDisposable {
 
     textureCache: { [key: number]: ITexture }
     shaderCache: { [key: string]: IShaderProgram }
+    wmoCache: { [key: string]: WoWWorldModelData|null }
+    m2Cache: { [key: string]: WoWModelData|null }
+    runningRequests: { [key:string]: Promise<unknown> }
+
+
     batchRequests: RenderingBatchRequest[];
 
     constructor(graphics: IGraphics, dataLoader: IDataLoader, progress?: IProgressReporter, container?: HTMLElement) {
@@ -49,6 +54,9 @@ export class RenderingEngine implements IDisposable {
 
         this.textureCache = { };
         this.shaderCache = { };
+        this.wmoCache = { };
+        this.m2Cache = { };
+        this.runningRequests = { };
         this.batchRequests = [];
 
         // TODO: Allow options to set this somewhere
@@ -149,23 +157,40 @@ export class RenderingEngine implements IDisposable {
 
     getTexture(fileId: number, opts?: ITextureOptions): Promise<ITexture> {
         return new Promise<ITexture>((res, rej) => {
-            if(this.textureCache[fileId]) {
-                res(this.textureCache[fileId]);
-            }
-            
-            this.progress?.setOperation('Loading textures...');
-            this.progress?.addFileIdToOperation(fileId);
-            this.dataLoader.loadTexture(fileId).then((imgData) => {
+            const handleTexture = (imgData : string | null) => {
+                if (imgData === null) {
+                    res(this.getUnknownTexture());
+                    return;
+                }
+
                 this.progress?.removeFileIdFromOperation(fileId);
                 const img = new Image();
                 img.onload = () => {
-                    res(this.graphics.createTextureFromImg(img, opts));
+                    const texture = this.graphics.createTextureFromImg(img, opts);
+                    this.textureCache[fileId] = texture; 
+                    delete this.runningRequests[fileId];
+                    res(texture);
                 }
                 img.onerror = (err) => {
                     rej(err)
                 }
                 img.src = imgData;
-            });
+            }
+
+            if (this.runningRequests[fileId]) {
+                this.runningRequests[fileId].then(handleTexture);
+                return;
+            }
+            if(this.textureCache[fileId]) {
+                res(this.textureCache[fileId]);
+                return;
+            }
+            
+            this.progress?.setOperation('Loading textures...');
+            this.progress?.addFileIdToOperation(fileId);
+            const req = this.dataLoader.loadTexture(fileId);
+            this.runningRequests[fileId] = req;
+            req.then(handleTexture);
         });
     }
 
@@ -199,16 +224,42 @@ export class RenderingEngine implements IDisposable {
         return program;
     }
 
-    async getM2ModelFile(fileId: number): Promise<WoWModelData> {
+    async getM2ModelFile(fileId: number): Promise<WoWModelData|null> {
+        if (this.runningRequests[fileId]) {
+            const data = await this.runningRequests[fileId];
+            return data as WoWModelData|null;
+        }
+        if (this.m2Cache[fileId]) {
+            return this.m2Cache[fileId];
+        }
+
         this.progress?.setOperation('Loading model data...');
-        const data = await this.dataLoader.loadModelFile(fileId);
-        this.progress?.finishOperation();
+        this.progress?.addFileIdToOperation(fileId);
+        const req = this.dataLoader.loadModelFile(fileId);
+        this.runningRequests[fileId] = req;
+        const data = await req;
+        delete this.runningRequests[fileId];
+        this.m2Cache[fileId] = data;
+        this.progress?.removeFileIdFromOperation(fileId);
         return data;
     }
 
-    async getWMOModelFile(fileId: number): Promise<WoWWorldModelData> {
+    async getWMOModelFile(fileId: number): Promise<WoWWorldModelData|null> {
+        if (this.runningRequests[fileId]) {
+            const data = await this.runningRequests[fileId];
+            return data as WoWWorldModelData|null;
+        }
+        if (this.wmoCache[fileId]) {
+            return this.wmoCache[fileId];
+        }
         this.progress?.setOperation('Loading model data...');
-        const data = await this.dataLoader.loadWorldModelFile(fileId);
+        this.progress?.addFileIdToOperation(fileId);
+        const req = this.dataLoader.loadWorldModelFile(fileId);
+        this.runningRequests[fileId] = req;
+        const data = await req;
+        this.wmoCache[fileId] = data;
+        delete this.runningRequests[fileId];
+        this.progress?.removeFileIdFromOperation(fileId);
         this.progress?.finishOperation();
         return data;
     }
