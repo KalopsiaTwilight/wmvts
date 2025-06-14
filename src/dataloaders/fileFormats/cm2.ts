@@ -5,7 +5,7 @@ import {
     WoWSubmeshData, WoWTextureUnitData, WoWMaterialData, WoWTextureData, WoWTextureTransformData, 
     WoWAttachmentData, WoWColorData, WoWTextureWeightData, WoWParticleEmitterData, WoWExtendedParticleData, 
     WoWRibbonEmiterData, WoWAnimatedValue, WoWBoneFileData 
-} from "@app/wowData";
+} from "@app/modeldata";
 import { BinaryReader } from "@app/utils";
 
 import { readArray, readFloat2, readFloat3, readFloat4, readFloat44, readQuaternion } from "./compressedReading";

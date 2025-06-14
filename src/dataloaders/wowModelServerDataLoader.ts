@@ -1,8 +1,8 @@
 import { parseCM2BoneFile, parseCM2File } from "./fileFormats";
 import { parseCWMOFile } from "./fileFormats/cwmo";
-import { IDataLoader, IProgressReporter } from "./iDataLoader";
-import { CharacterCustomizationMetadata, CharacterMetadata, ItemMetadata, ItemVisualMetadata } from "./metadata";
-import { WoWBoneFileData, WoWModelData, WoWWorldModelData } from "./wowData";
+import { IDataLoader, IProgressReporter } from "../iDataLoader";
+import { CharacterCustomizationMetadata, CharacterMetadata, ItemMetadata, ItemVisualMetadata } from "../metadata";
+import { WoWBoneFileData, WoWModelData, WoWWorldModelData } from "../modeldata";
 
 
 export class WoWModelServerDataProvider implements IDataLoader {

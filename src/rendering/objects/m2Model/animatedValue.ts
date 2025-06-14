@@ -1,4 +1,4 @@
-import { WoWAnimatedValue, WoWAnimationData, WoWAnimationFlags, WoWTrackData } from "@app/wowData";
+import { WoWAnimationData, WoWAnimationFlags, WoWTrackData } from "@app/modeldata";
 import { M2Model } from "./m2Model";
 import { Float3, Float4 } from "@app/index";
 

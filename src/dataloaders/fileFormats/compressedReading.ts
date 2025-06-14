@@ -1,6 +1,6 @@
 import { Float2, Float3, Float4, Float44 } from "@app/rendering";
 import { BinaryReader } from "@app/utils";
-import { Color, Int2 } from "@app/wowData";
+import { Color, Int2 } from "@app/modeldata";
 
 export function readInt2(reader: BinaryReader): Int2 {
     return [reader.readInt32LE(), reader.readInt32LE()];

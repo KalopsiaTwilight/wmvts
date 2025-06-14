@@ -1,6 +1,6 @@
 import { BufferDataType, Float3, Float4, Float44, GxBlend, IShaderProgram, ITexture, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, M2BlendModeToEGxBlend, M2Model, RenderingBatchRequest, RenderingEngine, RenderObject } from "@app/rendering";
 import { BinaryWriter } from "@app/utils";
-import { WoWWorldModelData, WowWorldModelGroupFlags, WoWWorldModelMaterialMaterialFlags } from "@app/wowData";
+import { WoWWorldModelData, WowWorldModelGroupFlags, WoWWorldModelMaterialMaterialFlags } from "@app/modeldata";
 
 import fragmentShaderProgramText from "./wmoModel.frag";
 import vertexShaderProgramText from "./wmoModel.vert";
