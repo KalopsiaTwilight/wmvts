@@ -6,9 +6,7 @@ export abstract class BaseProgressReporter implements IProgressReporter {
     private timeSinceLastUpdate: number;
     timeBetweenUpdates: number;
     private lastTime: number;
-    private lastProgress: number;
 
-    isIndeterminate: boolean;
     currentOperation: string;
     show: boolean;
     progressPerFile: { [key: number]: number }
@@ -43,14 +41,7 @@ export abstract class BaseProgressReporter implements IProgressReporter {
         }
         this.timeSinceLastUpdate -= this.timeBetweenUpdates;
 
-        if (this.isIndeterminate) {
-            this.drawIndeterminateFrame();
-        } else {
-            const progress = this.calcTotalProgress();
-            if (progress != this.lastProgress) {
-                this.drawDeterminateFrame(progress);
-            }
-        }
+        this.drawProgressFrame();
     }
 
     calcTotalProgress() {
@@ -64,19 +55,10 @@ export abstract class BaseProgressReporter implements IProgressReporter {
         return progress;
     }
 
-    abstract drawIndeterminateFrame(): void;
-
-    abstract drawDeterminateFrame(progress: number): void;
+    abstract drawProgressFrame(): void;
 
     update(fileId: number, progress: number): void {
-        this.isIndeterminate = false;
         this.progressPerFile[fileId] = progress;
-        for(const key in this.progressPerFile) {
-            if (this.progressPerFile[key] === 0) {
-                this.isIndeterminate = true;
-                break;
-            }
-        }
     }
 
     addFileIdToOperation(fileId: number): void {
@@ -130,7 +112,6 @@ export abstract class BaseProgressReporter implements IProgressReporter {
     private resetState(): void {
         this.show = false;
         this.currentOperation = '';
-        this.isIndeterminate = true;
         this.progressPerFile = { }
     }
 }

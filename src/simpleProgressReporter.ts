@@ -27,9 +27,8 @@ export class SimpleProgressReporter extends BaseProgressReporter {
         this.setupElements();
     }
 
-    drawIndeterminateFrame() {
+    drawProgressFrame() {
         let currentX = parseInt(this.progressBar.style.left, 10);
-        const parent = this.progressBackground.getBoundingClientRect();
 
         const absMaxX = this.progressBackground.clientWidth;
         const shrinkX = absMaxX - this.indeterminateProgressBarWidth;
@@ -46,11 +45,6 @@ export class SimpleProgressReporter extends BaseProgressReporter {
             currentX = 0;
         }
         this.progressBar.style.left = currentX + "px";
-    }
-
-    drawDeterminateFrame(progress: number) {
-        this.progressBar.style.left = "0";
-        this.progressBar.style.width = progress + "%";
     }
 
     setupElements(): void {
