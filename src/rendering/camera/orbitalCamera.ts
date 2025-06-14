@@ -161,6 +161,7 @@ export class OrbitalCamera extends Camera {
 
     handleWheel(eventArgs: WheelEvent) {
         this.currentZoom = eventArgs.deltaY < 0 ? -1 : 1;
+        eventArgs.preventDefault();
     }
 
     setDistance(distance: number): void {
