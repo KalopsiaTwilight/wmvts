@@ -131,8 +131,10 @@ export class WMOModel extends BaseRenderObject {
         this.modelData = data;
 
         if (this.modelData == null) {
-            // TODO: Raise model loading error evt?
             this.dispose();
+            return;
+        }
+        if (this.isDisposing) {
             return;
         }
 
@@ -272,10 +274,10 @@ export class WMOModel extends BaseRenderObject {
                         const texturePromise = this.engine.getTexture(fileId, {
                             clampS, clampT
                         }).then((texture) => {
-                            this.loadedTextures[fileId] = texture
-                        }).catch(() => {
-                            this.loadedTextures[fileId] = this.engine.getUnknownTexture();
-                        });
+                            if (!this.isDisposing) {
+                                this.loadedTextures[fileId] = texture
+                            }
+                        })
                         loadingPromises.push(texturePromise)
                     }
                 }

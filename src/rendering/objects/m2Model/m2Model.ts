@@ -502,12 +502,14 @@ export class M2Model extends BaseRenderObject
 
     onModelLoaded(data: WoWModelData|null) {
         if (data === null) {
-            // TODO: Raise model loading error evt?
             this.dispose();
             return;
         }
-        this.modelData = data;
+        if (this.isDisposing) {
+            return;
+        }
 
+        this.modelData = data;
         this.animationState = new AnimationState(this);
         this.animationState.useAnimation(0);
         if (!this.parent) {
@@ -555,10 +557,10 @@ export class M2Model extends BaseRenderObject
             const textureId = this.modelData.textures[i].textureId
             if(textureId > 0) {
                 this.engine.getTexture(textureId).then((texture) => {
-                    this.loadedTextures[textureId] = texture
-                }).catch(() => {
-                    this.loadedTextures[textureId] = this.engine.getUnknownTexture();
-                });
+                    if (!this.isDisposing) {
+                        this.loadedTextures[textureId] = texture
+                    }
+                })
             } else {
                 this.loadedTextures[i] = undefined;
             }
