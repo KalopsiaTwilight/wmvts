@@ -5,11 +5,22 @@ import { GxBlend, IGraphics, IShaderProgram, ITexture, ITextureOptions, Renderin
 import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData } from "..";
 
 const UNKNOWN_TEXTURE_ID = -123;
+
+const DataLoadingErrorType = "dataFetching";
+const DataProcessingErrorType = "dataProcessing";
+export type ErrorType = "dataFetching" | "dataProcessing";
+
+export type ErrorHandlerFn = (type: ErrorType, errorMsg: string) => void;
+
+const LoadDataOperationText: string = "Loading model data..."
+
 export class RenderingEngine implements IDisposable {
-    containerElement?: HTMLElement;
     graphics: IGraphics;
     dataLoader: IDataLoader;
+
+    containerElement?: HTMLElement;
     progress?: IProgressReporter;
+    errorHandler?: ErrorHandlerFn;
 
     isDisposing: boolean;
     lastTime: number;
@@ -38,12 +49,14 @@ export class RenderingEngine implements IDisposable {
 
     batchRequests: RenderingBatchRequest[];
 
-    constructor(graphics: IGraphics, dataLoader: IDataLoader, progress?: IProgressReporter, container?: HTMLElement) {
+    constructor(graphics: IGraphics, dataLoader: IDataLoader, 
+        progress?: IProgressReporter, container?: HTMLElement, errorHandler?: ErrorHandlerFn) {
         this.graphics = graphics;
-        this.containerElement = container;
         this.dataLoader = dataLoader;
         this.dataLoader.useProgressReporter(progress);
         this.progress = progress;
+        this.errorHandler = errorHandler;
+        this.containerElement = container;
 
         this.sceneObjects = [];
 
@@ -159,6 +172,7 @@ export class RenderingEngine implements IDisposable {
         return new Promise<ITexture>((res, rej) => {
             const handleTexture = (imgData : string | null) => {
                 if (imgData === null) {
+                    this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve image data for file: " + fileId);
                     res(this.getUnknownTexture());
                     return;
                 }
@@ -172,7 +186,8 @@ export class RenderingEngine implements IDisposable {
                     res(texture);
                 }
                 img.onerror = (err) => {
-                    rej(err)
+                    this.errorHandler?.(DataProcessingErrorType, "Unable to process image data for file: " + fileId);
+                    res(null);
                 }
                 img.src = imgData;
             }
@@ -186,7 +201,7 @@ export class RenderingEngine implements IDisposable {
                 return;
             }
             
-            this.progress?.setOperation('Loading model data...');
+            this.progress?.setOperation(LoadDataOperationText);
             this.progress?.addFileIdToOperation(fileId);
             const req = this.dataLoader.loadTexture(fileId);
             this.runningRequests[fileId] = req;
@@ -233,11 +248,14 @@ export class RenderingEngine implements IDisposable {
             return this.m2Cache[fileId];
         }
 
-        this.progress?.setOperation('Loading model data...');
+        this.progress?.setOperation(LoadDataOperationText);
         this.progress?.addFileIdToOperation(fileId);
         const req = this.dataLoader.loadModelFile(fileId);
         this.runningRequests[fileId] = req;
         const data = await req;
+        if (data === null) {
+            this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve M2 data for file: " + fileId);
+        }
         delete this.runningRequests[fileId];
         this.m2Cache[fileId] = data;
         this.progress?.removeFileIdFromOperation(fileId);
@@ -252,11 +270,14 @@ export class RenderingEngine implements IDisposable {
         if (this.wmoCache[fileId]) {
             return this.wmoCache[fileId];
         }
-        this.progress?.setOperation('Loading model data...');
+        this.progress?.setOperation(LoadDataOperationText);
         this.progress?.addFileIdToOperation(fileId);
         const req = this.dataLoader.loadWorldModelFile(fileId);
         this.runningRequests[fileId] = req;
         const data = await req;
+        if (data === null) {
+            this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve WMO data for file: " + fileId);
+        }
         this.wmoCache[fileId] = data;
         delete this.runningRequests[fileId];
         this.progress?.removeFileIdFromOperation(fileId);
