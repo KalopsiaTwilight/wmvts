@@ -17,73 +17,99 @@ export class WoWModelServerDataProvider implements IDataLoader {
     async loadBoneFile(fileId: number): Promise<WoWBoneFileData|null> {
         const url = `${this.rootPath}/modelviewer/bone/${fileId}.cbone`;
 
-        const resp = await fetch(url);
-        if (!resp.ok) {
+        try {
+            const resp = await fetch(url);
+            if (!resp.ok) {
+                return null;
+            }
+
+            const data = await resp.arrayBuffer();
+            return parseCM2BoneFile(data);
+        } catch {
             return null;
         }
-
-        const data = await resp.arrayBuffer();
-        return parseCM2BoneFile(data);
     }
 
     async loadModelFile(fileId: number): Promise<WoWModelData|null> {
         const url = `${this.rootPath}/modelviewer/models/${fileId}.cm2`;
-        const resp = await fetch(url);
-        
-        if (!resp.ok) {
+        try {
+            const resp = await fetch(url);
+            
+            if (!resp.ok) {
+                return null;
+            }
+
+            const data = await resp.arrayBuffer();
+            return parseCM2File(data);
+        } catch {
             return null;
         }
-
-        const data = await resp.arrayBuffer();
-        return parseCM2File(data);
     }
 
     async loadWorldModelFile(fileId: number): Promise<WoWWorldModelData|null> {
         const url = `${this.rootPath}/modelviewer/models/${fileId}.cwmo`;
-        const resp = await fetch(url);
+        try {
+            const resp = await fetch(url);
 
-        if (!resp.ok) {
+            if (!resp.ok) {
+                return null;
+            }
+
+            const data = await resp.arrayBuffer();
+            return parseCWMOFile(data);
+        } catch {
             return null;
         }
-
-        const data = await resp.arrayBuffer();
-        return parseCWMOFile(data);
     }
 
     async loadCharacterCustomizationMetadata(modelId: number): Promise<CharacterCustomizationMetadata|null> {
         const url = `${this.rootPath}/modelviewer/meta/charactercustomization/${modelId}.json`;
-        const resp = await fetch(url);
+        try {
+            const resp = await fetch(url);
 
-        if (!resp.ok) {
+            if (!resp.ok) {
+                return null;
+            }
+
+            const data = await resp.json() as CharacterCustomizationMetadata;
+            return data;
+        } catch {
             return null;
         }
-
-        const data = await resp.json() as CharacterCustomizationMetadata;
-        return data;
     }
 
     async loadCharacterMetadata(modelId: number): Promise<CharacterMetadata|null> {
         const url = `${this.rootPath}/modelviewer/meta/character/${modelId}.json`;
-        const resp = await fetch(url);
+        try { 
+            const resp = await fetch(url);
 
-        if (!resp.ok) {
+            if (!resp.ok) {
+                return null;
+            }
+
+            const data = await resp.json() as CharacterMetadata;
+            return data;
+        }
+        catch {
             return null;
         }
-
-        const data = await resp.json() as CharacterMetadata;
-        return data;
     }
 
     async loadItemMetadata(displayId: number): Promise<ItemMetadata|null> {
         const url = `${this.rootPath}/modelviewer/meta/item/${displayId}.json`;
-        const resp = await fetch(url);
+        try {
+            const resp = await fetch(url);
 
-        if (!resp.ok) {
+            if (!resp.ok) {
+                return null;
+            }
+
+            const data = await resp.json() as ItemMetadata;
+            
+            return data;
+        } catch {
             return null;
         }
-
-        const data = await resp.json() as ItemMetadata;
-        return data;
     }
 
     loadTexture(fileId: number): Promise<string|null> {
@@ -115,14 +141,19 @@ export class WoWModelServerDataProvider implements IDataLoader {
 
     async loadItemvisualMetadata(visualId: number): Promise<ItemVisualMetadata|null> {
         const url = `${this.rootPath}/modelviewer/meta/itemvisual/${visualId}.json`;
-        const resp = await fetch(url);
+        try {
+            const resp = await fetch(url);
 
-        if (!resp.ok) {
+            if (!resp.ok) {
+                return null;
+            }
+
+            const data = await resp.json() as ItemVisualMetadata;
+            return data; 
+        }
+        catch {
             return null;
         }
-
-        const data = await resp.json() as ItemVisualMetadata;
-        return data;
     }
 
     useProgressReporter(progress?: IProgressReporter): void {

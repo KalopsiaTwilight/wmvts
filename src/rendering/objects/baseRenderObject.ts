@@ -42,9 +42,11 @@ export abstract class BaseRenderObject implements RenderObject {
     
     dispose(): void {
         this.isDisposing = true;
-        for(const child of this.children) {
-            child.dispose();
-        };
+        if (this.children) {
+            for(const child of this.children) {
+                child.dispose();
+            };
+        }
         this.children = null;
         this.engine = null;
         this.modelMatrix = null;
