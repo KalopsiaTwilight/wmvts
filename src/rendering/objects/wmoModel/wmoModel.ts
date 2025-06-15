@@ -139,7 +139,7 @@ export class WMOModel extends BaseRenderObject {
         }
 
         if (!this.parent) {
-            this.calculateBounds();
+            this.resizeForBounds();
         }
 
         this.loadTextures();
@@ -251,12 +251,10 @@ export class WMOModel extends BaseRenderObject {
         }
     }
 
-    private calculateBounds() {
+    private resizeForBounds() {
         const max = this.modelData.maxBoundingBox
         const min = this.modelData.minBoundingBox
-        const diff = Float3.subtract(max, min);
-
-        this.engine.sceneCamera.setDistance(Float3.length(diff));
+        this.engine.sceneCamera.resizeForBoundingBox([min, max]);
     }
 
     private loadTextures() {

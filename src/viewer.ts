@@ -54,9 +54,7 @@ export class WoWModelViewer {
     }
 
     useCamera(camera: Camera) {
-        camera.initialize(this.renderEngine);
-        camera.setDistance(this.renderEngine.sceneCamera.getDistance());
-        this.renderEngine.sceneCamera = camera;
+        this.renderEngine.switchCamera(camera);
     }
 
     private initialize() {

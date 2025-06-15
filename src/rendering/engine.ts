@@ -158,6 +158,13 @@ export class RenderingEngine implements IDisposable {
         Float44.perspective(Math.PI / 180 * this.fov, aspect, 0.1, 2000, this.projectionMatrix);
     }
 
+    switchCamera(newCamera: Camera) {
+        newCamera.initialize(this);
+        newCamera.resizeForBoundingBox(this.sceneCamera.getBoundingBox())
+        this.sceneCamera.dispose();
+        this.sceneCamera = newCamera;
+    }
+
     addSceneObject(object: RenderObject, priority: number) {
         object.initialize(this);
         this.sceneObjects.push(object);

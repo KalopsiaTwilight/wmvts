@@ -1,5 +1,5 @@
 import { RenderingEngine } from "../engine";
-import { Float3, Float44 } from "../math";
+import { BoundingBox, Float3, Float44 } from "../math";
 import { IDisposable } from "../objects";
 
 export abstract class Camera implements IDisposable {
@@ -7,7 +7,7 @@ export abstract class Camera implements IDisposable {
     viewMatrix: Float44;
     position: Float3;
     engine: RenderingEngine;
-    distance: number;
+    lastBoundingBox: BoundingBox;
 
     constructor() {
         this.viewMatrix = Float44.identity();
@@ -25,6 +25,8 @@ export abstract class Camera implements IDisposable {
     dispose() {
         this.isDisposing = true;
         this.viewMatrix = null;
+        this.position = null;
+        this.lastBoundingBox = null;
     }
 
     getViewMatrix() {
@@ -35,7 +37,7 @@ export abstract class Camera implements IDisposable {
         return this.position;
     }
 
-    abstract setDistance(distance: number): void;
+    abstract resizeForBoundingBox(boundingBox?: BoundingBox): void;
 
-    abstract getDistance(): number;
+    abstract getBoundingBox(): BoundingBox;
 }

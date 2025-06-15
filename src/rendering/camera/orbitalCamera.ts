@@ -1,6 +1,6 @@
 import { Camera } from "./base";
 import { RenderingEngine } from "../engine";
-import { Float3, Float44 } from "../math";
+import { BoundingBox, Float3, Float44 } from "../math";
 
 export enum DragOperation {
     None,
@@ -164,7 +164,15 @@ export class OrbitalCamera extends Camera {
         eventArgs.preventDefault();
     }
 
-    setDistance(distance: number): void {
+    resizeForBoundingBox(box: BoundingBox): void {
+        this.lastBoundingBox = box;
+        if (!box) {
+            return;
+        }
+        const [min, max] = box;
+        const diff = Float3.subtract(max, min);
+        const distance = Float3.length(diff)
+
         this.startingRadius = distance;
         this.currentRadius = this.startingRadius;
         this.minRadius = 0.25 * distance;
@@ -175,7 +183,7 @@ export class OrbitalCamera extends Camera {
         Float3.add(this.position, this.targetLocation);
     }
 
-    getDistance(): number {
-        return this.startingRadius;
+    getBoundingBox(): BoundingBox {
+        return this.lastBoundingBox;
     }
 }

@@ -473,12 +473,10 @@ export class M2Model extends BaseRenderObject
         this.engine.submitBatchRequest(batchRequest);
     }
 
-    private calculateBounds() {
+    private resizeForBounds() {
         const max = this.animationState.currentAnimation.extentMax;
         const min = this.animationState.currentAnimation.extentMin
-        const diff = Float3.subtract(max, min);
-
-        this.engine.sceneCamera.setDistance(Float3.length(diff));
+        this.engine.sceneCamera.resizeForBoundingBox([min, max]);
     }
 
     override dispose(): void {
@@ -513,7 +511,7 @@ export class M2Model extends BaseRenderObject
         this.animationState = new AnimationState(this);
         this.animationState.useAnimation(0);
         if (!this.parent) {
-            this.calculateBounds();
+            this.resizeForBounds();
         }
 
         this.loadTextures();
