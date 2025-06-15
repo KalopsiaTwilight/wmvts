@@ -5,6 +5,7 @@ export type Float4 = [number, number, number, number]
 const FloatArrayType = "undefined" != typeof Float32Array ? Float32Array : Array;
 
 export namespace Float4 {
+
     export function zero(dest?: Float4): Float4 {
         if (dest) {
             dest[0] = 0;
@@ -187,6 +188,54 @@ export namespace Float4 {
         dest[1] = r * vec[1];
         dest[2] = r * vec[2];
         dest[3] = Math.cos(theta);
+        return dest;
+    }
+
+    export function quatFromEulers(roll: number, pitch: number, yaw: number, dest?: Float4) {
+        dest = dest ? dest : identity();
+        const cosU = Math.cos(roll/2);
+        const sinU = Math.sin(roll/2);
+        const cosV = Math.cos(pitch/2);
+        const sinV = Math.sin(pitch/2);
+        const cosW = Math.cos(yaw/2);
+        const sinW = Math.sin(yaw/2);
+
+        dest[0] = cosU*cosV*cosW + sinU*sinV*sinW;
+        dest[1] = sinU*cosV*cosW - cosU*sinV*sinW;
+        dest[2] = cosU*sinV*cosW + sinU*cosV*sinW;
+        dest[3] = cosU*cosV*sinW - sinU*sinV*cosW;
+
+        return dest;
+    }
+
+    export function quatMultiply(quatA: Float4, quatB: Float4, dest?: Float4) {
+        dest = dest ? dest : identity();
+
+        const r0 = quatA[0];
+        const r1 = quatA[1];
+        const r2 = quatA[2];
+        const r3 = quatA[3];
+
+        const s0 = quatB[0];
+        const s1 = quatB[1];
+        const s2 = quatB[2];
+        const s3 = quatB[3];
+        dest[0] = r0*s0-r1*s1-r2*s2-r3*s3;
+        dest[1] = r0*s1+r1*s0-r2*s3+r3*s2;
+        dest[2] = r0*s2+r1*s3+r2*s0-r3*s1;
+        dest[3] = r0*s3-r1*s2+r2*s1+r3*s0;
+
+        return dest;
+    }
+
+    export function quatInvert(quat: Float4, dest?: Float4) {
+        dest = dest ? dest : identity();
+        
+        dest[0] = quat[0];
+        dest[1] = -quat[1];
+        dest[2] = -quat[2];
+        dest[3] = -quat[3];
+
         return dest;
     }
 }
