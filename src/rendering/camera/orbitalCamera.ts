@@ -12,7 +12,7 @@ export class OrbitalCamera extends Camera {
     containerWidth: number;
     containerHeight: number;
 
-    currentDragOpartion: DragOperation;
+    currentDragOperation: DragOperation;
     lastDragX: number;
     lastDragY: number;
 
@@ -48,7 +48,7 @@ export class OrbitalCamera extends Camera {
         super();
 
         this.cameraMatrix = Float44.identity();
-        this.currentDragOpartion = DragOperation.None;
+        this.currentDragOperation = DragOperation.None;
         this.targetLocation = Float3.create(0, 0, 0);
         this.upDir = Float3.create(0, 0, 1);
 
@@ -154,9 +154,9 @@ export class OrbitalCamera extends Camera {
 
     handleMouseDown(eventArgs: MouseEvent) {
         if (eventArgs.button == 2 || eventArgs.ctrlKey) {
-            this.currentDragOpartion = DragOperation.Translation
+            this.currentDragOperation = DragOperation.Translation
         } else {
-            this.currentDragOpartion = DragOperation.Rotation
+            this.currentDragOperation = DragOperation.Rotation
         }
         this.lastDragX = eventArgs.clientX;
         this.lastDragY = eventArgs.clientY;
@@ -165,7 +165,7 @@ export class OrbitalCamera extends Camera {
     }
 
     handleTouchStart(eventArgs: TouchEvent) {
-        this.currentDragOpartion = DragOperation.Rotation;
+        this.currentDragOperation = DragOperation.Rotation;
         this.lastDragX = eventArgs.touches[0].clientX;
         this.lastDragY = eventArgs.touches[0].clientY;
 
@@ -181,13 +181,13 @@ export class OrbitalCamera extends Camera {
     }
 
     handleDrag(currentX: number, currentY: number) {
-        if (this.currentDragOpartion === DragOperation.None) {
+        if (this.currentDragOperation === DragOperation.None) {
             return;
         }
 
         const xPct = (currentX - this.lastDragX) / this.containerWidth
         const yPct = (currentY - this.lastDragY) / this.containerHeight
-        if (this.currentDragOpartion === DragOperation.Translation) {
+        if (this.currentDragOperation === DragOperation.Translation) {
             
             Float3.add(this.cameraTranslation, Float3.create(xPct * this.currentRadius, 0, -yPct * this.currentRadius), this.cameraTranslation);
         } else {
@@ -207,7 +207,7 @@ export class OrbitalCamera extends Camera {
     }
 
     handleDragRelease() {
-        this.currentDragOpartion = DragOperation.None;
+        this.currentDragOperation = DragOperation.None;
     }
 
     handleWheel(eventArgs: WheelEvent) {
