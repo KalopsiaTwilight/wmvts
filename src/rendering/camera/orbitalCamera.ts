@@ -34,6 +34,16 @@ export class OrbitalCamera extends Camera {
     currentZoom: number;
     zoomDecay: number;
 
+    // Bound functions
+    onContextMenu: (ev: MouseEvent) => void;
+    onWheel: (ev: MouseEvent) => void;
+    onMouseDown: (ev: MouseEvent) => void;
+    onMouseMove: (ev: MouseEvent) => void;
+    onMouseUp: (ev: MouseEvent) => void;
+    onTouchStart: (ev: TouchEvent) => void;
+    onTouchMove: (ev: TouchEvent) => void;;
+    onTouchEnd: (ev: TouchEvent) => void;;
+
     constructor() {
         super();
 
@@ -65,20 +75,30 @@ export class OrbitalCamera extends Camera {
         super.initialize(engine);
         
         if (engine.containerElement) {
-            engine.containerElement.addEventListener('contextmenu', (evt) => { evt.preventDefault(); return false; });
-            engine.containerElement.addEventListener('mousedown', this.handleMouseDown.bind(this));
-            engine.containerElement.addEventListener('touchstart', this.handleTouchStart.bind(this));
-            engine.containerElement.addEventListener('wheel', this.handleWheel.bind(this));
+            this.onContextMenu = (evt) => { evt.preventDefault(); return false; };
+            this.onMouseDown = this.handleMouseDown.bind(this);
+            this.onTouchStart = this.handleTouchStart.bind(this);
+            this.onWheel = this.handleWheel.bind(this);
+
+            engine.containerElement.addEventListener('contextmenu', this.onContextMenu);
+            engine.containerElement.addEventListener('mousedown', this.onMouseDown);
+            engine.containerElement.addEventListener('touchstart', this.onTouchStart);
+            engine.containerElement.addEventListener('wheel', this.onWheel);
             
             const containerBounds = engine.containerElement.getBoundingClientRect();
             this.containerWidth = containerBounds.width;
             this.containerHeight = containerBounds.height;
         }
         if (document) {
-            document.addEventListener('mouseup', this.handleDragRelease.bind(this));
-            document.addEventListener('touchend', this.handleDragRelease.bind(this));
-            document.addEventListener('mousemove', this.handleMouseMove.bind(this));
-            document.addEventListener('touchmove', this.handleTouchMove.bind(this));
+            this.onMouseUp = this.handleDragRelease.bind(this);
+            this.onTouchEnd = this.handleDragRelease.bind(this);
+            this.onMouseMove = this.handleMouseMove.bind(this)
+            this.onTouchMove = this.handleTouchMove.bind(this);
+
+            document.addEventListener('mouseup', this.onMouseUp);
+            document.addEventListener('touchend', this.onTouchEnd);
+            document.addEventListener('mousemove', this.onMouseMove);
+            document.addEventListener('touchmove', this.onTouchMove);
         }
     }
 
@@ -99,6 +119,37 @@ export class OrbitalCamera extends Camera {
         Float44.lookAt(this.position, this.targetLocation, this.upDir, this.cameraMatrix);
         Float44.invert(this.cameraMatrix, this.viewMatrix);
         Float44.translate(this.viewMatrix, this.cameraTranslation, this.viewMatrix);
+    }
+
+    override dispose() {
+        if (this.engine.containerElement) {
+            this.engine.containerElement.removeEventListener('contextmenu', this.onContextMenu);
+            this.engine.containerElement.removeEventListener('mousedown', this.onMouseDown);
+            this.engine.containerElement.removeEventListener('touchstart', this.onTouchStart);
+            this.engine.containerElement.removeEventListener('wheel', this.onWheel);
+
+            this.onContextMenu = null;
+            this.onMouseDown = null;
+            this.onTouchStart = null;
+            this.onWheel = null;
+        }
+        if (document) {
+            document.removeEventListener('mouseup', this.onMouseUp);
+            document.removeEventListener('touchend', this.onTouchEnd);
+            document.removeEventListener('mousemove', this.onMouseMove);
+            document.removeEventListener('touchmove', this.onTouchMove);
+
+            this.onMouseUp = null;
+            this.onTouchEnd = null;
+            this.onMouseMove = null;
+            this.onTouchMove = null;
+        }
+
+        super.dispose();
+        this.cameraMatrix = null;
+        this.targetLocation = null;
+        this.upDir = null;
+        this.cameraTranslation = null;
     }
 
     handleMouseDown(eventArgs: MouseEvent) {
