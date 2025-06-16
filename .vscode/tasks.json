@@ -4,12 +4,27 @@
 		{
 			"type": "npm",
 			"script": "dev",
-			"problemMatcher": [],
 			"label": "npm: dev",
 			"detail": "webpack serve -c webpack.dev.config.js",
 			"group": {
 				"kind": "build",
 				"isDefault": true
+			},
+			"isBackground": true,
+			"problemMatcher": {
+				"owner": "webpack",
+				"fileLocation": "relative",
+				"pattern": {
+					"regexp": ".",
+					"file": 1,
+					"location": 2,
+					"message": 3
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": ".",
+					"endsPattern": "."
+				}
 			}
 		}
 	]
