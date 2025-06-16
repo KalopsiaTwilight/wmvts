@@ -1,10 +1,18 @@
 import { IDataLoader, IProgressReporter } from "./iDataLoader";
 import { RenderingEngine, OrbitalCamera, RenderObject, Camera, WebGlGraphics, M2Model, WMOModel, ErrorHandlerFn } from "./rendering";
 
+export type CanvasCreationFunction = () => HTMLCanvasElement;
+
 export interface WoWModelViewerOptions {
-    container: HTMLElement,
     dataLoader: IDataLoader,
     progressReporter?: IProgressReporter,
+    canvas: {
+        container?: HTMLElement,
+        height?: number;
+        width?: number;
+        resizeToContainer?: boolean,
+        createCanvas?: CanvasCreationFunction
+    }
     onError?: ErrorHandlerFn,
     scene?: {
         camera?: Camera;
@@ -16,14 +24,21 @@ export class WoWModelViewer {
     options: WoWModelViewerOptions;
 
     canvas: HTMLCanvasElement;
+    viewerContainer: HTMLDivElement;
     renderEngine: RenderingEngine;
 
-    containerWidth: number;
-    containerHeight: number;
+    width: number;
+    height: number;
     
     constructor(options: WoWModelViewerOptions) {
-        if (!options.container) {
-            throw "container is a required argument for WoWModelViewer";
+        if (!options.dataLoader) {
+            throw "dataLoader is a required argument for WoWModelViewer";
+        }
+        if (!document && !options.canvas.createCanvas) {
+            throw "canvas.createCanvas is a required argument for WoWModelViewer when running outside of a browser context";
+        }
+        if (!options.canvas.container && !options.canvas.createCanvas) {
+            throw "canvas.container is a required argument for WoWModelViewer when not providing a canvas via canvas.createCanvas";
         }
 
         this.options = options;
@@ -58,20 +73,52 @@ export class WoWModelViewer {
     }
 
     private initialize() {
-        this.containerWidth = this.options.container.getBoundingClientRect().width;
-        this.containerHeight = this.options.container.getBoundingClientRect().height;
+        if (this.options.canvas.createCanvas) {
+            this.canvas = this.options.canvas.createCanvas();
+        } else {
+            this.canvas = document.createElement("canvas");
+        }
+        
+        if (document) {
+            const containerElem = this.options.canvas.container ? 
+            this.options.canvas.container : this.canvas.parentElement;
+            
+            if (containerElem) {
+                this.width = containerElem.getBoundingClientRect().width;
+                this.height = containerElem.getBoundingClientRect().height;
 
-        this.canvas = document.createElement("canvas");
-        this.options.container.append(this.canvas);
+                this.viewerContainer = document.createElement("div");
+                this.viewerContainer.className = "wmvts-container";
+                this.viewerContainer.style.position = "relative";
+                this.viewerContainer.style.width = "100%";
+                this.viewerContainer.style.height = "100%";
+                containerElem.append(this.viewerContainer)
+                this.viewerContainer.append(this.canvas);
+                
+            
+                if (this.options.canvas.resizeToContainer) {
+                    const resizeObserver = new ResizeObserver(() => {
+                        this.width = this.viewerContainer.getBoundingClientRect().width;
+                        this.height = this.viewerContainer.getBoundingClientRect().height;
+                        this.resize(this.width, this.height);
+                    })
+                    resizeObserver.observe(this.viewerContainer);
+                }
+            }
+        }
 
-
+        if (this.options.canvas.width) {
+            this.width = this.options.canvas.width;
+        }
+        if (this.options.canvas.height) {
+            this.height = this.options.canvas.height;
+        }
+        
         let gl = this.canvas.getContext("webgl", { alpha: true, premultipliedAlpha: false });
-
         const graphics = new WebGlGraphics(gl);
         this.renderEngine = new RenderingEngine(graphics, this.options.dataLoader, 
-            this.options.progressReporter, this.options.container, this.options.onError);
-        this.resize(this.containerWidth, this.containerHeight);
-
+            this.options.progressReporter, this.viewerContainer, this.options.onError);
+        this.resize(this.width, this.height);
         this.renderEngine.sceneCamera = this.options.scene?.camera ?? new OrbitalCamera();
         if (this.options.scene && this.options.scene.objects) {
             for(const obj of this.options.scene.objects) {
@@ -79,15 +126,6 @@ export class WoWModelViewer {
             }
         }
         this.renderEngine.start();
-
-        const resizeObserver = new ResizeObserver((entries) => {
-
-            this.containerWidth = this.options.container.getBoundingClientRect().width;
-            this.containerHeight = this.options.container.getBoundingClientRect().height;
-            this.resize(this.containerWidth, this.containerHeight);
-        })
-
-        resizeObserver.observe(this.options.container);
     }
 
     private resize(width: number, height: number) {

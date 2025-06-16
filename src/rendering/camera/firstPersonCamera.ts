@@ -78,9 +78,9 @@ export class FirstPersonCamera extends Camera {
         const movementDir = Float3.create(this.xMovement, this.yMovement, this.zMovement)
         // normalize to prevent speed gain from moving in multiple directions
         Float3.normalize(movementDir, movementDir);
+        // Multiply speed * deltaTime 
         const speedVec = Float3.create(this.movementSpeed, this.movementSpeed, this.movementSpeed);
         const deltaTimeVec = Float3.create(deltaTime/1000, deltaTime/1000, deltaTime/1000);
-        // Multiply speed * deltaTime 
         Float3.multiply(speedVec, deltaTimeVec, speedVec);
         Float3.multiply(speedVec, movementDir, movementDir);
         // Transform movement with camera rotation to make axis relative to camera
@@ -199,17 +199,15 @@ export class FirstPersonCamera extends Camera {
 
         eventArgs.preventDefault();
 
-        if (document) {
+        if (this.engine.containerElement) {
             this.engine.containerElement.requestPointerLock()
-            document.body.style.cursor = "none";
         }
     }
 
     handleTouchStart(eventArgs: TouchEvent) {
         eventArgs.preventDefault();
-        if (document) {
+        if (this.engine.containerElement) {
             this.engine.containerElement.requestPointerLock()
-            document.body.style.cursor = "none";
         }
     }
 
@@ -239,7 +237,6 @@ export class FirstPersonCamera extends Camera {
 
         if (document) {
             document.exitPointerLock();
-            document.body.style.cursor = "auto";
         }
     }
 }
