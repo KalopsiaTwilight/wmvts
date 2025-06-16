@@ -72,6 +72,14 @@ export class WoWModelViewer {
         this.renderEngine.switchCamera(camera);
     }
 
+    showFps() {
+        this.renderEngine.showFps();
+    }
+
+    hideFps() {
+        this.renderEngine.hideFps();
+    }
+
     private initialize() {
         if (this.options.canvas.createCanvas) {
             this.canvas = this.options.canvas.createCanvas();

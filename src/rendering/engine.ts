@@ -46,8 +46,17 @@ export class RenderingEngine implements IDisposable {
     m2Cache: { [key: string]: WoWModelData|null }
     runningRequests: { [key:string]: Promise<unknown> }
 
-
     batchRequests: RenderingBatchRequest[];
+
+    framesDrawn: number;
+    timeElapsed: number;
+
+    // FPS calculation over avg of x frames
+    maxFpsCounterSize: number;
+    fpsCounter: number[];
+
+    debugContainer?: HTMLDivElement;
+    fpsElement?: HTMLParagraphElement;
 
     constructor(graphics: IGraphics, dataLoader: IDataLoader, 
         progress?: IProgressReporter, container?: HTMLElement, errorHandler?: ErrorHandlerFn) {
@@ -77,6 +86,26 @@ export class RenderingEngine implements IDisposable {
         this.ambientColor = Float4.create(1/3, 1/3, 1/3, 1);
         this.lightColor = Float4.one()
         this.lightDir = Float3.normalize([0, 0, 1]);
+
+        this.framesDrawn = 0;
+        this.timeElapsed = 0;
+        this.maxFpsCounterSize = 100;
+        this.fpsCounter = [];
+
+        if (document && this.containerElement) {
+            this.debugContainer = document.createElement("div");
+            this.debugContainer.style.position = "absolute";
+            this.debugContainer.style.left = "0";
+            this.debugContainer.style.top = "0";
+            this.debugContainer.style.padding = "1em";
+
+            this.fpsElement = document.createElement("p");
+            this.fpsElement.style.color = "white";
+            this.fpsElement.style.margin = "0";
+            this.fpsElement.style.display = "none";
+            this.debugContainer.append(this.fpsElement);
+            this.containerElement.append(this.debugContainer);
+        }
     }
 
     dispose(): void {
@@ -127,6 +156,18 @@ export class RenderingEngine implements IDisposable {
             batch.submit(this.graphics);
         }
         this.batchRequests = [];
+
+        this.framesDrawn++;
+        this.timeElapsed+=deltaTime;
+
+        if (this.fpsElement) {
+            this.fpsCounter.push(1/(deltaTime/1000));
+            if (this.fpsCounter.length > this.maxFpsCounterSize) {
+                this.fpsCounter.splice(0, 1);
+            }
+            const avgFps = this.fpsCounter.reduce((acc, next)  => acc+next, 0) / this.fpsCounter.length;
+            this.fpsElement.textContent = "FPS: " + Math.floor(avgFps);
+        }
     }
 
     start() {
@@ -148,6 +189,18 @@ export class RenderingEngine implements IDisposable {
             window.requestAnimationFrame(drawFrame)
         }
         drawFrame();
+    }
+
+    showFps() {
+        if (this.fpsElement) {
+            this.fpsElement.style.display = 'block';
+        }
+    }
+
+    hideFps() {
+        if (this.fpsElement) {
+            this.fpsElement.style.display = 'none';
+        }
     }
 
     resize(width: number, height: number) {
