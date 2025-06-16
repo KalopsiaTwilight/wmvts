@@ -2,6 +2,7 @@ import { IDataLoader, IProgressReporter } from "./iDataLoader";
 import { RenderingEngine, OrbitalCamera, RenderObject, Camera, WebGlGraphics, M2Model, WMOModel, ErrorHandlerFn } from "./rendering";
 
 export type CanvasCreationFunction = () => HTMLCanvasElement;
+export type RequestFrameFunction = (callback: Function) => void;
 
 export interface WoWModelViewerOptions {
     dataLoader: IDataLoader,
@@ -11,8 +12,9 @@ export interface WoWModelViewerOptions {
         height?: number;
         width?: number;
         resizeToContainer?: boolean,
-        createCanvas?: CanvasCreationFunction
-    }
+        createCanvas?: CanvasCreationFunction,
+        requestFrame?: RequestFrameFunction,
+    },
     onError?: ErrorHandlerFn,
     scene?: {
         camera?: Camera;
@@ -122,10 +124,13 @@ export class WoWModelViewer {
             this.height = this.options.canvas.height;
         }
         
+        const requestFrameFn = this.options.canvas.requestFrame ? 
+            this.options.canvas.requestFrame : window.requestAnimationFrame.bind(window);
         let gl = this.canvas.getContext("webgl", { alpha: true, premultipliedAlpha: false });
         const graphics = new WebGlGraphics(gl);
         this.renderEngine = new RenderingEngine(graphics, this.options.dataLoader, 
-            this.options.progressReporter, this.viewerContainer, this.options.onError);
+            requestFrameFn, this.options.progressReporter, this.viewerContainer, 
+            this.options.onError);
         this.resize(this.width, this.height);
         this.renderEngine.sceneCamera = this.options.scene?.camera ?? new OrbitalCamera();
         if (this.options.scene && this.options.scene.objects) {

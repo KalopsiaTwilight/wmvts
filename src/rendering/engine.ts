@@ -2,7 +2,7 @@ import { Float3, Float4, Float44 } from "./math";
 import { Camera } from "./camera";
 import { RenderObject, IDisposable } from "./objects";
 import { GxBlend, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest } from "./graphics";
-import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData } from "..";
+import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData, RequestFrameFunction } from "..";
 
 const UNKNOWN_TEXTURE_ID = -123;
 
@@ -17,6 +17,7 @@ const LoadDataOperationText: string = "Loading model data..."
 export class RenderingEngine implements IDisposable {
     graphics: IGraphics;
     dataLoader: IDataLoader;
+    requestFrame: RequestFrameFunction;
 
     containerElement?: HTMLElement;
     progress?: IProgressReporter;
@@ -58,10 +59,11 @@ export class RenderingEngine implements IDisposable {
     debugContainer?: HTMLDivElement;
     fpsElement?: HTMLParagraphElement;
 
-    constructor(graphics: IGraphics, dataLoader: IDataLoader, 
+    constructor(graphics: IGraphics, dataLoader: IDataLoader, requestFrame: RequestFrameFunction,
         progress?: IProgressReporter, container?: HTMLElement, errorHandler?: ErrorHandlerFn) {
         this.graphics = graphics;
         this.dataLoader = dataLoader;
+        this.requestFrame = requestFrame;
         this.dataLoader.useProgressReporter(progress);
         this.progress = progress;
         this.errorHandler = errorHandler;
@@ -186,7 +188,7 @@ export class RenderingEngine implements IDisposable {
             }
             const now = engine.now();
             engine.draw(now);
-            window.requestAnimationFrame(drawFrame)
+            this.requestFrame(drawFrame)
         }
         drawFrame();
     }
