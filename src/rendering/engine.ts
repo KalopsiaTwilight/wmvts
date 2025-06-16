@@ -3,6 +3,7 @@ import { Camera } from "./camera";
 import { RenderObject, IDisposable } from "./objects";
 import { GxBlend, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest } from "./graphics";
 import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData, RequestFrameFunction } from "..";
+import { SimpleCache } from "./cache";
 
 const UNKNOWN_TEXTURE_ID = -123;
 
@@ -41,10 +42,10 @@ export class RenderingEngine implements IDisposable {
     lightColor: Float4;
     lightDir: Float3;
 
-    textureCache: { [key: number]: ITexture }
-    shaderCache: { [key: string]: IShaderProgram }
-    wmoCache: { [key: string]: WoWWorldModelData|null }
-    m2Cache: { [key: string]: WoWModelData|null }
+    textureCache: SimpleCache<ITexture>;
+    shaderCache: SimpleCache<IShaderProgram>;
+    wmoCache: SimpleCache<WoWWorldModelData>;
+    m2Cache: SimpleCache<WoWModelData>;
     runningRequests: { [key:string]: Promise<unknown> }
 
     batchRequests: RenderingBatchRequest[];
@@ -76,10 +77,12 @@ export class RenderingEngine implements IDisposable {
         this.projectionMatrix = Float44.identity();
         this.clearColor = Float4.create(0.1, 0.1, 0.1, 1);
 
-        this.textureCache = { };
-        this.shaderCache = { };
-        this.wmoCache = { };
-        this.m2Cache = { };
+        // TODO: Allow options to set this somewhere
+        const cacheTtl = 1000 * 60 * 15
+        this.textureCache = new SimpleCache(cacheTtl);
+        this.shaderCache = new SimpleCache(cacheTtl);
+        this.wmoCache = new SimpleCache(cacheTtl);
+        this.m2Cache = new SimpleCache(cacheTtl);
         this.runningRequests = { };
         this.batchRequests = [];
 
@@ -133,6 +136,10 @@ export class RenderingEngine implements IDisposable {
         this.sceneCamera.update(deltaTime);
         Float44.copy(this.sceneCamera.getViewMatrix(), this.viewMatrix);
         Float44.invert(this.viewMatrix, this.invViewMatrix);
+
+        this.textureCache.update(deltaTime);
+        this.wmoCache.update(deltaTime);
+        this.m2Cache.update(deltaTime);
         for(const obj of this.sceneObjects) {
             obj.update(deltaTime);
         }
@@ -243,7 +250,7 @@ export class RenderingEngine implements IDisposable {
                 const img = new Image();
                 img.onload = () => {
                     const texture = this.graphics.createTextureFromImg(img, opts);
-                    this.textureCache[fileId] = texture; 
+                    this.textureCache.store(fileId, texture); 
                     delete this.runningRequests[fileId];
                     res(texture);
                 }
@@ -258,8 +265,8 @@ export class RenderingEngine implements IDisposable {
                 this.runningRequests[fileId].then(handleTexture);
                 return;
             }
-            if(this.textureCache[fileId]) {
-                res(this.textureCache[fileId]);
+            if(this.textureCache.contains(fileId)) {
+                res(this.textureCache.get(fileId));
                 return;
             }
             
@@ -272,12 +279,13 @@ export class RenderingEngine implements IDisposable {
     }
 
     getUnknownTexture(): ITexture {
-        if (this.textureCache[UNKNOWN_TEXTURE_ID]) {
-            return this.textureCache[UNKNOWN_TEXTURE_ID];
+        if (this.textureCache.contains(UNKNOWN_TEXTURE_ID)) {
+            return this.textureCache.get(UNKNOWN_TEXTURE_ID);
         }
 
-        this.textureCache[UNKNOWN_TEXTURE_ID] = this.graphics.createSolidColorTexture(Float4.create(0, 1, 0, 1));
-        return this.textureCache[UNKNOWN_TEXTURE_ID];
+        const unknownTexture = this.graphics.createSolidColorTexture(Float4.create(0, 1, 0, 1));
+        this.textureCache.store(UNKNOWN_TEXTURE_ID, unknownTexture, -1);
+        return unknownTexture;
     }
 
     submitBatchRequest(request: RenderingBatchRequest) {
@@ -292,12 +300,12 @@ export class RenderingEngine implements IDisposable {
     }
 
     getShaderProgram(key: string, vertexShader: string, fragmentShader: string): IShaderProgram {
-        if (this.shaderCache[key]) {
-            return this.shaderCache[key];
+        if (this.shaderCache.contains(key)) {
+            return this.shaderCache.get(key);
         }
 
         const program = this.graphics.createShaderProgram(vertexShader, fragmentShader);
-        this.shaderCache[key] = program;
+        this.shaderCache.store(key, program, -1);
         return program;
     }
 
@@ -306,8 +314,8 @@ export class RenderingEngine implements IDisposable {
             const data = await this.runningRequests[fileId];
             return data as WoWModelData|null;
         }
-        if (this.m2Cache[fileId]) {
-            return this.m2Cache[fileId];
+        if (this.m2Cache.contains(fileId)) {
+            return this.m2Cache.get(fileId);
         }
 
         this.progress?.setOperation(LoadDataOperationText);
@@ -319,7 +327,7 @@ export class RenderingEngine implements IDisposable {
             this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve M2 data for file: " + fileId);
         }
         delete this.runningRequests[fileId];
-        this.m2Cache[fileId] = data;
+        this.m2Cache.store(fileId, data);
         this.progress?.removeFileIdFromOperation(fileId);
         return data;
     }
@@ -329,8 +337,8 @@ export class RenderingEngine implements IDisposable {
             const data = await this.runningRequests[fileId];
             return data as WoWWorldModelData|null;
         }
-        if (this.wmoCache[fileId]) {
-            return this.wmoCache[fileId];
+        if (this.wmoCache.contains(fileId)) {
+            return this.wmoCache.get(fileId);
         }
         this.progress?.setOperation(LoadDataOperationText);
         this.progress?.addFileIdToOperation(fileId);
@@ -340,7 +348,7 @@ export class RenderingEngine implements IDisposable {
         if (data === null) {
             this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve WMO data for file: " + fileId);
         }
-        this.wmoCache[fileId] = data;
+        this.wmoCache.store(fileId, data);
         delete this.runningRequests[fileId];
         this.progress?.removeFileIdFromOperation(fileId);
         this.progress?.finishOperation();
