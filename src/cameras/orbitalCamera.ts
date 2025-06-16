@@ -1,6 +1,6 @@
 import { Camera } from "./base";
-import { RenderingEngine } from "../engine";
-import { BoundingBox, Float3, Float44 } from "../math";
+import { RenderingEngine } from "../rendering/engine";
+import { BoundingBox, Float3, Float44 } from "../rendering/math";
 
 export enum DragOperation {
     None,
@@ -215,8 +215,9 @@ export class OrbitalCamera extends Camera {
         eventArgs.preventDefault();
     }
 
-    resizeForBoundingBox(box: BoundingBox): void {
+    override resizeForBoundingBox(box: BoundingBox): void {
         this.lastBoundingBox = box;
+        
         if (!box) {
             return;
         }
@@ -232,9 +233,5 @@ export class OrbitalCamera extends Camera {
 
         Float3.fromSpherical(this.currentRadius, this.theta, this.phi, this.position);
         Float3.add(this.position, this.targetLocation);
-    }
-
-    getBoundingBox(): BoundingBox {
-        return this.lastBoundingBox;
     }
 }

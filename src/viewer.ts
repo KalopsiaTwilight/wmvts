@@ -1,6 +1,7 @@
 import { IDataLoader, IProgressReporter } from "./iDataLoader";
-import { RenderingEngine, OrbitalCamera, RenderObject, Camera, WebGlGraphics, 
+import { RenderingEngine, RenderObject, WebGlGraphics, 
     M2Model, WMOModel, ErrorHandlerFn, Float3, Float4 } from "./rendering";
+import { Camera } from "./cameras";
 
 export type CanvasCreationFunction = () => HTMLCanvasElement;
 export type RequestFrameFunction = (callback: Function) => void;
@@ -180,7 +181,7 @@ export class WoWModelViewer {
             disableLighting: this.options.scene?.disableLighting
         });
         this.resize(this.width, this.height);
-        this.renderEngine.sceneCamera = this.options.scene?.camera ?? new OrbitalCamera();
+        this.renderEngine.sceneCamera = this.options.scene?.camera ?? new Camera();
         if (this.options.scene && this.options.scene.objects) {
             for(const obj of this.options.scene.objects) {
                 this.renderEngine.addSceneObject(obj, 0);

@@ -1,5 +1,5 @@
 import { Float3, Float4, Float44 } from "./math";
-import { Camera } from "./camera";
+import { Camera } from "../cameras";
 import { RenderObject, IDisposable } from "./objects";
 import { GxBlend, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest } from "./graphics";
 import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData, RequestFrameFunction } from "..";

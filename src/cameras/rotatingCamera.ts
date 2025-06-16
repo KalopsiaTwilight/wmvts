@@ -1,5 +1,5 @@
-import { RenderingEngine } from "../engine";
-import { BoundingBox, Float3, Float44 } from "../math";
+import { RenderingEngine } from "../rendering/engine";
+import { BoundingBox, Float3, Float44 } from "../rendering/math";
 import { Camera } from "./base";
 
 
@@ -36,7 +36,7 @@ export class RotatingCamera extends Camera {
         Float44.invert(cameraMatrix, this.viewMatrix);
     }
 
-    resizeForBoundingBox(box?: BoundingBox): void {
+    override resizeForBoundingBox(box?: BoundingBox): void {
         this.lastBoundingBox = box;
         if (!box) {
             return;
@@ -46,9 +46,5 @@ export class RotatingCamera extends Camera {
         const distance = Float3.length(diff)
 
         this.radius = distance;
-    }
-
-    getBoundingBox(): BoundingBox {
-        return this.lastBoundingBox;
     }
 }

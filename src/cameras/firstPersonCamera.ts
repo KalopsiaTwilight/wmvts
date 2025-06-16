@@ -1,5 +1,5 @@
-import { RenderingEngine } from "../engine";
-import { BoundingBox, Float3, Float4, Float44 } from "../math";
+import { RenderingEngine } from "../rendering/engine";
+import { BoundingBox, Float3, Float4, Float44 } from "../rendering/math";
 import { Camera } from "./base";
 
 enum MovementState {
@@ -121,7 +121,7 @@ export class FirstPersonCamera extends Camera {
         super.dispose();
     }
 
-    resizeForBoundingBox(box?: BoundingBox): void {
+    override resizeForBoundingBox(box?: BoundingBox): void {
         this.lastBoundingBox = box;
 
         if (box) {
@@ -132,10 +132,6 @@ export class FirstPersonCamera extends Camera {
             this.pitch = Math.atan2(lookDir[1], horizontalDistance)
             this.yaw = Math.atan2(lookDir[0], lookDir[2])
         } 
-    }
-
-    getBoundingBox(): BoundingBox {
-        return this.lastBoundingBox;
     }
 
     handleKeyDown(eventArgs: KeyboardEvent) {

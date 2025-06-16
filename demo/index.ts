@@ -16,6 +16,7 @@ const viewer = new WoWModelViewer({
         container: containerElement,
     },
     scene: {
+        camera: new OrbitalCamera(),
         cameraFov: 90,
         ambientColor: [0.2, 0.1, 0.1, 1],
         lightDirection: [0, 1, 1],
