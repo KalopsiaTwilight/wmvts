@@ -44,13 +44,13 @@ export class WoWModelViewer {
     height: number;
     
     constructor(options: WoWModelViewerOptions) {
-        if (!options.dataLoader) {
+        if (!options?.dataLoader) {
             throw "dataLoader is a required argument for WoWModelViewer";
         }
-        if (!document && !options.canvas.createCanvas) {
+        if (!document && !options?.canvas?.createCanvas) {
             throw "canvas.createCanvas is a required argument for WoWModelViewer when running outside of a browser context";
         }
-        if (!options.canvas.container && !options.canvas.createCanvas) {
+        if (!options?.canvas?.container && !options?.canvas?.createCanvas) {
             throw "canvas.container is a required argument for WoWModelViewer when not providing a canvas via canvas.createCanvas";
         }
 
