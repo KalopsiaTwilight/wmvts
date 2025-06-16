@@ -34,3 +34,7 @@ setTimeout(() => {
     viewer.useClearColor([0, 0, 1, 0.2]);
     viewer.useCameraFov(130);
 }, 3000);
+
+setTimeout(() => {
+    viewer.disableLighting();
+}, 5000);

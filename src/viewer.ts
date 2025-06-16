@@ -23,6 +23,7 @@ export interface WoWModelViewerOptions {
         lightDirection?: Float3;
         lightColor?: Float4;
         ambientColor?: Float4;
+        disableLighting?: boolean;
         camera?: Camera;
         objects?: RenderObject[]
     }
@@ -104,6 +105,14 @@ export class WoWModelViewer {
         this.renderEngine.clearColor = color;
     }
 
+    disableLighting() {
+        this.renderEngine.lightingDisabled = true;
+    }
+
+    enableLighting() {
+        this.renderEngine.lightingDisabled = false;
+    }
+
     showFps() {
         this.renderEngine.showFps();
     }
@@ -167,7 +176,8 @@ export class WoWModelViewer {
             cameraFov: this.options.scene?.cameraFov,
             clearColor: this.options.canvas?.clearColor,
             lightColor: this.options.scene?.lightColor,
-            lightDirection: this.options.scene?.lightDirection
+            lightDirection: this.options.scene?.lightDirection,
+            disableLighting: this.options.scene?.disableLighting
         });
         this.resize(this.width, this.height);
         this.renderEngine.sceneCamera = this.options.scene?.camera ?? new OrbitalCamera();

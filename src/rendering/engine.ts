@@ -30,7 +30,8 @@ export interface RenderingEngineOptions{
     lightColor?: Float4;
     ambientColor?: Float4;
     clearColor?: Float4;
-    cacheTtl?: number
+    cacheTtl?: number;
+    disableLighting?: boolean
 }
 
 export class RenderingEngine implements IDisposable {
@@ -59,6 +60,7 @@ export class RenderingEngine implements IDisposable {
     ambientColor: Float4;
     lightColor: Float4;
     lightDir: Float3;
+    lightingDisabled: boolean;
 
     textureCache: SimpleCache<ITexture>;
     shaderCache: SimpleCache<IShaderProgram>;
@@ -107,6 +109,7 @@ export class RenderingEngine implements IDisposable {
         this.ambientColor = options.ambientColor ? options.ambientColor : Float4.create(1/3, 1/3, 1/3, 1);
         this.lightColor = options.lightColor ? options.lightColor : Float4.one()
         this.lightDir = Float3.normalize(options.lightDirection ? options.lightDirection : [0, 0, 1]);
+        this.lightingDisabled = options.disableLighting ? options.disableLighting : false;
 
         this.framesDrawn = 0;
         this.timeElapsed = 0;
@@ -312,6 +315,11 @@ export class RenderingEngine implements IDisposable {
             "u_viewMatrix": this.viewMatrix,
             "u_projectionMatrix": this.projectionMatrix,
         });
+        if (this.lightingDisabled) {
+            request.useUniforms({
+                "u_unlit": true
+            })
+        }
         this.batchRequests.push(request);
     }
 
