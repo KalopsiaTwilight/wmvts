@@ -139,9 +139,8 @@ export class WoWModelViewer {
 
                 this.viewerContainer = document.createElement("div");
                 this.viewerContainer.className = "wmvts-container";
+                this.viewerContainer.style.lineHeight = "0";
                 this.viewerContainer.style.position = "relative";
-                this.viewerContainer.style.width = "100%";
-                this.viewerContainer.style.height = "100%";
                 containerElem.append(this.viewerContainer)
                 this.viewerContainer.append(this.canvas);
                 
