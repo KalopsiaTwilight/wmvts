@@ -58,6 +58,7 @@ export class SimpleProgressReporter extends BaseProgressReporter {
         this.progressContainer.style.right = "0";
         this.progressContainer.style.left = "0";
         this.progressContainer.style.width = "100%";
+        this.progressContainer.style.zIndex = "1";
         this.container.appendChild(this.progressContainer);
 
         this.textContainer = document.createElement("p");
