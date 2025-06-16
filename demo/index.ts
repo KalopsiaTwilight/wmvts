@@ -14,10 +14,23 @@ const viewer = new WoWModelViewer({
     onError: console.log,
     canvas: {
         container: containerElement,
-        resizeToContainer: true
     },
+    scene: {
+        cameraFov: 90,
+        ambientColor: [0.2, 0.1, 0.1, 1],
+        lightDirection: [0, 1, 1],
+        lightColor: [1, 1, 1, 1]
+    }
 });
 
 // viewer.addM2Model(2120018);
 viewer.addWMOModel(106679);
 viewer.useCamera(new FirstPersonCamera())
+
+setTimeout(() => {
+    viewer.useAmbientColor([0.3, 0.1, 0.1, 1]);
+    viewer.useLightColor([0, 1, 0, 1]);
+    viewer.useLightDirection([25, 0, 0]);
+    viewer.useClearColor([0, 0, 1, 0.2]);
+    viewer.useCameraFov(130);
+}, 3000);

@@ -1,5 +1,6 @@
 import { IDataLoader, IProgressReporter } from "./iDataLoader";
-import { RenderingEngine, OrbitalCamera, RenderObject, Camera, WebGlGraphics, M2Model, WMOModel, ErrorHandlerFn } from "./rendering";
+import { RenderingEngine, OrbitalCamera, RenderObject, Camera, WebGlGraphics, 
+    M2Model, WMOModel, ErrorHandlerFn, Float3, Float4 } from "./rendering";
 
 export type CanvasCreationFunction = () => HTMLCanvasElement;
 export type RequestFrameFunction = (callback: Function) => void;
@@ -7,18 +8,26 @@ export type RequestFrameFunction = (callback: Function) => void;
 export interface WoWModelViewerOptions {
     dataLoader: IDataLoader,
     progressReporter?: IProgressReporter,
+    onError?: ErrorHandlerFn,
     canvas: {
         container?: HTMLElement,
         height?: number;
         width?: number;
+        clearColor?: Float4,
         resizeToContainer?: boolean,
         createCanvas?: CanvasCreationFunction,
         requestFrame?: RequestFrameFunction,
     },
-    onError?: ErrorHandlerFn,
     scene?: {
+        cameraFov?: number;
+        lightDirection?: Float3;
+        lightColor?: Float4;
+        ambientColor?: Float4;
         camera?: Camera;
         objects?: RenderObject[]
+    }
+    misc?: {
+        cacheTtl?: number
     }
 }
 
@@ -72,6 +81,27 @@ export class WoWModelViewer {
 
     useCamera(camera: Camera) {
         this.renderEngine.switchCamera(camera);
+    }
+
+    useCameraFov(newFov: number) {
+        this.renderEngine.fov = newFov;
+        this.renderEngine.resize(this.width, this.height);
+    }
+
+    useLightDirection(newLightDir: Float3) {
+        this.renderEngine.lightDir = Float3.normalize(newLightDir);
+    }
+
+    useLightColor(lightColor: Float4) {
+        this.renderEngine.lightColor = lightColor;
+    }
+    
+    useAmbientColor(ambientColor: Float4) {
+        this.renderEngine.ambientColor = ambientColor;
+    }
+
+    useClearColor(color: Float4) {
+        this.renderEngine.clearColor = color;
     }
 
     showFps() {
@@ -128,9 +158,17 @@ export class WoWModelViewer {
             this.options.canvas.requestFrame : window.requestAnimationFrame.bind(window);
         let gl = this.canvas.getContext("webgl", { alpha: true, premultipliedAlpha: false });
         const graphics = new WebGlGraphics(gl);
-        this.renderEngine = new RenderingEngine(graphics, this.options.dataLoader, 
-            requestFrameFn, this.options.progressReporter, this.viewerContainer, 
-            this.options.onError);
+        this.renderEngine = new RenderingEngine(graphics, this.options.dataLoader, requestFrameFn, {
+            progress: this.options.progressReporter,
+            container: this.viewerContainer,
+            errorHandler: this.options.onError,
+            ambientColor: this.options.scene?.ambientColor,
+            cacheTtl: this.options.misc?.cacheTtl,
+            cameraFov: this.options.scene?.cameraFov,
+            clearColor: this.options.canvas?.clearColor,
+            lightColor: this.options.scene?.lightColor,
+            lightDirection: this.options.scene?.lightDirection
+        });
         this.resize(this.width, this.height);
         this.renderEngine.sceneCamera = this.options.scene?.camera ?? new OrbitalCamera();
         if (this.options.scene && this.options.scene.objects) {

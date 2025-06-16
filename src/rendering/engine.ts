@@ -15,6 +15,24 @@ export type ErrorHandlerFn = (type: ErrorType, errorMsg: string) => void;
 
 const LoadDataOperationText: string = "Loading model data..."
 
+export interface RenderingEngineRequirements {
+    graphics: IGraphics,
+    dataLoader: IDataLoader,
+    requestFrame: RequestFrameFunction,
+}
+
+export interface RenderingEngineOptions{
+    progress?: IProgressReporter, 
+    container?: HTMLElement, 
+    errorHandler?: ErrorHandlerFn,
+    cameraFov?: number;
+    lightDirection?: Float3;
+    lightColor?: Float4;
+    ambientColor?: Float4;
+    clearColor?: Float4;
+    cacheTtl?: number
+}
+
 export class RenderingEngine implements IDisposable {
     graphics: IGraphics;
     dataLoader: IDataLoader;
@@ -61,24 +79,22 @@ export class RenderingEngine implements IDisposable {
     fpsElement?: HTMLParagraphElement;
 
     constructor(graphics: IGraphics, dataLoader: IDataLoader, requestFrame: RequestFrameFunction,
-        progress?: IProgressReporter, container?: HTMLElement, errorHandler?: ErrorHandlerFn) {
+        options: RenderingEngineOptions) {
         this.graphics = graphics;
         this.dataLoader = dataLoader;
         this.requestFrame = requestFrame;
-        this.dataLoader.useProgressReporter(progress);
-        this.progress = progress;
-        this.errorHandler = errorHandler;
-        this.containerElement = container;
+        this.progress = options.progress;
+        this.dataLoader.useProgressReporter(options.progress);
+        this.errorHandler = options.errorHandler;
+        this.containerElement = options.container;
 
         this.sceneObjects = [];
 
         this.viewMatrix = Float44.identity();
         this.invViewMatrix = Float44.identity();
         this.projectionMatrix = Float44.identity();
-        this.clearColor = Float4.create(0.1, 0.1, 0.1, 1);
 
-        // TODO: Allow options to set this somewhere
-        const cacheTtl = 1000 * 60 * 15
+        const cacheTtl = options.cacheTtl ? options.cacheTtl : 1000 * 60 * 15;
         this.textureCache = new SimpleCache(cacheTtl);
         this.shaderCache = new SimpleCache(cacheTtl);
         this.wmoCache = new SimpleCache(cacheTtl);
@@ -86,11 +102,11 @@ export class RenderingEngine implements IDisposable {
         this.runningRequests = { };
         this.batchRequests = [];
 
-        // TODO: Allow options to set this somewhere
-        this.fov = 60;
-        this.ambientColor = Float4.create(1/3, 1/3, 1/3, 1);
-        this.lightColor = Float4.one()
-        this.lightDir = Float3.normalize([0, 0, 1]);
+        this.clearColor = options.clearColor ? options.clearColor : Float4.create(0.1, 0.1, 0.1, 1);
+        this.fov = options.cameraFov ? options.cameraFov : 60;
+        this.ambientColor = options.ambientColor ? options.ambientColor : Float4.create(1/3, 1/3, 1/3, 1);
+        this.lightColor = options.lightColor ? options.lightColor : Float4.one()
+        this.lightDir = Float3.normalize(options.lightDirection ? options.lightDirection : [0, 0, 1]);
 
         this.framesDrawn = 0;
         this.timeElapsed = 0;
