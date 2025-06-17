@@ -9,7 +9,8 @@ const UNKNOWN_TEXTURE_ID = -123;
 
 const DataLoadingErrorType = "dataFetching";
 const DataProcessingErrorType = "dataProcessing";
-export type ErrorType = "dataFetching" | "dataProcessing";
+const RenderingErrorType = "rendering"
+export type ErrorType = "dataFetching" | "dataProcessing" | "rendering";
 
 export type ErrorHandlerFn = (type: ErrorType, errorMsg: string) => void;
 
@@ -146,55 +147,60 @@ export class RenderingEngine implements IDisposable {
     }
 
     draw(currentTime: number) {
-        const deltaTime = (currentTime - this.lastTime);
-        this.lastTime = currentTime;
+        try {
+            const deltaTime = (currentTime - this.lastTime);
+            this.lastTime = currentTime;
 
-        this.graphics.startFrame(this.width, this.height);
-        this.graphics.clearFrame(this.clearColor);
-        
-        this.sceneCamera.update(deltaTime);
-        Float44.copy(this.sceneCamera.getViewMatrix(), this.viewMatrix);
-        Float44.invert(this.viewMatrix, this.invViewMatrix);
+            this.graphics.startFrame(this.width, this.height);
+            this.graphics.clearFrame(this.clearColor);
+            
+            this.sceneCamera.update(deltaTime);
+            Float44.copy(this.sceneCamera.getViewMatrix(), this.viewMatrix);
+            Float44.invert(this.viewMatrix, this.invViewMatrix);
 
-        this.textureCache.update(deltaTime);
-        this.wmoCache.update(deltaTime);
-        this.m2Cache.update(deltaTime);
-        for(const obj of this.sceneObjects) {
-            obj.update(deltaTime);
-        }
-        for(const obj of this.sceneObjects) {
-            obj.draw();
-        }
-
-        // Sort batches in draw order.
-        const requests = this.batchRequests
-            .sort((r1, r2) => {
-            const layer1 = r1.blendMode > GxBlend.GxBlend_Opaque ?
-                r1.blendMode == GxBlend.GxBlend_AlphaKey ? 1 : 2  : 0
-            const layer2 = r2.blendMode > GxBlend.GxBlend_Opaque ?
-                r2.blendMode == GxBlend.GxBlend_AlphaKey ? 1 : 2  : 0
-
-            const layerDiff = layer1 - layer2;
-            if (layerDiff != 0) {
-                return layerDiff;
+            this.textureCache.update(deltaTime);
+            this.wmoCache.update(deltaTime);
+            this.m2Cache.update(deltaTime);
+            for(const obj of this.sceneObjects) {
+                obj.update(deltaTime);
             }
-            return r1.priority - r2.priority;
-        });
-        for(const batch of requests) {
-            batch.submit(this.graphics);
-        }
-        this.batchRequests = [];
-
-        this.framesDrawn++;
-        this.timeElapsed+=deltaTime;
-
-        if (this.fpsElement) {
-            this.fpsCounter.push(1/(deltaTime/1000));
-            if (this.fpsCounter.length > this.maxFpsCounterSize) {
-                this.fpsCounter.splice(0, 1);
+            for(const obj of this.sceneObjects) {
+                obj.draw();
             }
-            const avgFps = this.fpsCounter.reduce((acc, next)  => acc+next, 0) / this.fpsCounter.length;
-            this.fpsElement.textContent = "FPS: " + Math.floor(avgFps);
+
+            // Sort batches in draw order.
+            const requests = this.batchRequests
+                .sort((r1, r2) => {
+                const layer1 = r1.blendMode > GxBlend.GxBlend_Opaque ?
+                    r1.blendMode == GxBlend.GxBlend_AlphaKey ? 1 : 2  : 0
+                const layer2 = r2.blendMode > GxBlend.GxBlend_Opaque ?
+                    r2.blendMode == GxBlend.GxBlend_AlphaKey ? 1 : 2  : 0
+
+                const layerDiff = layer1 - layer2;
+                if (layerDiff != 0) {
+                    return layerDiff;
+                }
+                return r1.priority - r2.priority;
+            });
+            for(const batch of requests) {
+                batch.submit(this.graphics);
+            }
+            this.batchRequests = [];
+
+            this.framesDrawn++;
+            this.timeElapsed+=deltaTime;
+
+            if (this.fpsElement) {
+                this.fpsCounter.push(1/(deltaTime/1000));
+                if (this.fpsCounter.length > this.maxFpsCounterSize) {
+                    this.fpsCounter.splice(0, 1);
+                }
+                const avgFps = this.fpsCounter.reduce((acc, next)  => acc+next, 0) / this.fpsCounter.length;
+                this.fpsElement.textContent = "FPS: " + Math.floor(avgFps);
+            }
+        }
+        catch(err) {
+            this.errorHandler?.(RenderingErrorType, err.toString());
         }
     }
 
