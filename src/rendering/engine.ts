@@ -1,4 +1,4 @@
-import { Float3, Float4, Float44 } from "./math";
+import { AleaPrngGenerator, Float3, Float4, Float44 } from "./math";
 import { Camera } from "../cameras";
 import { RenderObject, IDisposable } from "./objects";
 import { GxBlend, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest } from "./graphics";
@@ -383,5 +383,9 @@ export class RenderingEngine implements IDisposable {
         this.progress?.removeFileIdFromOperation(fileId);
         this.progress?.finishOperation();
         return data;
+    }
+
+    getRandomNumberGenerator(seed?: number|string) {
+        return new AleaPrngGenerator(seed ? seed : 0xb00b1e5);
     }
 }

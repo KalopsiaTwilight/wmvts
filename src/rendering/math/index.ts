@@ -1,5 +1,6 @@
 import { Float3 } from "./vectors"
 
+export * from "./rng"
 export * from "./matrices"
 export * from "./vectors"
 

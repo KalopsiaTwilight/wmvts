@@ -10,6 +10,7 @@ import fragmentShaderProgramText from "./m2Model.frag";
 import vertexShaderProgramText from "./m2Model.vert";
 import { getM2PixelShaderId, getM2VertexShaderId} from "./m2Shaders";
 import { BaseRenderObject } from "../baseRenderObject";
+import { M2ParticleEmitter } from "./particleEmitter/m2ParticleEmitter";
 
 const MAX_BONES = 256;
 
@@ -50,6 +51,7 @@ export class M2Model extends BaseRenderObject
     invModelViewMatrix: Float44;
     isMirrored: boolean;
     drawOrderTexUnits: WoWTextureUnitData[];
+    particleEmitters: M2ParticleEmitter[];
 
     constructor(fileId: number) {
         super();
@@ -64,6 +66,7 @@ export class M2Model extends BaseRenderObject
         this.bonePositionBuffer = new Float32Array(16 * MAX_BONES);
 
         this.children = [];
+        this.particleEmitters = [];
     }
 
     get isLoaded() {
@@ -106,9 +109,11 @@ export class M2Model extends BaseRenderObject
         for (let i = 0; i < this.modelData.bones.length; i++) {
             this.updateBone(this.modelData.bones[i], i);
         }
-
         for(let i = 0; i < this.drawOrderTexUnits.length; i++) {
             this.updateTextureUnit(this.modelData.textureUnits[i], i);
+        }
+        for(let i = 0; i < this.modelData.particleEmitters.length; i++) {
+            this.particleEmitters[i].update(deltaTime);
         }
     }
 
@@ -124,6 +129,9 @@ export class M2Model extends BaseRenderObject
 
         for(let i = 0; i < this.modelData.textureUnits.length; i++) {
             this.drawTextureUnit(this.modelData.textureUnits[i], i);
+        }
+        for(let i = 0; i < this.modelData.particleEmitters.length; i++) {
+            this.particleEmitters[i].draw();
         }
     }
 
@@ -193,7 +201,7 @@ export class M2Model extends BaseRenderObject
                     const pivotVec3 = Float4.create(bone.pivot[0], bone.pivot[1], bone.pivot[2], 0);
 
                     const translationVec = Float4.identity();
-                    Float4.subtract(Float44.transformDirection(pivotVec4, originalPosMatrix), Float44.transformDirection(pivotVec3, parentPosMatrix), translationVec);
+                    Float4.subtract(Float44.transformDirection4(pivotVec4, originalPosMatrix), Float44.transformDirection4(pivotVec3, parentPosMatrix), translationVec);
                     translationVec[3] = 1;
                     Float44.setColumn(parentPosMatrix, 3, translationVec);
                 }
@@ -327,7 +335,7 @@ export class M2Model extends BaseRenderObject
             Float44.setColumn(positionMatrix, 2, Float4.scale(Float44.getColumn(positionMatrix, 2), scaleVector[2]));
 
             const translationVec = Float4.identity();
-            Float4.subtract(Float44.transformDirection(pivotVec4, positionMatrixCopy), Float44.transformDirection(pivotVec3, positionMatrix), translationVec);
+            Float4.subtract(Float44.transformDirection4(pivotVec4, positionMatrixCopy), Float44.transformDirection4(pivotVec3, positionMatrix), translationVec);
             translationVec[3] = 1;
             Float44.setColumn(positionMatrix, 3, translationVec);
         }
@@ -480,6 +488,9 @@ export class M2Model extends BaseRenderObject
     }
 
     override dispose(): void {
+        for(const emitter of this.particleEmitters) {
+            emitter.dispose();
+        }
         super.dispose();
         this.modelData = null;
         this.shaderProgram = null;
@@ -545,6 +556,13 @@ export class M2Model extends BaseRenderObject
                 : this.modelData.submeshes[a.skinSectionIndex].submeshId - this.modelData.submeshes[b.skinSectionIndex].submeshId
         );
 
+        for(let i = 0; i < this.modelData.particleEmitters.length; i++) {
+            const exp2Data = this.modelData.particles[i];
+            const emitterData = this.modelData.particleEmitters[i];
+            const emitter = new M2ParticleEmitter(this.engine, this, emitterData, exp2Data);
+            this.particleEmitters.push(emitter)
+        }
+
         this.isModelDataLoaded = true;
     }
 
@@ -554,11 +572,12 @@ export class M2Model extends BaseRenderObject
         for (let i = 0; i < this.modelData.textures.length; i++) {
             const textureId = this.modelData.textures[i].textureId
             if(textureId > 0) {
-                this.engine.getTexture(textureId).then((texture) => {
+                const promise = this.engine.getTexture(textureId).then((texture) => {
                     if (!this.isDisposing) {
                         this.loadedTextures[textureId] = texture
                     }
                 })
+                loadingPromises.push(promise);
             } else {
                 this.loadedTextures[i] = undefined;
             }

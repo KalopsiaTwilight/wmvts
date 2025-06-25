@@ -269,6 +269,10 @@ export namespace Float3 {
         return result as Float3;
     }
 
+    export function fromScalar(scalar: number) {
+        return create(scalar, scalar, scalar);
+    }
+
     export function copy(input: Float3, dest?: Float3): Float3 {
         dest = dest ? dest : zero();
         dest[0] = input[0];
@@ -308,8 +312,12 @@ export namespace Float3 {
         return dest;
     }
 
-    export function length(vec: Float3) {
+    export function length(vec: Float3 | Float4) {
         return Math.hypot(vec[0], vec[1], vec[2]);
+    }
+
+    export function lengthSquared(vec: Float3) {
+        return vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2];
     }
 
     export function normalize(input: Float3, dest?: Float3) {
@@ -434,7 +442,10 @@ export namespace Float2 {
         return dest;
     }
 
-    export function multiply(vecA: Float2, vecB: Float2, dest?: Float2) {
+    export function multiply(vecA: Float2|Float3|Float4, vecB: Float2|Float3|Float4, dest?: Float2): Float2
+    export function multiply(vecA: Float2|Float3|Float4, vecB: Float2|Float3|Float4, dest?: Float3): Float3
+    export function multiply(vecA: Float2|Float3|Float4, vecB: Float2|Float3|Float4, dest?: Float4): Float4
+    export function multiply(vecA: Float2|Float3|Float4, vecB: Float2|Float3|Float4, dest?: Float2 | Float3 | Float4) {
         dest = dest ? dest : zero();
         dest[0] = vecA[0] * vecB[0];
         dest[1] = vecA[1] * vecB[1];

@@ -55,7 +55,7 @@ export namespace Float33 {
         return result as Float33;
     }
 
-    export function from44(input: Float44, dest?: Float33) {
+    export function getRotationMatrix(input: Float44, dest?: Float33) {
         dest = dest ? dest : identity();
         dest[0] = input[0];
         dest[1] = input[1];
@@ -66,6 +66,14 @@ export namespace Float33 {
         dest[6] = input[8];
         dest[7] = input[9];
         dest[8] = input[10];
+        return dest;
+    }
+
+    export function getColumn(input: Float33, col: number, dest?: Float3) {
+        dest = dest ? dest : Float3.zero();
+        dest[0] = input[col * 3]
+        dest[1] = input[col * 3 + 1]
+        dest[2] = input[col * 3 + 2]
         return dest;
     }
 
@@ -615,7 +623,10 @@ export namespace Float44 {
         return dest;
     }
 
-    export function getTranslation(input: Float44, dest?: Float3 | Float4) {
+    export function getTranslation(input: Float44): Float3
+    export function getTranslation(input: Float44, dest: Float3): Float3
+    export function getTranslation(input: Float44, dest: Float4): Float4
+    export function getTranslation(input: Float44, dest?: Float3|Float4): Float3|Float4 {
         dest = dest ? dest : Float3.zero();
         dest[0] = input[12];
         dest[1] = input[13];
@@ -639,7 +650,7 @@ export namespace Float44 {
         return dest;
     }
     
-    export function transformDirection(input: Float4, matrix: Float44, dest?: Float4) {
+    export function transformDirection4(input: Float4, matrix: Float44, dest?: Float4) {
         dest = dest ? dest : Float4.zero();
 
         const x = input[0];
@@ -651,6 +662,32 @@ export namespace Float44 {
         dest[1] = matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13] * w;
         dest[2] = matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14] * w;
         dest[3] = matrix[3] * x + matrix[7] * y + matrix[11] * z + matrix[15] * w;
+        return dest;
+    }
+
+    export function transformDirection3_1(input: Float3, matrix: Float44, dest?: Float3) {
+        dest = dest ? dest : Float3.zero();
+
+        const x = input[0];
+        const y = input[1];
+        const z = input[2];
+
+        dest[0] = matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12];
+        dest[1] = matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13];
+        dest[2] = matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14];
+        return dest;
+    }
+
+    export function transformDirection3_0(input: Float3, matrix: Float44, dest?: Float3) {
+        dest = dest ? dest : Float3.zero();
+
+        const x = input[0];
+        const y = input[1];
+        const z = input[2];
+
+        dest[0] = matrix[0] * x + matrix[4] * y + matrix[8] * z;
+        dest[1] = matrix[1] * x + matrix[5] * y + matrix[9] * z;
+        dest[2] = matrix[2] * x + matrix[6] * y + matrix[10] * z;
         return dest;
     }
 
