@@ -273,7 +273,9 @@ export namespace Float3 {
         return create(scalar, scalar, scalar);
     }
 
-    export function copy(input: Float3, dest?: Float3): Float3 {
+    export function copy(input: Float3, dest?: Float3): Float3
+    export function copy(input: Float3, dest?: Float4): Float4
+    export function copy(input: Float3, dest?: Float3|Float4): Float3|Float4 {
         dest = dest ? dest : zero();
         dest[0] = input[0];
         dest[1] = input[1];

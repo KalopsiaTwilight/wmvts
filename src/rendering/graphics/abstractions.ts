@@ -117,6 +117,7 @@ export interface IGraphics {
 
     drawTriangles(offset: number, count: number): void;
     drawIndexedTriangles(offset: number, count: number): void;
+    drawIndexedTriangleStrip(offset: number, count: number): void;
 
     createTextureFromImg(img: HTMLImageElement, opts?: ITextureOptions): ITexture;
     createSolidColorTexture(color: Float4): ITexture;

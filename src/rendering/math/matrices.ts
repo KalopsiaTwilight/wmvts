@@ -720,8 +720,12 @@ export namespace Float44 {
         return dest;
     }
 
-    export function getColumn(input: Float44, col: number) {
+    export function getColumn4(input: Float44, col: number) {
         return Float4.create(input[4 * col + 0], input[4 * col + 1], input[4 * col + 2], 0);
+    }
+
+    export function getColumn3(input: Float44, col: number) {
+        return Float3.create(input[4 * col + 0], input[4 * col + 1], input[4 * col + 2]);
     }
 
     export function setColumn(input: Float44, col: number, colVal: Float4) {

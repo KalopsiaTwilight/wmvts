@@ -125,6 +125,10 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
     drawIndexedTriangles(offset: number, count: number): void {
         this.gl.drawElements(this.gl.TRIANGLES, count, this.gl.UNSIGNED_SHORT, offset);
     }
+    
+    drawIndexedTriangleStrip(offset: number, count: number): void {
+        this.gl.drawElements(this.gl.TRIANGLE_STRIP, count, this.gl.UNSIGNED_SHORT, offset);
+    }
 
     private useGlFeature(feature: GLenum, val: boolean) {
         if (val) {
