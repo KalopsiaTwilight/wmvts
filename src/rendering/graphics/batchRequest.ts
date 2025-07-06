@@ -1,9 +1,15 @@
 import { ColorMask, GxBlend, IGraphics, IShaderProgram, IUniformsData, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer } from "./abstractions";
 
+export enum DrawInstructionType {
+    Triangle,
+    TriangleStrip
+}
+
 export interface DrawInstruction {
     indexed: boolean;
     offset: number;
     count: number;
+    type: DrawInstructionType
 }
 
 export class RenderingBatchRequest {
@@ -75,13 +81,22 @@ export class RenderingBatchRequest {
     drawTriangles(offset: number, count: number) {
         this.drawInstruction = {
             indexed: false,
-            offset, count
+            offset, count,
+            type: DrawInstructionType.Triangle
         };
     }
     drawIndexedTriangles(offset: number, count: number) {
         this.drawInstruction = {
             indexed: true,
-            offset, count
+            offset, count,
+            type: DrawInstructionType.Triangle
+        };
+    }
+    drawIndexedTriangleStrip(offset: number, count: number) {
+        this.drawInstruction = {
+            indexed: true,
+            offset, count,
+            type: DrawInstructionType.TriangleStrip
         };
     }
 
@@ -108,10 +123,15 @@ export class RenderingBatchRequest {
         }
 
         if (this.drawInstruction) {
-            if (this.drawInstruction.indexed) {
-                graphics.drawIndexedTriangles(this.drawInstruction.offset, this.drawInstruction.count);
-            } else {
-                graphics.drawTriangles(this.drawInstruction.offset, this.drawInstruction.count);
+            if (this.drawInstruction.type === DrawInstructionType.Triangle) {
+                if (this.drawInstruction.indexed) {
+                    graphics.drawIndexedTriangles(this.drawInstruction.offset, this.drawInstruction.count);
+                } else {
+                    graphics.drawTriangles(this.drawInstruction.offset, this.drawInstruction.count);
+                }
+            }
+            if (this.drawInstruction.type === DrawInstructionType.TriangleStrip) {
+                graphics.drawIndexedTriangleStrip(this.drawInstruction.offset, this.drawInstruction.count)
             }
         }
     }

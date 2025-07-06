@@ -398,7 +398,7 @@ export class M2ParticleEmitter implements IDisposable {
         this.zOrder = currentBonePosition[2];
 
         Float44.copy(currentModelMatrix, this.emitterModelMatrix);
-        this.inheritedScale = Float3.length(Float44.getColumn(this.emitterModelMatrix, 0))
+        this.inheritedScale = Float3.length(Float44.getColumn4(this.emitterModelMatrix, 0))
 
         if (deltaTime > 0) {
             const currentPosition = Float44.getTranslation(this.emitterModelMatrix);

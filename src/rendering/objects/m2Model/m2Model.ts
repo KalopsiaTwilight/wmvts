@@ -11,6 +11,7 @@ import vertexShaderProgramText from "./m2Model.vert";
 import { getM2PixelShaderId, getM2VertexShaderId} from "./m2Shaders";
 import { BaseRenderObject } from "../baseRenderObject";
 import { M2ParticleEmitter } from "./particleEmitter/m2ParticleEmitter";
+import { M2RibbonEmitter } from "./ribbonEmitter/m2RibbonEmitter";
 
 const MAX_BONES = 256;
 
@@ -52,6 +53,7 @@ export class M2Model extends BaseRenderObject
     isMirrored: boolean;
     drawOrderTexUnits: WoWTextureUnitData[];
     particleEmitters: M2ParticleEmitter[];
+    ribbonEmitters: M2RibbonEmitter[];
 
     constructor(fileId: number) {
         super();
@@ -67,6 +69,7 @@ export class M2Model extends BaseRenderObject
 
         this.children = [];
         this.particleEmitters = [];
+        this.ribbonEmitters = [];
     }
 
     get isLoaded() {
@@ -115,6 +118,9 @@ export class M2Model extends BaseRenderObject
         for(let i = 0; i < this.modelData.particleEmitters.length; i++) {
             this.particleEmitters[i].update(deltaTime);
         }
+        for(let i = 0; i < this.modelData.ribbonEmitters.length; i++) {
+            this.ribbonEmitters[i].update(deltaTime);
+        }
     }
 
     draw(): void {
@@ -132,6 +138,9 @@ export class M2Model extends BaseRenderObject
         }
         for(let i = 0; i < this.modelData.particleEmitters.length; i++) {
             this.particleEmitters[i].draw();
+        }
+        for(let i = 0; i < this.modelData.ribbonEmitters.length; i++) {
+            this.ribbonEmitters[i].draw();
         }
     }
 
@@ -162,15 +171,15 @@ export class M2Model extends BaseRenderObject
                 // Ignore both scale & rot, i.e. just use original 3x3 col vectors
                 if ((6 & bone.flags) === 6) {
                     for(let i = 0; i < 3; i++) {
-                        Float44.setColumn(parentPosMatrix, i, Float44.getColumn(this.modelViewMatrix, i))
+                        Float44.setColumn(parentPosMatrix, i, Float44.getColumn4(this.modelViewMatrix, i))
                     }
                 }
                 // Ignore Rotation, i.e only apply scale 
                 else if ((4 & bone.flags)) {
                     for(let i = 0; i < 3; i++) {
-                        const col = Float44.getColumn(this.modelViewMatrix, i);
+                        const col = Float44.getColumn4(this.modelViewMatrix, i);
                         const colLength = Float4.length(col);
-                        const parentCol = Float44.getColumn(parentPosMatrix, i);
+                        const parentCol = Float44.getColumn4(parentPosMatrix, i);
                         const parentColLength = Float4.length(parentCol);
                         
                         // Apply scale to original vector by multiplying by (|scaled vector| / |orig vector|)
@@ -181,9 +190,9 @@ export class M2Model extends BaseRenderObject
                 // Ignore Scale, i.e. only apply rotation
                 else {
                     for(let i = 0; i < 3; i++) {
-                        const col = Float44.getColumn(this.modelViewMatrix, i);
+                        const col = Float44.getColumn4(this.modelViewMatrix, i);
                         const colLength = Float4.length(col);
-                        const parentCol = Float44.getColumn(parentPosMatrix, i);
+                        const parentCol = Float44.getColumn4(parentPosMatrix, i);
                         const parentColLength = Float4.length(parentCol);
                         
                         // Apply rotation to by scaling parent vector by (1 / |scaled vector| * |orig vector|)
@@ -195,7 +204,7 @@ export class M2Model extends BaseRenderObject
                 let translate: Float4;
                 // Ignore parent translate
                 if (1 & bone.flags) {
-                    translate = Float44.getColumn(this.modelViewMatrix, 3);
+                    translate = Float44.getColumn4(this.modelViewMatrix, 3);
                 } else {
                     const pivotVec4 = Float4.create(bone.pivot[0], bone.pivot[1], bone.pivot[2], 1);
                     const pivotVec3 = Float4.create(bone.pivot[0], bone.pivot[1], bone.pivot[2], 0);
@@ -262,27 +271,27 @@ export class M2Model extends BaseRenderObject
             const positionMatrix = data.positionMatrix;
             const positionMatrixCopy = Float44.copy(data.positionMatrix);
             const scaleVector = Float3.create(
-                Float4.length(Float44.getColumn(data.positionMatrix, 0)),
-                Float4.length(Float44.getColumn(data.positionMatrix, 1)),
-                Float4.length(Float44.getColumn(data.positionMatrix, 2)),
+                Float4.length(Float44.getColumn4(data.positionMatrix, 0)),
+                Float4.length(Float44.getColumn4(data.positionMatrix, 1)),
+                Float4.length(Float44.getColumn4(data.positionMatrix, 2)),
             )
 
             switch (billboardFlags) {
                 case WoWBoneFlags.SphericalBillboard: {
                     if (isAnimated) {
-                        const xAxis = Float44.getColumn(animationMatrix, 0);
+                        const xAxis = Float44.getColumn4(animationMatrix, 0);
                         Float44.setColumn(positionMatrix, 0, Float4.normalize(
                             Float4.create(xAxis[1], xAxis[2], -xAxis[0], 0)
                         ));
 
-                        const yAxis = Float44.getColumn(animationMatrix, 1);
+                        const yAxis = Float44.getColumn4(animationMatrix, 1);
                         Float44.setColumn(positionMatrix, 1, Float4.normalize(
                             this.isMirrored 
                                 ? Float4.create(-yAxis[1], -yAxis[2], yAxis[0], 0) 
                                 : Float4.create(yAxis[1], yAxis[2], -yAxis[0], 0) 
                         ))
 
-                        const zAxis = Float44.getColumn(animationMatrix, 2);
+                        const zAxis = Float44.getColumn4(animationMatrix, 2);
                         Float44.setColumn(positionMatrix, 2, Float4.normalize(
                             Float4.create(zAxis[1], zAxis[2], -zAxis[0], 0)
                         ))
@@ -293,7 +302,7 @@ export class M2Model extends BaseRenderObject
                     }
                 }
                 case WoWBoneFlags.CylindricalBillboardLockX: {
-                    const xAxis = Float4.normalize(Float44.getColumn(positionMatrix, 0));
+                    const xAxis = Float4.normalize(Float44.getColumn4(positionMatrix, 0));
                     Float44.setColumn(positionMatrix, 0, xAxis);
 
                     const yAxis = Float4.normalize(Float4.create(positionMatrix[4], -positionMatrix[0], 0, 0));
@@ -304,7 +313,7 @@ export class M2Model extends BaseRenderObject
                     Float44.setColumn(positionMatrix, 2, zAxis);
                 }
                 case WoWBoneFlags.CylindricalBillboardLockY: {
-                    const yAxis = Float4.normalize(Float44.getColumn(positionMatrix, 1));
+                    const yAxis = Float4.normalize(Float44.getColumn4(positionMatrix, 1));
                     Float44.setColumn(positionMatrix, 1, yAxis);
 
                     const xAxis = Float4.normalize(Float4.create(-positionMatrix[5], positionMatrix[1], 0, 0));
@@ -315,7 +324,7 @@ export class M2Model extends BaseRenderObject
                     Float44.setColumn(positionMatrix, 2, zAxis);
                 }
                 case WoWBoneFlags.CylindricalBillboardLockZ: {
-                    const zAxis = Float4.normalize(Float44.getColumn(positionMatrix, 2));
+                    const zAxis = Float4.normalize(Float44.getColumn4(positionMatrix, 2));
                     Float44.setColumn(positionMatrix, 2, zAxis);
 
                     const yAxis = Float4.normalize(Float4.create(positionMatrix[9], positionMatrix[8], 0, 0));
@@ -330,9 +339,9 @@ export class M2Model extends BaseRenderObject
             const pivotVec4 = Float4.create(bone.pivot[0], bone.pivot[1], bone.pivot[2], 1);
             const pivotVec3 = Float4.create(bone.pivot[0], bone.pivot[1], bone.pivot[2], 0);
 
-            Float44.setColumn(positionMatrix, 0, Float4.scale(Float44.getColumn(positionMatrix, 0), scaleVector[0]));
-            Float44.setColumn(positionMatrix, 1, Float4.scale(Float44.getColumn(positionMatrix, 1), scaleVector[1]));
-            Float44.setColumn(positionMatrix, 2, Float4.scale(Float44.getColumn(positionMatrix, 2), scaleVector[2]));
+            Float44.setColumn(positionMatrix, 0, Float4.scale(Float44.getColumn4(positionMatrix, 0), scaleVector[0]));
+            Float44.setColumn(positionMatrix, 1, Float4.scale(Float44.getColumn4(positionMatrix, 1), scaleVector[1]));
+            Float44.setColumn(positionMatrix, 2, Float4.scale(Float44.getColumn4(positionMatrix, 2), scaleVector[2]));
 
             const translationVec = Float4.identity();
             Float4.subtract(Float44.transformDirection4(pivotVec4, positionMatrixCopy), Float44.transformDirection4(pivotVec3, positionMatrix), translationVec);
@@ -559,8 +568,15 @@ export class M2Model extends BaseRenderObject
         for(let i = 0; i < this.modelData.particleEmitters.length; i++) {
             const exp2Data = this.modelData.particles[i];
             const emitterData = this.modelData.particleEmitters[i];
+            // TODO: Refactor ctor to use parent.engine
             const emitter = new M2ParticleEmitter(this.engine, this, emitterData, exp2Data);
             this.particleEmitters.push(emitter)
+        }
+
+        for(let i = 0; i < this.modelData.ribbonEmitters.length; i++) {
+            const emitterData = this.modelData.ribbonEmitters[i];
+            const emitter = new M2RibbonEmitter(this, emitterData);
+            this.ribbonEmitters.push(emitter)
         }
 
         this.isModelDataLoaded = true;
