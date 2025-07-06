@@ -139,7 +139,12 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
     }
 
     createSolidColorTexture(color: Float4): ITexture {
-        return new WebGLTextureAbstraction(this.gl, createTexture(this.gl, { color: color, width: 1, height: 1 }));
+        const gl = this.gl;
+        const glTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, glTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(Float4.scale(color, 255)));
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        return new WebGLTextureAbstraction(this.gl, glTexture);
     }
 
     createTextureFromImg(img: HTMLImageElement, opts: ITextureOptions): ITexture {

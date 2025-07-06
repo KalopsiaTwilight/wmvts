@@ -595,7 +595,7 @@ export class M2Model extends BaseRenderObject
                 })
                 loadingPromises.push(promise);
             } else {
-                this.loadedTextures[i] = undefined;
+                this.loadedTextures[i] = this.engine.getUnknownTexture();
             }
         }
 
