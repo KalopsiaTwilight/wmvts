@@ -41,7 +41,7 @@ void main() {
     vec4 texture3 = texture2D(u_texture3, v_texCoord3);
 
     // BlendMode AlphaKey
-    if (u_blendMode == 1) {
+    if (u_blendMode > 0) {
         if (texture1.a < 0.501960814) {
             discard;
         }

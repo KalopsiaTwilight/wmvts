@@ -1,6 +1,9 @@
-import { BufferDataType, Float3, Float4, Float44, GxBlend, IShaderProgram, ITexture, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, M2BlendModeToEGxBlend, M2Model, RenderingBatchRequest, RenderingEngine, RenderObject } from "@app/rendering";
+import { 
+    BufferDataType, ColorMask, Float3, IShaderProgram, ITexture, IVertexArrayObject, M2BlendModeToEGxBlend, M2Model, 
+    RenderingBatchRequest, RenderingEngine 
+} from "@app/rendering";
 import { BinaryWriter } from "@app/utils";
-import { WoWWorldModelData, WowWorldModelGroupFlags, WoWWorldModelMaterialMaterialFlags } from "@app/modeldata";
+import { WoWWorldModelData, WoWWorldModelMaterialMaterialFlags } from "@app/modeldata";
 
 import fragmentShaderProgramText from "./wmoModel.frag";
 import vertexShaderProgramText from "./wmoModel.vert";
@@ -84,6 +87,7 @@ export class WMOModel extends BaseRenderObject {
                 batchRequest.useBlendMode(blendMode)
                 batchRequest.useDepthTest(true);
                 batchRequest.useDepthWrite(true);
+                batchRequest.useColorMask(ColorMask.Alpha | ColorMask.Red | ColorMask.Blue | ColorMask.Green);
 
                 batchRequest.useShaderProgram(this.shaderProgram);
                 batchRequest.useUniforms({
@@ -103,7 +107,6 @@ export class WMOModel extends BaseRenderObject {
                 this.engine.submitBatchRequest(batchRequest);
             }
         }
-
         
         for (const child of this.children) {
             child.draw();

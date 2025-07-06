@@ -40,8 +40,8 @@ vec2 posToTexCoord(vec3 pos, vec3 normal) {
 void main() {
     v_position = (u_modelMatrix * vec4(a_position, 1.0)).xyz;
     v_normal = normalizedMatrixMultiply(u_modelMatrix, a_normal);
-    v_color1 = a_color1.bgra;
-    v_color2 = a_color2.rgba;
+    v_color1 = a_color1.bgra * vec4(1/255);
+    v_color2 = a_color2 * vec4(1/255);
 
     vec3 viewPosition = (u_viewMatrix * vec4(v_position, 1.0)).xyz;
     vec3 viewNormal = (u_viewMatrix * vec4(v_normal, 0.0)).xyz;
