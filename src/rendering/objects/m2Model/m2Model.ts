@@ -205,6 +205,7 @@ export class M2Model extends BaseRenderObject
                 // Ignore parent translate
                 if (1 & bone.flags) {
                     translate = Float44.getColumn4(this.modelViewMatrix, 3);
+                    Float44.setColumn(parentPosMatrix, 3, translate)
                 } else {
                     const pivotVec4 = Float4.create(bone.pivot[0], bone.pivot[1], bone.pivot[2], 1);
                     const pivotVec3 = Float4.create(bone.pivot[0], bone.pivot[1], bone.pivot[2], 0);
@@ -214,8 +215,6 @@ export class M2Model extends BaseRenderObject
                     translationVec[3] = 1;
                     Float44.setColumn(parentPosMatrix, 3, translationVec);
                 }
-                translate[3] = 1;
-                Float44.setColumn(parentPosMatrix, 3, translate)
 
                 Float44.multiply(this.invModelMatrix, parentPosMatrix, parentPosMatrix);
             }
