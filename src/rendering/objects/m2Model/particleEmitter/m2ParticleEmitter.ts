@@ -114,6 +114,7 @@ export class M2ParticleEmitter implements IDisposable {
     activeNow: boolean;
 
     // Calculation data
+    particlesFixMat: Float44;
     isTexturesLoaded: boolean;
     particles: ParticleData[];
     emitterModelMatrix: Float44;
@@ -149,6 +150,12 @@ export class M2ParticleEmitter implements IDisposable {
         this.emissionCounter = 0;
         this.vertexData = [];
         this.particleToView = Float44.identity();
+        this.particlesFixMat = Float44.create(
+            0,1,0,0,
+            -1,0,0,0,
+            0,0,1,0,
+            0,0,0,1
+        );
         this.quadToView = Float33.identity();
         this.quadToViewZVector = Float3.zero();
         this.nrQuads = 0;
@@ -329,8 +336,7 @@ export class M2ParticleEmitter implements IDisposable {
         Float44.createWithTranslation(this.m2data.position, offsetMatrix);
         Float44.multiply(currentModelMatrix, offsetMatrix, currentModelMatrix);
 
-        // Why do we do this?
-        Float44.rotateZ(currentModelMatrix, Math.PI / 2 * 3, currentModelMatrix);
+        Float44.multiply(currentModelMatrix, this.particlesFixMat, currentModelMatrix);
 
         this.updateParticles(deltaTime, currentModelMatrix);
         this.updateVertexBuffer();
