@@ -1,5 +1,5 @@
 import { RenderingEngine } from "../rendering/engine";
-import { BoundingBox, Float3, Float4, Float44 } from "../rendering/math";
+import { AABB, Float3, Float4, Float44 } from "../rendering/math";
 import { Camera } from "./base";
 
 enum MovementState {
@@ -121,11 +121,11 @@ export class FirstPersonCamera extends Camera {
         super.dispose();
     }
 
-    override resizeForBoundingBox(box?: BoundingBox): void {
+    override resizeForBoundingBox(box?: AABB): void {
         this.lastBoundingBox = box;
 
         if (box) {
-            const [min, max] = box;
+            const { min, max } = box;
             Float3.copy(max, this.position);
             const lookDir = Float3.negate(this.position);
             const horizontalDistance = Math.sqrt(lookDir[0] *lookDir[0] + lookDir[2]*lookDir[2])

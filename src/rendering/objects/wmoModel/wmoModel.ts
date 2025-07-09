@@ -1,9 +1,10 @@
 import { 
+    AABB,
     BufferDataType, ColorMask, Float3, IShaderProgram, ITexture, IVertexArrayObject, M2BlendModeToEGxBlend, M2Model, 
     RenderingBatchRequest, RenderingEngine 
 } from "@app/rendering";
 import { BinaryWriter } from "@app/utils";
-import { WoWWorldModelData, WoWWorldModelMaterialMaterialFlags } from "@app/modeldata";
+import { WoWWorldModelData, WoWWorldModelGroup, WowWorldModelGroupFlags, WoWWorldModelMaterialMaterialFlags } from "@app/modeldata";
 
 import fragmentShaderProgramText from "./wmoModel.frag";
 import vertexShaderProgramText from "./wmoModel.vert";
@@ -18,7 +19,7 @@ export class WMOModel extends BaseRenderObject {
     modelData: WoWWorldModelData;
     doodadSetId: number;
     // Used to cull / load doodads based on group
-    groupDoodads: { [key: number]: number[] }
+    groupDoodads: { [key: number]: M2Model[] }
     loadedTextures: { [key: number]: ITexture }
 
     shaderProgram: IShaderProgram;
@@ -53,6 +54,18 @@ export class WMOModel extends BaseRenderObject {
         }
 
         // Todo: cull visible objects/groups
+        for (let i = 0; i < this.modelData.groups.length; i++) {
+            const groupData = this.modelData.groups[i];
+
+            if (groupData.lod !== this.currentLod) {
+                continue;
+            }
+
+            for(const modelObj of this.groupDoodads[i]) {
+                modelObj.update(deltaTime);
+            }
+        }
+
 
         for (const child of this.children) {
             child.update(deltaTime);
@@ -71,40 +84,24 @@ export class WMOModel extends BaseRenderObject {
             if (groupData.lod !== this.currentLod) {
                 continue;
             } 
-            for (let j = 0; j < groupData.batches.length; j++) {
-                const batchData = groupData.batches[j];
-                const material = this.modelData.materials[batchData.materialId];
 
-                const blendMode = M2BlendModeToEGxBlend(material.blendMode);
-                const vs = getWMOVertexShader(material.shader);
-                const ps = getWMOPixelShader(material.shader);
-                const unlit = (material.flags & WoWWorldModelMaterialMaterialFlags.Unlit) ? true : false
-                const doubleSided = (material.flags & WoWWorldModelMaterialMaterialFlags.Unculled) != 0;
+            let drawGeometry = false;
+            let drawObjects = false;
+            if (groupData.flags & WowWorldModelGroupFlags.AlwaysDraw || groupData.flags & WowWorldModelGroupFlags.Exterior) {
+                drawGeometry = true;
+                drawObjects = true;
+            }
 
-                const batchRequest = new RenderingBatchRequest();
-                batchRequest.useCounterClockWiseFrontFaces(true);
-                batchRequest.useBackFaceCulling(!doubleSided);
-                batchRequest.useBlendMode(blendMode)
-                batchRequest.useDepthTest(true);
-                batchRequest.useDepthWrite(true);
-                batchRequest.useColorMask(ColorMask.Alpha | ColorMask.Red | ColorMask.Blue | ColorMask.Green);
+            if (drawGeometry) {
+                this.drawGroup(i, cameraPos)
+            }
 
-                batchRequest.useShaderProgram(this.shaderProgram);
-                batchRequest.useUniforms({
-                    "u_modelMatrix": this.modelMatrix,
-                    "u_cameraPos": cameraPos,
-                    "u_pixelShader": ps,
-                    "u_vertexShader": vs,
-                    "u_blendMode": material.blendMode,
-                    "u_unlit": unlit,
-                    "u_texture1": this.loadedTextures[material.texture1],
-                    "u_texture2": this.loadedTextures[material.texture2],
-                    "u_texture3": this.loadedTextures[material.texture3]
-                });
-
-                batchRequest.useVertexArrayObject(this.groupVaos[i]);
-                batchRequest.drawIndexedTriangles(batchData.startIndex * 2, batchData.indexCount);
-                this.engine.submitBatchRequest(batchRequest);
+            if (drawObjects) {
+                for(const modelObj of this.groupDoodads[i]) {
+                    if (AABB.visibleInFrustrum(modelObj.worldBoundingBox, this.engine.cameraFrustrum)) {
+                        modelObj.draw();
+                    }
+                }
             }
         }
         
@@ -115,6 +112,12 @@ export class WMOModel extends BaseRenderObject {
 
     override dispose(): void {
         super.dispose();
+        for(let i = 0; i < this.modelData.groups.length; i++) {
+            for(const model of this.groupDoodads[i]) {
+                model.dispose();
+            }
+        }
+        this.groupDoodads = null;
         this.modelData = null;
         if (this.groupVaos) {
             for (let i = 0; i < this.groupVaos.length; i++) {
@@ -222,42 +225,32 @@ export class WMOModel extends BaseRenderObject {
 
     private loadDoodads() {
         const refs = this.getDoodadSetRefs();
-        const refsToLoad = []
-
-        // Calculate doodads per group and load active LOD group
         for (let i = 0; i < this.modelData.groups.length; i++) {
             const group = this.modelData.groups[i];
             this.groupDoodads[i] = [];
             const groupRefs = group.doodadReferences;
             for (let ref of groupRefs) {
                 if (refs.indexOf(ref) !== -1) {
-                    this.groupDoodads[i].push(ref);
-                    if (group.lod === this.currentLod) {
-                        refsToLoad.push(ref);
+                    const doodadDef = this.modelData.doodadDefs[ref];
+                    const modelId = this.modelData.doodadIds[doodadDef.nameOffset];
+                    if (modelId === 0) {
+                        continue;
                     }
+
+                    const doodadModel = new M2Model(modelId);
+                    doodadModel.parent = this;
+                    const scale = Float3.create(doodadDef.scale, doodadDef.scale, doodadDef.scale);
+                    doodadModel.setModelMatrix(doodadDef.position, doodadDef.rotation, scale);
+                    doodadModel.initialize(this.engine);
+                    
+                    this.groupDoodads[i].push(doodadModel);
                 }
             }
-        }
-
-        for (const ref of refsToLoad) {
-            const doodadDef = this.modelData.doodadDefs[ref];
-            const modelId = this.modelData.doodadIds[doodadDef.nameOffset];
-            if (modelId === 0) {
-                continue;
-            }
-            const doodadModel = new M2Model(modelId);
-            doodadModel.parent = this;
-            const scale = Float3.create(doodadDef.scale, doodadDef.scale, doodadDef.scale);
-            doodadModel.setModelMatrix(doodadDef.position, doodadDef.rotation, scale);
-            doodadModel.initialize(this.engine);
-            this.children.push(doodadModel);
         }
     }
 
     private resizeForBounds() {
-        const max = this.modelData.maxBoundingBox
-        const min = this.modelData.minBoundingBox
-        this.engine.sceneCamera.resizeForBoundingBox([min, max]);
+        this.engine.sceneCamera.resizeForBoundingBox(this.modelData.boundingBox);
     }
 
     private loadTextures() {
@@ -300,5 +293,44 @@ export class WMOModel extends BaseRenderObject {
             refs.concat(Array.from({ length: set.count }, (x, i) => i + set.startIndex));
         }
         return refs;
+    }
+
+    private drawGroup(i: number, cameraPos: Float3) {
+        const groupData = this.modelData.groups[i];
+        for (let j = 0; j < groupData.batches.length; j++) {
+            const batchData = groupData.batches[j];
+            const material = this.modelData.materials[batchData.materialId];
+
+            const blendMode = M2BlendModeToEGxBlend(material.blendMode);
+            const vs = getWMOVertexShader(material.shader);
+            const ps = getWMOPixelShader(material.shader);
+            const unlit = (material.flags & WoWWorldModelMaterialMaterialFlags.Unlit) ? true : false
+            const doubleSided = (material.flags & WoWWorldModelMaterialMaterialFlags.Unculled) != 0;
+
+            const batchRequest = new RenderingBatchRequest();
+            batchRequest.useCounterClockWiseFrontFaces(true);
+            batchRequest.useBackFaceCulling(!doubleSided);
+            batchRequest.useBlendMode(blendMode)
+            batchRequest.useDepthTest(true);
+            batchRequest.useDepthWrite(true);
+            batchRequest.useColorMask(ColorMask.Alpha | ColorMask.Red | ColorMask.Blue | ColorMask.Green);
+
+            batchRequest.useShaderProgram(this.shaderProgram);
+            batchRequest.useUniforms({
+                "u_modelMatrix": this.modelMatrix,
+                "u_cameraPos": cameraPos,
+                "u_pixelShader": ps,
+                "u_vertexShader": vs,
+                "u_blendMode": material.blendMode,
+                "u_unlit": unlit,
+                "u_texture1": this.loadedTextures[material.texture1],
+                "u_texture2": this.loadedTextures[material.texture2],
+                "u_texture3": this.loadedTextures[material.texture3]
+            });
+
+            batchRequest.useVertexArrayObject(this.groupVaos[i]);
+            batchRequest.drawIndexedTriangles(batchData.startIndex * 2, batchData.indexCount);
+            this.engine.submitBatchRequest(batchRequest);
+        }
     }
 }

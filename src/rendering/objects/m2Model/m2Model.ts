@@ -2,7 +2,8 @@ import { WoWBoneData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureUn
 import { BinaryWriter } from "@app/utils";
 import { RenderingEngine, BufferDataType, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderObject, ColorMask, 
     Float4, Float3, ITexture, Float44, IShaderProgram, GxBlend, M2BlendModeToEGxBlend, 
-    RenderingBatchRequest
+    RenderingBatchRequest,
+    AABB
 } from "@app/rendering";
 import { AnimationState } from "./animatedValue";
 
@@ -54,6 +55,9 @@ export class M2Model extends BaseRenderObject
     drawOrderTexUnits: WoWTextureUnitData[];
     particleEmitters: M2ParticleEmitter[];
     ribbonEmitters: M2RibbonEmitter[];
+
+    localBoundingBox: AABB;
+    worldBoundingBox: AABB;
 
     constructor(fileId: number) {
         super();
@@ -490,9 +494,7 @@ export class M2Model extends BaseRenderObject
     }
 
     private resizeForBounds() {
-        const max = this.animationState.currentAnimation.extentMax;
-        const min = this.animationState.currentAnimation.extentMin
-        this.engine.sceneCamera.resizeForBoundingBox([min, max]);
+        this.engine.sceneCamera.resizeForBoundingBox(this.worldBoundingBox);
     }
 
     override dispose(): void {
@@ -527,6 +529,9 @@ export class M2Model extends BaseRenderObject
         }
 
         this.modelData = data;
+
+        this.calculateBoundingBox();
+        
         this.animationState = new AnimationState(this);
         this.animationState.useAnimation(0);
         if (!this.parent) {
@@ -629,5 +634,31 @@ export class M2Model extends BaseRenderObject
             writer.writeFloatLE(vertices[i].texCoords2[1]);
         }
         this.vertexDataBuffer.setData(buffer);
+    }
+
+    private calculateBoundingBox() {
+        let minX, minY, minZ;
+        minX = minY = minZ = 9999;
+        let maxX, maxY, maxZ;
+        maxX = maxY = maxZ = -9999;
+
+        for(let i = 0; i < this.modelData.vertices.length; i++) {
+            const vertexPos = this.modelData.vertices[i].position;
+
+            minX = Math.min(minX, vertexPos[0]);
+            maxX = Math.max(maxX, vertexPos[0]);
+            minY = Math.min(minY, vertexPos[1]);
+            maxY = Math.max(maxY, vertexPos[1]);
+            minZ = Math.min(minZ, vertexPos[2]);
+            maxZ = Math.max(maxZ, vertexPos[2]);
+        }
+
+        // TODO: Change this margin
+        this.localBoundingBox = AABB.create(
+            Float3.create(minX-10, minY-10, minZ-10),
+            Float3.create(maxX+10, maxY+10, maxZ+10),
+        );
+
+        this.worldBoundingBox = AABB.transform(this.localBoundingBox, this.modelMatrix);
     }
 }

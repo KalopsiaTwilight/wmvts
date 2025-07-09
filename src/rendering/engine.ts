@@ -1,4 +1,4 @@
-import { AleaPrngGenerator, Float3, Float4, Float44 } from "./math";
+import { AleaPrngGenerator, Float3, Float4, Float44, Frustrum } from "./math";
 import { Camera } from "../cameras";
 import { RenderObject, IDisposable } from "./objects";
 import { GxBlend, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest } from "./graphics";
@@ -53,6 +53,8 @@ export class RenderingEngine implements IDisposable {
     projectionMatrix: Float44;
     viewMatrix: Float44;
     invViewMatrix: Float44;
+    projViewMatrix: Float44;
+    cameraFrustrum: Frustrum;
 
     fov: number;
     width: number;
@@ -80,6 +82,7 @@ export class RenderingEngine implements IDisposable {
 
     debugContainer?: HTMLDivElement;
     fpsElement?: HTMLParagraphElement;
+    batchesElement?: HTMLParagraphElement;
 
     constructor(graphics: IGraphics, dataLoader: IDataLoader, requestFrame: RequestFrameFunction,
         options: RenderingEngineOptions) {
@@ -96,6 +99,8 @@ export class RenderingEngine implements IDisposable {
         this.viewMatrix = Float44.identity();
         this.invViewMatrix = Float44.identity();
         this.projectionMatrix = Float44.identity();
+        this.projViewMatrix = Float44.identity();
+        this.cameraFrustrum = Frustrum.zero();
 
         const cacheTtl = options.cacheTtl ? options.cacheTtl : 1000 * 60 * 15;
         this.textureCache = new SimpleCache(cacheTtl);
@@ -129,6 +134,14 @@ export class RenderingEngine implements IDisposable {
             this.fpsElement.style.margin = "0";
             this.fpsElement.style.display = "none";
             this.debugContainer.append(this.fpsElement);
+
+            this.batchesElement = document.createElement("p");
+            this.batchesElement.style.color = "white";
+            this.batchesElement.style.margin = "0";
+            this.batchesElement.style.marginTop = "1.2em";
+            this.batchesElement.style.display = "none";
+            this.debugContainer.append(this.batchesElement);
+
             this.containerElement.append(this.debugContainer);
         }
     }
@@ -157,6 +170,8 @@ export class RenderingEngine implements IDisposable {
             this.sceneCamera.update(deltaTime);
             Float44.copy(this.sceneCamera.getViewMatrix(), this.viewMatrix);
             Float44.invert(this.viewMatrix, this.invViewMatrix);
+            Float44.multiply(this.projectionMatrix, this.viewMatrix, this.projViewMatrix);
+            Frustrum.fromMatrix(this.projViewMatrix, this.cameraFrustrum);
 
             this.textureCache.update(deltaTime);
             this.wmoCache.update(deltaTime);
@@ -185,10 +200,6 @@ export class RenderingEngine implements IDisposable {
             for(const batch of requests) {
                 batch.submit(this.graphics);
             }
-            this.batchRequests = [];
-
-            this.framesDrawn++;
-            this.timeElapsed+=deltaTime;
 
             if (this.fpsElement) {
                 this.fpsCounter.push(1/(deltaTime/1000));
@@ -198,6 +209,13 @@ export class RenderingEngine implements IDisposable {
                 const avgFps = this.fpsCounter.reduce((acc, next)  => acc+next, 0) / this.fpsCounter.length;
                 this.fpsElement.textContent = "FPS: " + Math.floor(avgFps);
             }
+            if (this.batchesElement) {
+                this.batchesElement.textContent = "Batches: " + requests.length;
+            }
+            this.batchRequests = [];
+
+            this.framesDrawn++;
+            this.timeElapsed+=deltaTime;
         }
         catch(err) {
             this.errorHandler?.(RenderingErrorType, err.toString());
@@ -225,15 +243,21 @@ export class RenderingEngine implements IDisposable {
         drawFrame();
     }
 
-    showFps() {
+    showDebug() {
         if (this.fpsElement) {
             this.fpsElement.style.display = 'block';
         }
+        if (this.batchesElement) {
+            this.batchesElement.style.display = 'block';
+        }
     }
 
-    hideFps() {
+    hideDebug() {
         if (this.fpsElement) {
             this.fpsElement.style.display = 'none';
+        }
+        if (this.batchesElement) {
+            this.batchesElement.style.display = 'none';
         }
     }
 

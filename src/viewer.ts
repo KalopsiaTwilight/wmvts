@@ -114,12 +114,12 @@ export class WoWModelViewer {
         this.renderEngine.lightingDisabled = false;
     }
 
-    showFps() {
-        this.renderEngine.showFps();
+    showDebug() {
+        this.renderEngine.showDebug();
     }
 
-    hideFps() {
-        this.renderEngine.hideFps();
+    hideDebug() {
+        this.renderEngine.hideDebug();
     }
 
     private initialize() {

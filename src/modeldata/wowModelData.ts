@@ -1,4 +1,4 @@
-import { Float2, Float3, Float4  } from "@app/index"
+import { AABB, Float2, Float3, Float4  } from "@app/index"
 
 export interface WoWModelData {
     flags: number;
@@ -67,8 +67,7 @@ export interface WoWAnimationData
     frequency: number;
     blendTimeIn: number;
     blendTimeOut: number;
-    extentMin: Float3;
-    extentMax: Float3;
+    extentBox: AABB;
     variationNext: number;
     aliasNext: number;
 }

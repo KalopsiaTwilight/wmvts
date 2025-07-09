@@ -1,4 +1,4 @@
-import { Float2, Float3, Float4, Float44 } from "@app/rendering";
+import { AABB, Float2, Float3, Float4, Float44 } from "@app/rendering";
 import { BinaryReader } from "@app/utils";
 import { Color, Int2 } from "@app/modeldata";
 
@@ -33,6 +33,10 @@ export function readFloat44(reader: BinaryReader) {
         reader.readFloatLE(), reader.readFloatLE(), reader.readFloatLE(), reader.readFloatLE(),
         reader.readFloatLE(), reader.readFloatLE(), reader.readFloatLE(), reader.readFloatLE()
     )
+}
+
+export function readAABB(reader: BinaryReader) {
+    return AABB.create(readFloat3(reader), readFloat3(reader));
 }
 
 export function readArray<T>(reader: BinaryReader, deserializeFn: (binaryReader: BinaryReader, index?: number) => T): T[] {

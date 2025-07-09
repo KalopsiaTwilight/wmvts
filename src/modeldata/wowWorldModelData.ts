@@ -1,4 +1,5 @@
 import { Float2, Float3, Float4, GxBlend } from "@app/index"
+import { AABB } from "@app/rendering/math/culling";
 
 export type Color = [number, number, number, number];
 export type Int2 = [number, number];
@@ -24,8 +25,7 @@ export interface WoWWorldModelData {
     id: number;
     skyboxFileId: number;
     ambientColor: Color;
-    minBoundingBox: Float3;
-    maxBoundingBox: Float3;
+    boundingBox: AABB;
     materials: WoWWorldModelMaterial[];
     groupInfo: WoWWorldModelGroupInfo[];
     doodadDefs: WoWWorldModelDoodadDef[];
@@ -92,8 +92,7 @@ export interface WoWWorldModelGroup {
     fileDataID: number;
     lod: number;
     flags: WowWorldModelGroupFlags;
-    boundingBoxMin: Float3;
-    boundingBoxMax: Float3;
+    boundingBox: AABB;
     portalsOffset: number;
     portalCount: number;
     transBatchCount: number;
@@ -216,8 +215,7 @@ export interface WoWWorldModelMaterial {
 
 export interface WoWWorldModelGroupInfo {
     flags: number;
-    minBoundingBox: Float3;
-    maxBoundingBox: Float3;
+    boundingBox: AABB;
 }
 
 export interface WoWWorldModelLodInfo {

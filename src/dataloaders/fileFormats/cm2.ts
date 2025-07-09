@@ -8,7 +8,7 @@ import {
 } from "@app/modeldata";
 import { BinaryReader } from "@app/utils";
 
-import { readArray, readFloat2, readFloat3, readFloat4, readFloat44, readQuaternion } from "./compressedReading";
+import { readAABB, readArray, readFloat2, readFloat3, readFloat4, readFloat44, readQuaternion } from "./compressedReading";
 
 export function parseCM2File(data: ArrayBuffer) {
     let reader = new BinaryReader(data);
@@ -204,8 +204,7 @@ function readAnimation(reader: BinaryReader) {
         frequency: reader.readUInt16LE(),
         blendTimeIn: reader.readUInt16LE(),
         blendTimeOut: reader.readUInt16LE(),
-        extentMin: readFloat3(reader),
-        extentMax: readFloat3(reader),
+        extentBox: readAABB(reader),
         variationNext: reader.readInt16LE(),
         aliasNext: reader.readUInt16LE()
     }

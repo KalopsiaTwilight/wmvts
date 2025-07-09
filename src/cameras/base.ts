@@ -1,5 +1,5 @@
 import { RenderingEngine } from "../rendering/engine";
-import { BoundingBox, Float3, Float44 } from "../rendering/math";
+import { AABB, Float3, Float44 } from "../rendering/math";
 import { IDisposable } from "../rendering/objects";
 
 export class Camera implements IDisposable {
@@ -7,7 +7,7 @@ export class Camera implements IDisposable {
     viewMatrix: Float44;
     position: Float3;
     engine: RenderingEngine;
-    lastBoundingBox: BoundingBox;
+    lastBoundingBox: AABB;
 
     constructor() {
         this.viewMatrix = Float44.identity();
@@ -39,18 +39,18 @@ export class Camera implements IDisposable {
         return this.position;
     }
 
-    resizeForBoundingBox(boundingBox?: BoundingBox) {
+    resizeForBoundingBox(boundingBox?: AABB) {
         this.lastBoundingBox = boundingBox;
 
         if (boundingBox) {
-            const [min, max] = boundingBox;
+            const { min, max } = boundingBox;
             Float3.copy(max, this.position);
             Float44.lookAt(this.position, [0, 0, 0], [0, 0, 1], this.viewMatrix);
             Float44.invert(this.viewMatrix, this.viewMatrix);
         } 
     }
 
-    getBoundingBox(): BoundingBox {
+    getBoundingBox(): AABB {
         return this.lastBoundingBox;
     }
 }

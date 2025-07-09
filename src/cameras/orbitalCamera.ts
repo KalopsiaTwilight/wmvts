@@ -1,6 +1,6 @@
 import { Camera } from "./base";
 import { RenderingEngine } from "../rendering/engine";
-import { BoundingBox, Float3, Float44 } from "../rendering/math";
+import { AABB, Float3, Float44 } from "../rendering/math";
 
 export enum DragOperation {
     None,
@@ -215,13 +215,13 @@ export class OrbitalCamera extends Camera {
         eventArgs.preventDefault();
     }
 
-    override resizeForBoundingBox(box: BoundingBox): void {
+    override resizeForBoundingBox(box: AABB): void {
         this.lastBoundingBox = box;
         
         if (!box) {
             return;
         }
-        const [min, max] = box;
+        const { min, max } = box;
         const diff = Float3.subtract(max, min);
         const distance = Float3.length(diff)
 

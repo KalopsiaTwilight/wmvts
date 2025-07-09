@@ -1,7 +1,7 @@
 import { inflate } from "pako";
 
 import { BinaryReader } from "@app/utils";
-import { readArray, readColor, readFloat2, readFloat3, readFloat4, readInt2 } from "./compressedReading";
+import { readAABB, readArray, readColor, readFloat2, readFloat3, readFloat4, readInt2 } from "./compressedReading";
 import { WoWWorldModelAmbientVolume, WoWWorldModelBatch, WoWWorldModelBspNode, WoWWorldModelData, WoWWorldModelDoodadDef, WoWWorldModelDoodadSet, WoWWorldModelFog, WoWWorldModelGroup, WoWWorldModelGroupInfo, WoWWorldModelLiquid, WoWWorldModelLiquidTile, WoWWorldModelLiquidVertex, WoWWorldModelMaterial, WoWWorldModelPortal, WoWWorldModelPortalRef } from "../..";
 
 export function parseCWMOFile(data: ArrayBuffer) {
@@ -47,8 +47,7 @@ export function parseCWMOFile(data: ArrayBuffer) {
     const id = reader.readUInt32LE();
     const skyboxFileId = reader.readUInt32LE();
     const ambientColor = readColor(reader);
-    const minBoundingBox = readFloat3(reader);
-    const maxBoundingBox = readFloat3(reader);
+    const boundingBox = readAABB(reader);
 
     reader.seek(materialsPos);
     const materials = readArray(reader, readMaterial);
@@ -81,8 +80,7 @@ export function parseCWMOFile(data: ArrayBuffer) {
         id,
         skyboxFileId,
         ambientColor,
-        minBoundingBox,
-        maxBoundingBox,
+        boundingBox,
         ambientVolumes,
         doodadDefs,
         doodadIds,
@@ -122,8 +120,7 @@ function readMaterial(reader: BinaryReader) {
 function readGroupInfo(reader: BinaryReader) {
     const data: WoWWorldModelGroupInfo = {
         flags: reader.readUInt32LE(),
-        minBoundingBox: readFloat3(reader),
-        maxBoundingBox: readFloat3(reader)
+        boundingBox: readAABB(reader)
     }
     return data;
 }
@@ -202,8 +199,7 @@ function readGroup(reader: BinaryReader) {
         fileDataID: reader.readUInt32LE(),
         lod: reader.readInt32LE(),
         flags: reader.readUInt32LE(),
-        boundingBoxMin: readFloat3(reader),
-        boundingBoxMax: readFloat3(reader),
+        boundingBox: readAABB(reader),
         portalsOffset: reader.readUInt16LE(),
         portalCount: reader.readUInt16LE(),
         transBatchCount: reader.readUInt16LE(),
