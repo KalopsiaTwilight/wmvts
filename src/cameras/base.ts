@@ -35,10 +35,6 @@ export class Camera implements IDisposable {
         return this.viewMatrix;
     }
 
-    getPosition() {
-        return this.position;
-    }
-
     resizeForBoundingBox(boundingBox?: AABB) {
         this.lastBoundingBox = boundingBox;
 

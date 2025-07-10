@@ -77,9 +77,18 @@ export class WMOModel extends BaseRenderObject {
             return;
         }
 
-        const cameraPos = this.engine.sceneCamera.getPosition();
+        const cameraPos = this.engine.cameraPosition;
 
-        for (let i = 0; i < this.modelData.groups.length; i++) {
+        let isInside = false;
+        for(let i = 0; i < this.modelData.groupInfo.length; i++) {
+            const groupInfo = this.modelData.groupInfo[i];
+            if (groupInfo.flags & WowWorldModelGroupFlags.Interior && AABB.containsPoint(groupInfo.boundingBox, cameraPos)) {
+                isInside = true;
+                break;
+            }
+        }
+
+        for (let i = 0; i < this.modelData.groupInfo.length; i++) {
             const groupData = this.modelData.groups[i];
             if (groupData.lod !== this.currentLod) {
                 continue;
@@ -87,9 +96,23 @@ export class WMOModel extends BaseRenderObject {
 
             let drawGeometry = false;
             let drawObjects = false;
-            if (groupData.flags & WowWorldModelGroupFlags.AlwaysDraw || groupData.flags & WowWorldModelGroupFlags.Exterior) {
+            if (groupData.flags & WowWorldModelGroupFlags.AlwaysDraw) {
                 drawGeometry = true;
                 drawObjects = true;
+            }
+            // Exterior
+            else if (groupData.flags & WowWorldModelGroupFlags.Exterior) {
+                if (AABB.visibleInFrustrum(groupData.boundingBox, this.engine.cameraFrustrum)) {
+                    drawGeometry = true;
+                    drawObjects = !isInside;
+                }
+            } 
+            // Interior
+            else {
+                if (AABB.visibleInFrustrum(groupData.boundingBox, this.engine.cameraFrustrum)) {
+                    drawGeometry = true;
+                    drawObjects = isInside;
+                }
             }
 
             if (drawGeometry) {

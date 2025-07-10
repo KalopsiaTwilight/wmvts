@@ -148,7 +148,7 @@ export namespace AABB {
 
     export function containsPoint(aabb: AABB, point: Float3) {
         for(let i = 0; i < 3; i++) {
-            if (aabb.min[0] > point[0] || aabb.max[0] < point[0]) {
+            if (aabb.min[i] > point[i] || aabb.max[i] < point[i]) {
                 return false;
             }
         }

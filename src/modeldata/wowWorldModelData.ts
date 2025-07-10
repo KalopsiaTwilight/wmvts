@@ -214,7 +214,7 @@ export interface WoWWorldModelMaterial {
 }
 
 export interface WoWWorldModelGroupInfo {
-    flags: number;
+    flags: WowWorldModelGroupFlags;
     boundingBox: AABB;
 }
 

@@ -133,7 +133,7 @@ export class FirstPersonCamera extends Camera {
             this.yaw = Math.atan2(lookDir[0], lookDir[2])
         } 
     }
-
+    
     handleKeyDown(eventArgs: KeyboardEvent) {
         switch(eventArgs.key.toUpperCase()) {
             case 'W': {

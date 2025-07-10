@@ -55,6 +55,7 @@ export class RenderingEngine implements IDisposable {
     invViewMatrix: Float44;
     projViewMatrix: Float44;
     cameraFrustrum: Frustrum;
+    cameraPosition: Float3;
 
     fov: number;
     width: number;
@@ -101,6 +102,7 @@ export class RenderingEngine implements IDisposable {
         this.projectionMatrix = Float44.identity();
         this.projViewMatrix = Float44.identity();
         this.cameraFrustrum = Frustrum.zero();
+        this.cameraPosition = Float3.zero();
 
         const cacheTtl = options.cacheTtl ? options.cacheTtl : 1000 * 60 * 15;
         this.textureCache = new SimpleCache(cacheTtl);
@@ -172,6 +174,7 @@ export class RenderingEngine implements IDisposable {
             Float44.invert(this.viewMatrix, this.invViewMatrix);
             Float44.multiply(this.projectionMatrix, this.viewMatrix, this.projViewMatrix);
             Frustrum.fromMatrix(this.projViewMatrix, this.cameraFrustrum);
+            Float44.getTranslation(this.invViewMatrix, this.cameraPosition);
 
             this.textureCache.update(deltaTime);
             this.wmoCache.update(deltaTime);
