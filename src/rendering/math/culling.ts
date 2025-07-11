@@ -154,4 +154,20 @@ export namespace AABB {
         }
         return true;
     }
+
+    export function distanceToPoint(aabb: AABB, point: Float3) {
+        if (containsPoint(aabb, point)) {
+            return 0;
+        }
+
+        const deltas = Float3.zero();
+        for(let i = 0; i < 3; i++) {
+            if (point[i] < aabb.min[i]) {
+                deltas[i] = aabb.min[i] - point[i];
+            } else {
+                deltas[i] = point[i] - aabb.max[i];
+            }
+        }
+        return Float3.length(deltas);
+    }
 }

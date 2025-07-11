@@ -1,7 +1,7 @@
-import { 
+import {
     AABB,
-    BufferDataType, ColorMask, Float3, IShaderProgram, ITexture, IVertexArrayObject, M2BlendModeToEGxBlend, M2Model, 
-    RenderingBatchRequest, RenderingEngine 
+    BufferDataType, ColorMask, Float3, IShaderProgram, ITexture, IVertexArrayObject, M2BlendModeToEGxBlend, M2Model,
+    RenderingBatchRequest, RenderingEngine
 } from "@app/rendering";
 import { BinaryWriter } from "@app/utils";
 import { WoWWorldModelData, WoWWorldModelGroup, WowWorldModelGroupFlags, WoWWorldModelMaterialMaterialFlags } from "@app/modeldata";
@@ -18,14 +18,14 @@ export class WMOModel extends BaseRenderObject {
     fileId: number;
     modelData: WoWWorldModelData;
     doodadSetId: number;
+    loadedTextures: { [key: number]: ITexture }
     // Used to cull / load doodads based on group
     groupDoodads: { [key: number]: M2Model[] }
-    loadedTextures: { [key: number]: ITexture }
+    activeGroups: number[];
+    lodGroupMap: number[];
 
     shaderProgram: IShaderProgram;
     groupVaos: IVertexArrayObject[]
-
-    currentLod: number;
 
     constructor(fileId: number) {
         super();
@@ -34,10 +34,11 @@ export class WMOModel extends BaseRenderObject {
         this.fileId = fileId;
 
         this.doodadSetId = 0; //TODO: Investigate what this means.
-        this.currentLod = 0;
+        this.lodGroupMap = [];
 
         this.loadedTextures = {};
         this.groupDoodads = {};
+        this.activeGroups = [];
     }
 
     override initialize(engine: RenderingEngine): void {
@@ -53,19 +54,33 @@ export class WMOModel extends BaseRenderObject {
             return;
         }
 
-        // Todo: cull visible objects/groups
-        for (let i = 0; i < this.modelData.groups.length; i++) {
-            const groupData = this.modelData.groups[i];
+        // Determine LOD levels per group
+        for (let i = 0; i < this.modelData.groupInfo.length; i++) {
+            const groupData = this.modelData.groupInfo[i];
 
-            if (groupData.lod !== this.currentLod) {
+            if (!(groupData.flags & WowWorldModelGroupFlags.Lod)) {
+                this.activeGroups[i] = i;
                 continue;
             }
 
-            for(const modelObj of this.groupDoodads[i]) {
+            const distance = AABB.distanceToPoint(groupData.boundingBox, this.engine.cameraPosition);
+            let lod = 0;
+            if (distance > 800) {
+                lod = 2;
+            } else if (distance > 500) {
+                lod = 1;
+            }
+            this.activeGroups[i] = this.lodGroupMap[lod * this.modelData.groupInfo.length + i];
+        }
+
+        // Update objects per group
+        for (let i = 0; i < this.modelData.groupInfo.length; i++) {
+            const groupDataIndex = this.activeGroups[i];
+
+            for (const modelObj of this.groupDoodads[groupDataIndex]) {
                 modelObj.update(deltaTime);
             }
         }
-
 
         for (const child of this.children) {
             child.update(deltaTime);
@@ -80,7 +95,7 @@ export class WMOModel extends BaseRenderObject {
         const cameraPos = this.engine.cameraPosition;
 
         let isInside = false;
-        for(let i = 0; i < this.modelData.groupInfo.length; i++) {
+        for (let i = 0; i < this.modelData.groupInfo.length; i++) {
             const groupInfo = this.modelData.groupInfo[i];
             if (groupInfo.flags & WowWorldModelGroupFlags.Interior && AABB.containsPoint(groupInfo.boundingBox, cameraPos)) {
                 isInside = true;
@@ -89,10 +104,8 @@ export class WMOModel extends BaseRenderObject {
         }
 
         for (let i = 0; i < this.modelData.groupInfo.length; i++) {
-            const groupData = this.modelData.groups[i];
-            if (groupData.lod !== this.currentLod) {
-                continue;
-            } 
+            const groupDataIndex = this.activeGroups[i];
+            const groupData = this.modelData.groups[groupDataIndex];
 
             let drawGeometry = false;
             let drawObjects = false;
@@ -106,7 +119,7 @@ export class WMOModel extends BaseRenderObject {
                     drawGeometry = true;
                     drawObjects = !isInside;
                 }
-            } 
+            }
             // Interior
             else {
                 if (AABB.visibleInFrustrum(groupData.boundingBox, this.engine.cameraFrustrum)) {
@@ -116,18 +129,18 @@ export class WMOModel extends BaseRenderObject {
             }
 
             if (drawGeometry) {
-                this.drawGroup(i, cameraPos)
+                this.drawGroup(groupDataIndex, cameraPos)
             }
 
             if (drawObjects) {
-                for(const modelObj of this.groupDoodads[i]) {
+                for (const modelObj of this.groupDoodads[groupDataIndex]) {
                     if (AABB.visibleInFrustrum(modelObj.worldBoundingBox, this.engine.cameraFrustrum)) {
                         modelObj.draw();
                     }
                 }
             }
         }
-        
+
         for (const child of this.children) {
             child.draw();
         }
@@ -135,8 +148,8 @@ export class WMOModel extends BaseRenderObject {
 
     override dispose(): void {
         super.dispose();
-        for(let i = 0; i < this.modelData.groups.length; i++) {
-            for(const model of this.groupDoodads[i]) {
+        for (let i = 0; i < this.modelData.groups.length; i++) {
+            for (const model of this.groupDoodads[i]) {
                 model.dispose();
             }
         }
@@ -171,6 +184,8 @@ export class WMOModel extends BaseRenderObject {
             this.resizeForBounds();
         }
 
+        // TODO: This would be unneccesary with a data format closer to how WMOs are actually stored.
+        this.makeLodMap();
         this.loadTextures();
         this.loadDoodads();
 
@@ -247,6 +262,7 @@ export class WMOModel extends BaseRenderObject {
     }
 
     private loadDoodads() {
+        // TODO: Check if model references should be shared amongst LOD groups
         const refs = this.getDoodadSetRefs();
         for (let i = 0; i < this.modelData.groups.length; i++) {
             const group = this.modelData.groups[i];
@@ -265,7 +281,7 @@ export class WMOModel extends BaseRenderObject {
                     const scale = Float3.create(doodadDef.scale, doodadDef.scale, doodadDef.scale);
                     doodadModel.setModelMatrix(doodadDef.position, doodadDef.rotation, scale);
                     doodadModel.initialize(this.engine);
-                    
+
                     this.groupDoodads[i].push(doodadModel);
                 }
             }
@@ -354,6 +370,33 @@ export class WMOModel extends BaseRenderObject {
             batchRequest.useVertexArrayObject(this.groupVaos[i]);
             batchRequest.drawIndexedTriangles(batchData.startIndex * 2, batchData.indexCount);
             this.engine.submitBatchRequest(batchRequest);
+        }
+    }
+
+    private makeLodMap() {
+        this.activeGroups = Array(this.modelData.groupInfo.length);
+        this.lodGroupMap = Array(3 * this.modelData.groupInfo.length);
+        const totalGroups = this.modelData.groupInfo.length;
+
+        const skipGroups = [];
+        for (let i = 0; i < this.lodGroupMap.length; i++) {
+            if (i < totalGroups) {
+                const groupInfo = this.modelData.groupInfo[i % totalGroups];
+                if (!(groupInfo.flags & WowWorldModelGroupFlags.Lod)) {
+                    skipGroups.push(i + totalGroups);
+                    skipGroups.push(i + totalGroups + totalGroups);
+                }
+                this.lodGroupMap[i] = i % totalGroups;
+                continue;
+            }
+
+            if (skipGroups.indexOf(i) > -1) {
+                this.lodGroupMap[i] = i % totalGroups;
+                continue;
+            }
+
+            const skipGroupsPassed = skipGroups.filter(x => x < i).length;
+            this.lodGroupMap[i] = i - skipGroupsPassed;
         }
     }
 }
