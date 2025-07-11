@@ -96,6 +96,29 @@ export namespace AABB {
         return { min, max };
     }
 
+    export function fromVertices(vertexPositions: Float3[]) {
+        let minX, minY, minZ;
+        minX = minY = minZ = 9999;
+        let maxX, maxY, maxZ;
+        maxX = maxY = maxZ = -9999;
+
+        for(let i = 0; i < vertexPositions.length; i++) {
+            const vertexPos = vertexPositions[i];
+            minX = Math.min(minX, vertexPos[0]);
+            maxX = Math.max(maxX, vertexPos[0]);
+            minY = Math.min(minY, vertexPos[1]);
+            maxY = Math.max(maxY, vertexPos[1]);
+            minZ = Math.min(minZ, vertexPos[2]);
+            maxZ = Math.max(maxZ, vertexPos[2]);
+        }
+
+        // TODO: Change this margin
+        return AABB.create(
+            Float3.create(minX-10, minY-10, minZ-10),
+            Float3.create(maxX+10, maxY+10, maxZ+10),
+        );
+    }
+
     // https://www.realtimerendering.com/resources/GraphicsGems/gems/TransBox.c
     export function transform(bb: AABB, transform: Float44): AABB {
         const bbMin = Float3.copy(bb.min);

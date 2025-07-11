@@ -530,7 +530,8 @@ export class M2Model extends BaseRenderObject
 
         this.modelData = data;
 
-        this.calculateBoundingBox();
+        this.localBoundingBox = AABB.fromVertices(this.modelData.vertices.map(x => x.position));
+        this.worldBoundingBox = AABB.transform(this.localBoundingBox, this.modelMatrix);
         
         this.animationState = new AnimationState(this);
         this.animationState.useAnimation(0);
@@ -634,31 +635,5 @@ export class M2Model extends BaseRenderObject
             writer.writeFloatLE(vertices[i].texCoords2[1]);
         }
         this.vertexDataBuffer.setData(buffer);
-    }
-
-    private calculateBoundingBox() {
-        let minX, minY, minZ;
-        minX = minY = minZ = 9999;
-        let maxX, maxY, maxZ;
-        maxX = maxY = maxZ = -9999;
-
-        for(let i = 0; i < this.modelData.vertices.length; i++) {
-            const vertexPos = this.modelData.vertices[i].position;
-
-            minX = Math.min(minX, vertexPos[0]);
-            maxX = Math.max(maxX, vertexPos[0]);
-            minY = Math.min(minY, vertexPos[1]);
-            maxY = Math.max(maxY, vertexPos[1]);
-            minZ = Math.min(minZ, vertexPos[2]);
-            maxZ = Math.max(maxZ, vertexPos[2]);
-        }
-
-        // TODO: Change this margin
-        this.localBoundingBox = AABB.create(
-            Float3.create(minX-10, minY-10, minZ-10),
-            Float3.create(maxX+10, maxY+10, maxZ+10),
-        );
-
-        this.worldBoundingBox = AABB.transform(this.localBoundingBox, this.modelMatrix);
     }
 }
