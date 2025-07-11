@@ -1,15 +1,18 @@
 import {
     AABB,
-    BufferDataType, ColorMask, Float3, IShaderProgram, ITexture, IVertexArrayObject, M2BlendModeToEGxBlend, M2Model,
+    BufferDataType, ColorMask, Float3, Float4, GxBlend, IShaderProgram, ITexture, IVertexArrayObject, IVertexDataBuffer, M2BlendModeToEGxBlend, M2Model,
     RenderingBatchRequest, RenderingEngine
 } from "@app/rendering";
 import { BinaryWriter } from "@app/utils";
 import { WoWWorldModelData, WoWWorldModelGroup, WowWorldModelGroupFlags, WoWWorldModelMaterialMaterialFlags } from "@app/modeldata";
 
+import { BaseRenderObject } from "../baseRenderObject";
+
+import { getWMOPixelShader, getWMOVertexShader } from "./wmoShaders";
 import fragmentShaderProgramText from "./wmoModel.frag";
 import vertexShaderProgramText from "./wmoModel.vert";
-import { getWMOPixelShader, getWMOVertexShader } from "./wmoShaders";
-import { BaseRenderObject } from "../baseRenderObject";
+import portalFragmentShaderProgramText from "./wmoPortal.frag";
+import portalVertexShaderProgramText from "./wmoPortal.vert";
 
 export class WMOModel extends BaseRenderObject {
     isModelDataLoaded: boolean;
@@ -26,6 +29,10 @@ export class WMOModel extends BaseRenderObject {
 
     shaderProgram: IShaderProgram;
     groupVaos: IVertexArrayObject[]
+
+    portalShader: IShaderProgram;
+    portalVao: IVertexArrayObject;
+    portalCount: number;
 
     constructor(fileId: number) {
         super();
@@ -44,6 +51,7 @@ export class WMOModel extends BaseRenderObject {
     override initialize(engine: RenderingEngine): void {
         super.initialize(engine);
         this.shaderProgram = this.engine.getShaderProgram("WMO", vertexShaderProgramText, fragmentShaderProgramText);
+        this.portalShader = this.engine.getShaderProgram("WMOPortal", portalVertexShaderProgramText, portalFragmentShaderProgramText);
 
         this.engine.getWMOModelFile(this.fileId).then(this.onModelLoaded.bind(this))
     }
@@ -116,14 +124,14 @@ export class WMOModel extends BaseRenderObject {
             // Exterior
             else if (groupData.flags & WowWorldModelGroupFlags.Exterior) {
                 if (AABB.visibleInFrustrum(groupData.boundingBox, this.engine.cameraFrustrum)) {
-                    drawGeometry = true;
+                    drawGeometry = !isInside;
                     drawObjects = !isInside;
                 }
             }
             // Interior
             else {
                 if (AABB.visibleInFrustrum(groupData.boundingBox, this.engine.cameraFrustrum)) {
-                    drawGeometry = true;
+                    drawGeometry = isInside;
                     drawObjects = isInside;
                 }
             }
@@ -140,6 +148,9 @@ export class WMOModel extends BaseRenderObject {
                 }
             }
         }
+
+        // TODO: make this toggleable?
+        this.drawPortals();
 
         for (const child of this.children) {
             child.draw();
@@ -189,19 +200,10 @@ export class WMOModel extends BaseRenderObject {
         this.loadTextures();
         this.loadDoodads();
 
-        this.groupVaos = new Array(this.modelData.groups.length);
-        for (let i = 0; i < this.modelData.groups.length; i++) {
-            const vao = this.engine.graphics.createVertexArrayObject();
+        this.setupGraphics();
+        // TODO: make this toggleable
+        this.setupPortalGraphics();
 
-            const vb = this.uploadVertexDataForGroup(i);
-            const ib = this.engine.graphics.createVertexIndexBuffer(true);
-            ib.setData(new Uint16Array(this.modelData.groups[i].indices));
-
-            vao.setIndexBuffer(ib);
-            vao.addVertexDataBuffer(vb);
-
-            this.groupVaos[i] = vao;
-        }
         this.isModelDataLoaded = true;
     }
 
@@ -334,6 +336,33 @@ export class WMOModel extends BaseRenderObject {
         return refs;
     }
 
+    private makeLodMap() {
+        this.activeGroups = Array(this.modelData.groupInfo.length);
+        this.lodGroupMap = Array(3 * this.modelData.groupInfo.length);
+        const totalGroups = this.modelData.groupInfo.length;
+
+        const skipGroups = [];
+        for (let i = 0; i < this.lodGroupMap.length; i++) {
+            if (i < totalGroups) {
+                const groupInfo = this.modelData.groupInfo[i % totalGroups];
+                if (!(groupInfo.flags & WowWorldModelGroupFlags.Lod)) {
+                    skipGroups.push(i + totalGroups);
+                    skipGroups.push(i + totalGroups + totalGroups);
+                }
+                this.lodGroupMap[i] = i % totalGroups;
+                continue;
+            }
+
+            if (skipGroups.indexOf(i) > -1) {
+                this.lodGroupMap[i] = i % totalGroups;
+                continue;
+            }
+
+            const skipGroupsPassed = skipGroups.filter(x => x < i).length;
+            this.lodGroupMap[i] = i - skipGroupsPassed;
+        }
+    }
+
     private drawGroup(i: number, cameraPos: Float3) {
         const groupData = this.modelData.groups[i];
         for (let j = 0; j < groupData.batches.length; j++) {
@@ -373,30 +402,71 @@ export class WMOModel extends BaseRenderObject {
         }
     }
 
-    private makeLodMap() {
-        this.activeGroups = Array(this.modelData.groupInfo.length);
-        this.lodGroupMap = Array(3 * this.modelData.groupInfo.length);
-        const totalGroups = this.modelData.groupInfo.length;
+    private drawPortals() {
+        const batchRequest = new RenderingBatchRequest();
+        batchRequest.useCounterClockWiseFrontFaces(false);
+        batchRequest.useBackFaceCulling(false);
+        batchRequest.useBlendMode(GxBlend.GxBlend_Alpha) // TODO: Alpha
+        batchRequest.useDepthTest(false);
+        batchRequest.useDepthWrite(false);
+        batchRequest.useColorMask(ColorMask.Alpha | ColorMask.Red | ColorMask.Blue | ColorMask.Green);
+        batchRequest.useShaderProgram(this.portalShader);
+        batchRequest.useUniforms({
+            "u_modelMatrix": this.modelMatrix,
+            "u_color": Float4.create(0.8, 0, 0, 0.25)
+        });
+        batchRequest.useVertexArrayObject(this.portalVao);
+        batchRequest.drawIndexedTriangles(0, this.portalCount);
+        this.engine.submitBatchRequest(batchRequest);
+    }
 
-        const skipGroups = [];
-        for (let i = 0; i < this.lodGroupMap.length; i++) {
-            if (i < totalGroups) {
-                const groupInfo = this.modelData.groupInfo[i % totalGroups];
-                if (!(groupInfo.flags & WowWorldModelGroupFlags.Lod)) {
-                    skipGroups.push(i + totalGroups);
-                    skipGroups.push(i + totalGroups + totalGroups);
-                }
-                this.lodGroupMap[i] = i % totalGroups;
-                continue;
-            }
+    private setupGraphics() {
+        this.groupVaos = new Array(this.modelData.groups.length);
+        for (let i = 0; i < this.modelData.groups.length; i++) {
+            const vao = this.engine.graphics.createVertexArrayObject();
 
-            if (skipGroups.indexOf(i) > -1) {
-                this.lodGroupMap[i] = i % totalGroups;
-                continue;
-            }
+            const vb = this.uploadVertexDataForGroup(i);
+            const ib = this.engine.graphics.createVertexIndexBuffer(true);
+            ib.setData(new Uint16Array(this.modelData.groups[i].indices));
 
-            const skipGroupsPassed = skipGroups.filter(x => x < i).length;
-            this.lodGroupMap[i] = i - skipGroupsPassed;
+            vao.setIndexBuffer(ib);
+            vao.addVertexDataBuffer(vb);
+
+            this.groupVaos[i] = vao;
         }
+    }
+
+    private setupPortalGraphics() {
+        this.portalVao = this.engine.graphics.createVertexArrayObject();
+        const portalVB = this.engine.graphics.createVertexDataBuffer([
+            { index: this.portalShader.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: 12, offset: 0 },
+        ], true);
+        const buffer = new Uint8Array(this.modelData.portalVertices.length * 12);
+        const writer = new BinaryWriter(buffer.buffer);
+        for (let i = 0; i < this.modelData.portalVertices.length; i++) {
+            writer.writeFloatLE(this.modelData.portalVertices[i][0]);
+            writer.writeFloatLE(this.modelData.portalVertices[i][1]);
+            writer.writeFloatLE(this.modelData.portalVertices[i][2]);
+        }
+        portalVB.setData(buffer);
+
+        const portalIB = this.engine.graphics.createVertexIndexBuffer(true);
+        const portalBuffer = [];
+        for(let i = 0; i < this.modelData.portals.length; i++) {
+            const portalData = this.modelData.portals[i];
+            if (portalData.vertexCount - 2 <= 0) {
+                continue;
+            }
+            for(let j = 0; j < portalData.vertexCount - 2; j++) {
+                portalBuffer.push(portalData.startVertex + 0)
+                portalBuffer.push(portalData.startVertex + j + 1)
+                portalBuffer.push(portalData.startVertex + j + 2)
+            }
+        }
+        this.portalCount = portalBuffer.length;
+        portalIB.setData(new Uint16Array(portalBuffer));
+
+        this.portalVao.setIndexBuffer(portalIB);
+        this.portalVao.addVertexDataBuffer(portalVB);
     }
 }
