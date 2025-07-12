@@ -108,6 +108,10 @@ export class RenderingBatchRequest {
         graphics.useDepthTest(this.depthTest);
         graphics.useDepthWrite(this.depthWrite);
 
+        if (this.shaderProgram) {
+            graphics.useShaderProgram(this.shaderProgram);
+            this.shaderProgram.useUniforms(this.uniforms);
+        }
         if (this.vertexDataBuffer) {
             graphics.useVertexDataBuffer(this.vertexDataBuffer);
         }
@@ -116,10 +120,6 @@ export class RenderingBatchRequest {
         }
         if (this.vao) {
             graphics.useVertexArrayObject(this.vao);
-        }
-        if (this.shaderProgram) {
-            graphics.useShaderProgram(this.shaderProgram);
-            this.shaderProgram.useUniforms(this.uniforms);
         }
 
         if (this.drawInstruction) {
@@ -134,5 +134,7 @@ export class RenderingBatchRequest {
                 graphics.drawIndexedTriangleStrip(this.drawInstruction.offset, this.drawInstruction.count)
             }
         }
+
+        graphics.useVertexArrayObject(undefined);
     }
 }
