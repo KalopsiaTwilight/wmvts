@@ -68,10 +68,17 @@ export class FirstPersonCamera extends Camera {
             document.addEventListener('touchend', this.onTouchEnd);
             document.addEventListener('mousemove', this.onMouseMove);
             document.addEventListener('touchmove', this.onTouchMove);
+            document.addEventListener('pointerlockchange', () => {
+
+            })
         }
     }
 
     override update(deltaTime: number) {
+        if (deltaTime > 100) {
+            deltaTime = 100;
+        }
+
         const rotation = Float4.quatFromEulers(0, this.pitch, this.yaw);
         const rotMatrix = Float44.fromQuat(rotation);
         // Handle movement
@@ -195,14 +202,14 @@ export class FirstPersonCamera extends Camera {
 
         eventArgs.preventDefault();
 
-        if (this.engine.containerElement) {
+        if (document && !document.pointerLockElement && this.engine.containerElement) {
             this.engine.containerElement.requestPointerLock()
         }
     }
 
     handleTouchStart(eventArgs: TouchEvent) {
         eventArgs.preventDefault();
-        if (this.engine.containerElement) {
+        if (document && !document.pointerLockElement && this.engine.containerElement) {
             this.engine.containerElement.requestPointerLock()
         }
     }
@@ -231,7 +238,7 @@ export class FirstPersonCamera extends Camera {
     handleDragRelease() {
         this.isDraggingMouse = false;
 
-        if (document) {
+        if (document && document.pointerLockElement) {
             document.exitPointerLock();
         }
     }
