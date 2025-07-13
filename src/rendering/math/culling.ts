@@ -276,6 +276,25 @@ export namespace AABB {
         }
         return Float3.length(deltas);
     }
+
+    export function distanceToPointIgnoreAxis(aabb: AABB, point: Float3, ignore: Axis) {
+        if (containsPoint(aabb, point)) {
+            return 0;
+        }
+
+        const deltas = Float3.zero();
+        for(let i = 0; i < 3; i++) {
+            if (i == ignore) {
+                continue;
+            }
+            if (point[i] < aabb.min[i]) {
+                deltas[i] = aabb.min[i] - point[i];
+            } else {
+                deltas[i] = point[i] - aabb.max[i];
+            }
+        }
+        return Float3.length(deltas);
+    }
 }
 
 export interface BspTree {

@@ -1,5 +1,5 @@
 import {
-    AABB, BspTree, BufferDataType, ColorMask, Float2, Float3, Float4, Float44, Frustrum, FrustrumSide, GxBlend, IShaderProgram, ITexture,
+    AABB, Axis, BspTree, BufferDataType, ColorMask, Float2, Float3, Float4, Float44, Frustrum, FrustrumSide, GxBlend, IShaderProgram, ITexture,
     IVertexArrayObject, M2BlendModeToEGxBlend, M2Model, Plane, RenderingBatchRequest, RenderingEngine
 } from "@app/rendering";
 import { BinaryWriter } from "@app/utils";
@@ -117,7 +117,7 @@ export class WMOModel extends BaseRenderObject {
             this.activeDoodads[i].draw();
         }
 
-        if (this.engine.debugMode) {
+        if (this.engine.debugPortals) {
             this.drawPortals();
         }
 
@@ -128,8 +128,8 @@ export class WMOModel extends BaseRenderObject {
 
     override dispose(): void {
         super.dispose();
-        for (let i = 0; i < this.modelData.groups.length; i++) {
-            for (const model of this.groupDoodads[i]) {
+        for (const group in this.groupDoodads) {
+            for (const model of this.groupDoodads[group]) {
                 model.dispose();
             }
         }
@@ -409,6 +409,7 @@ export class WMOModel extends BaseRenderObject {
             const groupData = this.modelData.groupInfo[i];
             if (groupData.flags & WowWorldModelGroupFlags.AlwaysDraw) {
                 this.activeGroups.push(i);
+                continue;
             }
             else if (groupData.flags & WowWorldModelGroupFlags.Exterior) {
                 if (AABB.visibleInFrustrum(groupData.boundingBox, this.localCameraFrustrum)) {
@@ -437,12 +438,12 @@ export class WMOModel extends BaseRenderObject {
 
         const visibleGroups: Set<number> = new Set();
         const visitedGroups: Set<number> = new Set();
-        const exteriorViews: Frustrum[] = [];
+        let exteriorViews: Frustrum[] = [];
         for (const group of traversalGroups) {
             this.traversePortals(group, this.localCameraFrustrum, visibleGroups, visitedGroups, exteriorViews, 0);
         }
-        this.activeGroups = [...visibleGroups];
 
+        // Add exteriors if visible from inside with their views
         if (currentlyInside && exteriorViews.length > 0) {
             for (const group of exteriorsInCameraFrustrum) {
                 if (this.activeGroups.indexOf(group) === -1) {
@@ -451,19 +452,28 @@ export class WMOModel extends BaseRenderObject {
                 this.groupViews[group] = exteriorViews;
             }
         }
+        this.activeGroups = this.activeGroups.concat([...visibleGroups]);
 
+        this.activeDoodads = [];
+        // Test for visible doodads to update/draw
         for(const group of this.activeGroups) {
             const groupData = this.modelData.groupInfo[group];
-            const distance = AABB.distanceToPoint(groupData.boundingBox, this.localCamera);
-            if (distance < 0) {
-                // TODO: Disable doodads from a certain distance
-                continue;
-            }
             
-            for (const modelObj of this.groupDoodads[group]) {
+            for (const doodad of this.groupDoodads[group]) {
+                const distance = AABB.distanceToPointIgnoreAxis(doodad.worldBoundingBox, this.localCamera, Axis.Z);
+                // TODO make this distance configurable;
+                if (distance > 200) {
+                    continue;
+                }
+
+                if (groupData.flags & WowWorldModelGroupFlags.AlwaysDraw) {
+                    this.activeDoodads.push(doodad);
+                    continue;
+                }
+
                 for (const view of this.groupViews[group]) {
-                    if (AABB.visibleInFrustrum(modelObj.worldBoundingBox, view)) {
-                        modelObj.draw();
+                    if (AABB.visibleInFrustrum(doodad.worldBoundingBox, view)) {
+                        this.activeDoodads.push(doodad);
                         break;
                     }
                 }
@@ -544,13 +554,13 @@ export class WMOModel extends BaseRenderObject {
         return currentGroup;
     }
 
-    private traversePortals(groupIndex: number, viewFrustrum: Frustrum, visibleGroups: Set<number>, visitedGroups: Set<number>, exteriorViews: Frustrum[], depth: number) {
+    private traversePortals(groupIndex: number, viewFrustrum: Frustrum, visibleSet: Set<number>, visitedSet: Set<number>, exteriorViews: Frustrum[], depth: number) {
         if (depth > 8) {
             return;
         }
 
-        // Skip traversed groups
-        if (visitedGroups.has(groupIndex)) {
+        // Skip traversed group
+        if (visitedSet.has(groupIndex)) {
             return;
         }
 
@@ -558,15 +568,14 @@ export class WMOModel extends BaseRenderObject {
         this.groupViews[groupIndex] = this.groupViews[groupIndex] ? this.groupViews[groupIndex] : [];
         this.groupViews[groupIndex].push(viewFrustrum);
 
-        visitedGroups.add(groupIndex);
-        visibleGroups.add(groupIndex);
+        visibleSet.add(groupIndex);
+        visitedSet.add(groupIndex);
 
         const portalRefs = this.portalsByGroup[groupIndex];
         for (const portalRef of portalRefs) {
             const portal = this.portalData[portalRef.portalIndex];
 
             let isInsidePortal = AABB.containsPoint(portal.boundingBox, this.localCamera);
-
             if (Plane.sideFacingPoint(portal.plane, this.localCamera) !== portalRef.side && !isInsidePortal) {
                 continue;
             }
@@ -588,13 +597,14 @@ export class WMOModel extends BaseRenderObject {
                 }
             }
 
+            const thisGroup = this.modelData.groupInfo[groupIndex]
             const otherGroup = this.modelData.groupInfo[portalRef.groupIndex];
-            if (otherGroup.flags & WowWorldModelGroupFlags.Exterior) {
+            if (thisGroup.flags & WowWorldModelGroupFlags.Interior && otherGroup.flags & WowWorldModelGroupFlags.Exterior) {
                 exteriorViews.push(portalView);
             }
 
             // Traverse portals for new clipped frustrum
-            this.traversePortals(portalRef.groupIndex, portalView, visibleGroups, new Set(), exteriorViews, depth + 1);
+            this.traversePortals(portalRef.groupIndex, portalView, visibleSet, new Set(), exteriorViews, depth + 1);
         }
     }
 

@@ -81,7 +81,7 @@ export class RenderingEngine implements IDisposable {
     maxFpsCounterSize: number;
     fpsCounter: number[];
 
-    debugMode: boolean;
+    debugPortals: boolean;
     debugContainer?: HTMLDivElement;
     fpsElement?: HTMLParagraphElement;
     batchesElement?: HTMLParagraphElement;
@@ -124,7 +124,7 @@ export class RenderingEngine implements IDisposable {
         this.timeElapsed = 0;
         this.maxFpsCounterSize = 100;
         this.fpsCounter = [];
-        this.debugMode = false;
+        this.debugPortals = false;
     }
 
     dispose(): void {
@@ -228,13 +228,19 @@ export class RenderingEngine implements IDisposable {
     }
 
     enableDebug() {
-        this.debugMode = true;
         this.setupDebugElements();
     }
 
+    enableDebugPortals() {
+        this.debugPortals = true;
+    }
+
     disableDebug() {
-        this.debugMode = false;
         this.destroyDebugElements();
+    }
+
+    disableDebugPortals() {
+        this.debugPortals = false;
     }
 
     resize(width: number, height: number) {

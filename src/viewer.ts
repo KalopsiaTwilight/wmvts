@@ -122,6 +122,14 @@ export class WoWModelViewer {
         this.renderEngine.disableDebug();
     }
 
+    enableDebugPortals() {
+        this.renderEngine.enableDebugPortals();
+    }
+
+    disableDebugPortals() {
+        this.renderEngine.disableDebugPortals();
+    }
+
     private initialize() {
         if (this.options.canvas.createCanvas) {
             this.canvas = this.options.canvas.createCanvas();
