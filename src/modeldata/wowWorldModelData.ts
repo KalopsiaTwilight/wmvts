@@ -1,5 +1,5 @@
 import { Float2, Float3, Float4, GxBlend } from "@app/index"
-import { AABB } from "@app/rendering/math/culling";
+import { AABB, Plane } from "@app/rendering/math/culling";
 
 export type Color = [number, number, number, number];
 export type Int2 = [number, number];
@@ -239,8 +239,7 @@ export interface WoWWorldModelFog {
 export interface WoWWorldModelPortal {
     startVertex: number;
     vertexCount: number;
-    planeNormal: Float3;
-    planeDistance: number;
+    plane: Plane;
 }
 
 export interface WoWWorldModelPortalRef {

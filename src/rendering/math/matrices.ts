@@ -665,6 +665,18 @@ export namespace Float44 {
         return dest;
     }
 
+    export function transformDirection3(input: Float3, matrix: Float44, dest?: Float3) {
+        let x = input[0],
+            y = input[1],
+            z = input[2];
+        let w = matrix[3] * x + matrix[7] * y + matrix[11] * z + matrix[15];
+        w = w || 1.0;
+        dest[0] = (matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12]) / w;
+        dest[1] = (matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13]) / w;
+        dest[2] = (matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14]) / w;
+        return dest;
+    }
+
     export function transformDirection3_1(input: Float3, matrix: Float44, dest?: Float3) {
         dest = dest ? dest : Float3.zero();
 

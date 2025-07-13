@@ -174,8 +174,7 @@ function readPortal(reader: BinaryReader) {
     const data: WoWWorldModelPortal = {
         startVertex: reader.readUInt16LE(),
         vertexCount: reader.readUInt16LE(),
-        planeNormal: readFloat3(reader),
-        planeDistance: reader.readFloatLE()
+        plane: readFloat4(reader)
     }
     return data;
 }

@@ -339,9 +339,6 @@ export class M2ParticleEmitter implements IDisposable {
         Float44.multiply(currentModelMatrix, this.particlesFixMat, currentModelMatrix);
 
         this.updateParticles(deltaTime, currentModelMatrix);
-        this.updateVertexBuffer();
-
-        this.vertexBuffer.setData(new Float32Array(this.vertexData));
         
         // Load quads
     }
@@ -354,6 +351,9 @@ export class M2ParticleEmitter implements IDisposable {
         if (!this.isTexturesLoaded) {
             return;
         }
+        
+        this.updateVertexBuffer();
+        this.vertexBuffer.setData(new Float32Array(this.vertexData));
 
         const batchRequest = new RenderingBatchRequest();
         batchRequest.useVertexArrayObject(this.vao);

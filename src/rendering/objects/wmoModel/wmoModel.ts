@@ -1,10 +1,9 @@
 import {
-    AABB,
-    BufferDataType, ColorMask, Float3, Float4, GxBlend, IShaderProgram, ITexture, IVertexArrayObject, IVertexDataBuffer, M2BlendModeToEGxBlend, M2Model,
-    RenderingBatchRequest, RenderingEngine
+    AABB, BspTree, BufferDataType, ColorMask, Float2, Float3, Float4, Float44, Frustrum, FrustrumSide, GxBlend, IShaderProgram, ITexture,
+    IVertexArrayObject, M2BlendModeToEGxBlend, M2Model, Plane, RenderingBatchRequest, RenderingEngine
 } from "@app/rendering";
 import { BinaryWriter } from "@app/utils";
-import { WoWWorldModelData, WoWWorldModelGroup, WowWorldModelGroupFlags, WoWWorldModelMaterialMaterialFlags } from "@app/modeldata";
+import { WoWWorldModelBspNode, WoWWorldModelData, WowWorldModelGroupFlags, WoWWorldModelMaterialMaterialFlags, WoWWorldModelPortalRef } from "@app/modeldata";
 
 import { BaseRenderObject } from "../baseRenderObject";
 
@@ -13,6 +12,15 @@ import fragmentShaderProgramText from "./wmoModel.frag";
 import vertexShaderProgramText from "./wmoModel.vert";
 import portalFragmentShaderProgramText from "./wmoPortal.frag";
 import portalVertexShaderProgramText from "./wmoPortal.vert";
+
+export interface PortalMapData {
+    index: number;
+    negGroup: number;
+    posGroup: number;
+    boundingBox: AABB;
+    vertices: Float3[];
+    plane: Plane;
+}
 
 export class WMOModel extends BaseRenderObject {
     isModelDataLoaded: boolean;
@@ -25,14 +33,23 @@ export class WMOModel extends BaseRenderObject {
     // Used to cull / load doodads based on group
     groupDoodads: { [key: number]: M2Model[] }
     activeGroups: number[];
+    activeDoodads: M2Model[];
     lodGroupMap: number[];
 
     shaderProgram: IShaderProgram;
     groupVaos: IVertexArrayObject[]
 
+    portalsByGroup: { [key: number]: WoWWorldModelPortalRef[] }
+    groupViews: { [key: number]: Frustrum[] }
+
     portalShader: IShaderProgram;
     portalVao: IVertexArrayObject;
     portalCount: number;
+    portalData: PortalMapData[];
+
+    localCamera: Float3;
+    localCameraFrustrum: Frustrum;
+    transposeInvModelMatrix: Float44;
 
     constructor(fileId: number) {
         super();
@@ -45,7 +62,13 @@ export class WMOModel extends BaseRenderObject {
 
         this.loadedTextures = {};
         this.groupDoodads = {};
+        this.portalsByGroup = {};
         this.activeGroups = [];
+        this.activeDoodads = [];
+
+        this.transposeInvModelMatrix = Float44.identity();
+        this.localCamera = Float3.zero();
+        this.localCameraFrustrum = Frustrum.zero();
     }
 
     override initialize(engine: RenderingEngine): void {
@@ -62,32 +85,16 @@ export class WMOModel extends BaseRenderObject {
             return;
         }
 
-        // Determine LOD levels per group
-        for (let i = 0; i < this.modelData.groupInfo.length; i++) {
-            const groupData = this.modelData.groupInfo[i];
+        Float44.transformDirection3(this.engine.cameraPosition, this.invModelMatrix, this.localCamera);
+        Frustrum.copy(this.engine.cameraFrustrum, this.localCameraFrustrum);
+        Frustrum.transformSelf(this.localCameraFrustrum, this.invModelMatrix);
 
-            if (!(groupData.flags & WowWorldModelGroupFlags.Lod)) {
-                this.activeGroups[i] = i;
-                continue;
-            }
-
-            const distance = AABB.distanceToPoint(groupData.boundingBox, this.engine.cameraPosition);
-            let lod = 0;
-            if (distance > 800) {
-                lod = 2;
-            } else if (distance > 500) {
-                lod = 1;
-            }
-            this.activeGroups[i] = this.lodGroupMap[lod * this.modelData.groupInfo.length + i];
-        }
+        this.findVisibleGroupsAndDoodads();
+        this.setLODGroupsForVisibleGroups();
 
         // Update objects per group
-        for (let i = 0; i < this.modelData.groupInfo.length; i++) {
-            const groupDataIndex = this.activeGroups[i];
-
-            for (const modelObj of this.groupDoodads[groupDataIndex]) {
-                modelObj.update(deltaTime);
-            }
+        for (let i = 0; i < this.activeDoodads.length; i++) {
+            this.activeDoodads[i].update(deltaTime);
         }
 
         for (const child of this.children) {
@@ -101,56 +108,18 @@ export class WMOModel extends BaseRenderObject {
         }
 
         const cameraPos = this.engine.cameraPosition;
-
-        let isInside = false;
-        for (let i = 0; i < this.modelData.groupInfo.length; i++) {
-            const groupInfo = this.modelData.groupInfo[i];
-            if (groupInfo.flags & WowWorldModelGroupFlags.Interior && AABB.containsPoint(groupInfo.boundingBox, cameraPos)) {
-                isInside = true;
-                break;
-            }
-        }
-
-        for (let i = 0; i < this.modelData.groupInfo.length; i++) {
+        for (let i = 0; i < this.activeGroups.length; i++) {
             const groupDataIndex = this.activeGroups[i];
-            const groupData = this.modelData.groups[groupDataIndex];
-
-            let drawGeometry = false;
-            let drawObjects = false;
-            if (groupData.flags & WowWorldModelGroupFlags.AlwaysDraw) {
-                drawGeometry = true;
-                drawObjects = true;
-            }
-            // Exterior
-            else if (groupData.flags & WowWorldModelGroupFlags.Exterior) {
-                if (AABB.visibleInFrustrum(groupData.boundingBox, this.engine.cameraFrustrum)) {
-                    drawGeometry = !isInside;
-                    drawObjects = !isInside;
-                }
-            }
-            // Interior
-            else {
-                if (AABB.visibleInFrustrum(groupData.boundingBox, this.engine.cameraFrustrum)) {
-                    drawGeometry = isInside;
-                    drawObjects = isInside;
-                }
-            }
-
-            if (drawGeometry) {
-                this.drawGroup(groupDataIndex, cameraPos)
-            }
-
-            if (drawObjects) {
-                for (const modelObj of this.groupDoodads[groupDataIndex]) {
-                    if (AABB.visibleInFrustrum(modelObj.worldBoundingBox, this.engine.cameraFrustrum)) {
-                        modelObj.draw();
-                    }
-                }
-            }
+            this.drawGroup(groupDataIndex, cameraPos)
         }
 
-        // TODO: make this toggleable?
-        this.drawPortals();
+        for(let i = 0; i < this.activeDoodads.length; i++) {
+            this.activeDoodads[i].draw();
+        }
+
+        if (this.engine.debugMode) {
+            this.drawPortals();
+        }
 
         for (const child of this.children) {
             child.draw();
@@ -174,6 +143,14 @@ export class WMOModel extends BaseRenderObject {
         }
         this.groupVaos = null;
         this.shaderProgram = null;
+
+        this.groupDoodads = null;
+        this.portalsByGroup = null;
+        this.activeGroups = null;
+        this.activeDoodads = null;
+        this.transposeInvModelMatrix = null;
+        this.localCamera = null;
+        this.localCameraFrustrum = null;
     }
 
     get isLoaded() {
@@ -195,13 +172,13 @@ export class WMOModel extends BaseRenderObject {
             this.resizeForBounds();
         }
 
+        this.setupPortals();
         // TODO: This would be unneccesary with a data format closer to how WMOs are actually stored.
         this.makeLodMap();
         this.loadTextures();
         this.loadDoodads();
 
         this.setupGraphics();
-        // TODO: make this toggleable
         this.setupPortalGraphics();
 
         this.isModelDataLoaded = true;
@@ -363,6 +340,264 @@ export class WMOModel extends BaseRenderObject {
         }
     }
 
+    private setupPortals() {
+        for (let i = 0; i < this.modelData.groupInfo.length; i++) {
+            this.portalsByGroup[i] = [];
+        }
+
+        this.portalData = Array(this.modelData.portals.length);
+
+        for (let i = 0; i < this.modelData.portals.length; i++) {
+            const portalData = this.modelData.portals[i];
+            let portalVertices = this.modelData.portalVertices.slice(portalData.startVertex, portalData.startVertex + portalData.vertexCount)
+
+            // Sort vertices around planar polygon
+            const majorAxis = Plane.majorAxis(portalData.plane);
+            const centroid = Float3.zero();
+            for (let i = 0; i < portalVertices.length; i++) {
+                Float3.add(portalVertices[i], centroid, centroid);
+            }
+            Float3.scale(centroid, 1 / portalVertices.length, centroid);
+            const centroid2d = Float3.projectToVec2(centroid, majorAxis);
+            portalVertices = portalVertices.sort((a, b) => {
+                const a2d = Float2.subtract(centroid2d, Float3.projectToVec2(a, majorAxis));
+                const b2d = Float2.subtract(centroid2d, Float3.projectToVec2(b, majorAxis));
+                return Math.atan2(a2d[1], a2d[0]) - Math.atan2(b2d[1], b2d[0]);
+            })
+
+            const boundingBox = AABB.fromVertices(portalVertices, 0);
+
+            this.portalData[i] = {
+                index: i,
+                negGroup: i,
+                posGroup: i,
+                boundingBox,
+                plane: portalData.plane,
+                vertices: portalVertices
+            }
+        }
+
+        for (const portalRef of this.modelData.portalRefs) {
+            if (portalRef.side > 0) {
+                this.portalData[portalRef.portalIndex].posGroup = portalRef.groupIndex
+            } else {
+                this.portalData[portalRef.portalIndex].negGroup = portalRef.groupIndex;
+            }
+        }
+
+        for (let i = 0; i < this.modelData.groups.length; i++) {
+            const groupData = this.modelData.groups[i];
+            const skip = groupData.portalsOffset;
+            const take = groupData.portalCount;
+            this.portalsByGroup[i] = []
+
+            for (let j = skip; j < skip + take; j++) {
+                this.portalsByGroup[i].push(this.modelData.portalRefs[j]);
+            }
+        }
+    }
+
+    // TODO: Move culling outside of WMO
+    private findVisibleGroupsAndDoodads() {
+        this.activeGroups = [];
+        this.groupViews = { };
+        const groupIndexCameraIsIn = this.findGroupIndexForPoint(this.localCamera);
+
+        const exteriorsInCameraFrustrum = []
+        // Check exteriors in camera view and add groups that should always be drawn
+        for (let i = 0; i < this.modelData.groupInfo.length; i++) {
+            const groupData = this.modelData.groupInfo[i];
+            if (groupData.flags & WowWorldModelGroupFlags.AlwaysDraw) {
+                this.activeGroups.push(i);
+            }
+            else if (groupData.flags & WowWorldModelGroupFlags.Exterior) {
+                if (AABB.visibleInFrustrum(groupData.boundingBox, this.localCameraFrustrum)) {
+                    exteriorsInCameraFrustrum.push(i);
+                }
+            }
+        }
+        // Not inside any group, i.e. out of bounds
+        if (groupIndexCameraIsIn < 0) {
+            // Draw only visible exteriors without doodads
+            this.activeGroups = this.activeGroups.concat(exteriorsInCameraFrustrum);
+            for (let i = 0; i < this.activeGroups.length; i++) {
+                this.groupViews[this.activeGroups[i]] = [this.localCameraFrustrum];
+            }
+            return;
+        }
+
+        const cameraGroup = this.modelData.groupInfo[groupIndexCameraIsIn];
+
+        // Occlussion culling via portals
+        const currentlyInside = (cameraGroup.flags & WowWorldModelGroupFlags.Interior) > 0;
+        let traversalGroups = [groupIndexCameraIsIn];
+        if (!currentlyInside) {
+            traversalGroups = traversalGroups.concat(exteriorsInCameraFrustrum);
+        }
+
+        const visibleGroups: Set<number> = new Set();
+        const visitedGroups: Set<number> = new Set();
+        const exteriorViews: Frustrum[] = [];
+        for (const group of traversalGroups) {
+            this.traversePortals(group, this.localCameraFrustrum, visibleGroups, visitedGroups, exteriorViews, 0);
+        }
+        this.activeGroups = [...visibleGroups];
+
+        if (currentlyInside && exteriorViews.length > 0) {
+            for (const group of exteriorsInCameraFrustrum) {
+                if (this.activeGroups.indexOf(group) === -1) {
+                    this.activeGroups.push(group);
+                }
+                this.groupViews[group] = exteriorViews;
+            }
+        }
+
+        for(const group of this.activeGroups) {
+            const groupData = this.modelData.groupInfo[group];
+            const distance = AABB.distanceToPoint(groupData.boundingBox, this.localCamera);
+            if (distance < 0) {
+                // TODO: Disable doodads from a certain distance
+                continue;
+            }
+            
+            for (const modelObj of this.groupDoodads[group]) {
+                for (const view of this.groupViews[group]) {
+                    if (AABB.visibleInFrustrum(modelObj.worldBoundingBox, view)) {
+                        modelObj.draw();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private setLODGroupsForVisibleGroups() {
+        for (let i = 0; i < this.activeGroups.length; i++) {
+            const groupIndex = this.activeGroups[i];
+            const groupData = this.modelData.groupInfo[groupIndex];
+
+            if (!(groupData.flags & WowWorldModelGroupFlags.Lod)) {
+                this.activeGroups[i] = groupIndex;
+                continue;
+            }
+
+            const distance = AABB.distanceToPoint(groupData.boundingBox, this.localCamera);
+            let lod = 0;
+            if (distance > 800) {
+                lod = 2;
+            } else if (distance > 500) {
+                lod = 1;
+            }
+            this.activeGroups[i] = this.lodGroupMap[lod * this.modelData.groupInfo.length + groupIndex];
+        }
+    }
+
+    private findGroupIndexForPoint(point: Float3) {
+        let currentGroup = -1;
+        let currentBB = null;
+        let minDist = Number.MAX_VALUE;
+        for (let i = 0; i < this.modelData.groupInfo.length; i++) {
+            const group = this.modelData.groupInfo[i];
+            if (group.flags & WowWorldModelGroupFlags.Unreachable || group.flags & WowWorldModelGroupFlags.AntiPortal || group.flags & WowWorldModelGroupFlags.Unknown_0x400000) {
+                continue;
+            }
+
+            if (group.flags & WowWorldModelGroupFlags.Exterior) {
+                if (!AABB.containsPointIgnoreMaxZ(group.boundingBox, point)) {
+                    continue;
+                }
+            } else {
+                if (!AABB.containsPoint(group.boundingBox, point)) {
+                    continue;
+                }
+            }
+
+            // If we can't find out node by partitioning space, rely on boundinboxes
+            if (currentGroup === -1) {
+                currentGroup = i;
+                currentBB = group.boundingBox;
+            } else {
+                if (minDist === Number.MAX_VALUE && AABB.containsBoundingBox(currentBB, group.boundingBox)) {
+                    currentGroup = i;
+                    currentBB = group.boundingBox;
+                }
+            }
+
+            const groupData = this.modelData.groups[i];
+            const nodes: WoWWorldModelBspNode[] = [];
+
+            const tree: BspTree = {
+                faceIndices: groupData.bspIndices,
+                nodes: groupData.bspNodes,
+                vertexIndices: groupData.indices,
+                vertices: groupData.vertices
+            }
+            BspTree.findNodesForPoint(tree, point, nodes, 0);
+            const triangleResult = BspTree.pickClosestTriangle_NegZ(tree, point, nodes);
+            if (triangleResult) {
+                if (triangleResult.distance < minDist) {
+                    minDist = triangleResult.distance;
+                    currentGroup = i;
+                }
+            }
+        }
+        return currentGroup;
+    }
+
+    private traversePortals(groupIndex: number, viewFrustrum: Frustrum, visibleGroups: Set<number>, visitedGroups: Set<number>, exteriorViews: Frustrum[], depth: number) {
+        if (depth > 8) {
+            return;
+        }
+
+        // Skip traversed groups
+        if (visitedGroups.has(groupIndex)) {
+            return;
+        }
+
+        // Add this view frustrum to view frustrums for this group for culling
+        this.groupViews[groupIndex] = this.groupViews[groupIndex] ? this.groupViews[groupIndex] : [];
+        this.groupViews[groupIndex].push(viewFrustrum);
+
+        visitedGroups.add(groupIndex);
+        visibleGroups.add(groupIndex);
+
+        const portalRefs = this.portalsByGroup[groupIndex];
+        for (const portalRef of portalRefs) {
+            const portal = this.portalData[portalRef.portalIndex];
+
+            let isInsidePortal = AABB.containsPoint(portal.boundingBox, this.localCamera);
+
+            if (Plane.sideFacingPoint(portal.plane, this.localCamera) !== portalRef.side && !isInsidePortal) {
+                continue;
+            }
+
+            // Skip portals that are not visible in the view frustrum
+            if (!AABB.visibleInFrustrum(portal.boundingBox, viewFrustrum) && !isInsidePortal) {
+                continue;
+            }
+
+            const portalView = Frustrum.copy(viewFrustrum);
+            for (let i = 0; i < portal.vertices.length; i++) {
+                const vertexA = portal.vertices[i];
+                const vertexB = portal.vertices[(i + 1) % portal.vertices.length];
+                const testPoint = portal.vertices[(i - 1 + portal.vertices.length) % portal.vertices.length];
+
+                const plane = Plane.fromEyeAndVertices(this.localCamera, vertexA, vertexB)
+                if (Plane.distanceToPoint(plane, testPoint) > 0) {
+                    Float4.scale(plane, -1, plane);
+                }
+            }
+
+            const otherGroup = this.modelData.groupInfo[portalRef.groupIndex];
+            if (otherGroup.flags & WowWorldModelGroupFlags.Exterior) {
+                exteriorViews.push(portalView);
+            }
+
+            // Traverse portals for new clipped frustrum
+            this.traversePortals(portalRef.groupIndex, portalView, visibleGroups, new Set(), exteriorViews, depth + 1);
+        }
+    }
+
     private drawGroup(i: number, cameraPos: Float3) {
         const groupData = this.modelData.groups[i];
         for (let j = 0; j < groupData.batches.length; j++) {
@@ -403,21 +638,29 @@ export class WMOModel extends BaseRenderObject {
     }
 
     private drawPortals() {
-        const batchRequest = new RenderingBatchRequest();
-        batchRequest.useCounterClockWiseFrontFaces(false);
-        batchRequest.useBackFaceCulling(false);
-        batchRequest.useBlendMode(GxBlend.GxBlend_Alpha) // TODO: Alpha
-        batchRequest.useDepthTest(false);
-        batchRequest.useDepthWrite(false);
-        batchRequest.useColorMask(ColorMask.Alpha | ColorMask.Red | ColorMask.Blue | ColorMask.Green);
-        batchRequest.useShaderProgram(this.portalShader);
-        batchRequest.useUniforms({
-            "u_modelMatrix": this.modelMatrix,
-            "u_color": Float4.create(0.8, 0, 0, 0.25)
-        });
-        batchRequest.useVertexArrayObject(this.portalVao);
-        batchRequest.drawIndexedTriangles(0, this.portalCount);
-        this.engine.submitBatchRequest(batchRequest);
+        for (let i = 0; i < this.modelData.portals.length; i++) {
+            const portalData = this.modelData.portals[i];
+            if (!AABB.visibleInFrustrum(this.portalData[i].boundingBox, this.engine.cameraFrustrum)) {
+                continue;
+            }
+
+            const batchRequest = new RenderingBatchRequest();
+            batchRequest.useCounterClockWiseFrontFaces(false);
+            batchRequest.useBackFaceCulling(false);
+            batchRequest.useBlendMode(GxBlend.GxBlend_Alpha)
+            batchRequest.useDepthTest(false);
+            batchRequest.useDepthWrite(false);
+            batchRequest.useColorMask(ColorMask.Alpha | ColorMask.Red | ColorMask.Blue | ColorMask.Green);
+            batchRequest.useShaderProgram(this.portalShader);
+            batchRequest.useUniforms({
+                "u_modelMatrix": this.modelMatrix,
+                "u_color": Float4.create(0.8, 0.1, 0.1, 0.25)
+            });
+            batchRequest.useVertexArrayObject(this.portalVao);
+            batchRequest.drawIndexedTriangles(portalData.startVertex * 1.5 * 2, portalData.vertexCount * 1.5);
+            // batchRequest.drawIndexedTriangles(0, this.portalCount);
+            this.engine.submitBatchRequest(batchRequest);
+        }
     }
 
     private setupGraphics() {
@@ -437,7 +680,6 @@ export class WMOModel extends BaseRenderObject {
     }
 
     private setupPortalGraphics() {
-        this.portalVao = this.engine.graphics.createVertexArrayObject();
         const portalVB = this.engine.graphics.createVertexDataBuffer([
             { index: this.portalShader.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: 12, offset: 0 },
         ], true);
@@ -452,12 +694,12 @@ export class WMOModel extends BaseRenderObject {
 
         const portalIB = this.engine.graphics.createVertexIndexBuffer(true);
         const portalBuffer = [];
-        for(let i = 0; i < this.modelData.portals.length; i++) {
+        for (let i = 0; i < this.modelData.portals.length; i++) {
             const portalData = this.modelData.portals[i];
             if (portalData.vertexCount - 2 <= 0) {
                 continue;
             }
-            for(let j = 0; j < portalData.vertexCount - 2; j++) {
+            for (let j = 0; j < portalData.vertexCount - 2; j++) {
                 portalBuffer.push(portalData.startVertex + 0)
                 portalBuffer.push(portalData.startVertex + j + 1)
                 portalBuffer.push(portalData.startVertex + j + 2)
@@ -466,7 +708,14 @@ export class WMOModel extends BaseRenderObject {
         this.portalCount = portalBuffer.length;
         portalIB.setData(new Uint16Array(portalBuffer));
 
-        this.portalVao.setIndexBuffer(portalIB);
+        this.portalVao = this.engine.graphics.createVertexArrayObject();
         this.portalVao.addVertexDataBuffer(portalVB);
+        this.portalVao.setIndexBuffer(portalIB);
+    }
+
+    override setModelMatrix(position: Float3 | null, rotation: Float4 | null, scale: Float3 | null): void {
+        super.setModelMatrix(position, rotation, scale);
+
+        Float44.tranpose(this.invModelMatrix, this.transposeInvModelMatrix);
     }
 }

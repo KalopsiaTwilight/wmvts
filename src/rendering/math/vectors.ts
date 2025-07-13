@@ -4,6 +4,13 @@ export type Float4 = [number, number, number, number]
 
 const FloatArrayType = "undefined" != typeof Float32Array ? Float32Array : Array;
 
+
+export enum Axis {
+    X = 0,
+    Y = 1,
+    Z = 2,
+    W = 3
+}
 export namespace Float4 {
 
     export function zero(dest?: Float4): Float4 {
@@ -58,6 +65,10 @@ export namespace Float4 {
         return result as Float4;
     }
 
+    export function fromVec3(vec3: Float3): Float4 {
+        return create(vec3[0], vec3[1], vec3[2], 1);
+    }
+
     export function copy(input: Float4, dest?: Float4): Float4 {
         dest = dest ? dest : identity();
         dest[0] = input[0];
@@ -67,7 +78,7 @@ export namespace Float4 {
         return dest;
     }
 
-    export function set(dest: Float4, x: number, y: number, z: number, w: number) {
+    export function set(dest: Float4|undefined, x: number, y: number, z: number, w: number) {
         dest[0] = x;
         dest[1] = y;
         dest[2] = z;
@@ -298,7 +309,10 @@ export namespace Float3 {
         return dest;
     }
 
-    export function subtract(vecA: Float3, vecB: Float3, dest?: Float3) {
+    export function subtract(vecA: Float3|Float4, vecB: Float3|Float4, dest: Float4): Float4;
+    export function subtract(vecA: Float3|Float4, vecB: Float3|Float4, dest: Float3): Float3;
+    export function subtract(vecA: Float3|Float4, vecB: Float3|Float4): Float3;
+    export function subtract(vecA: Float3|Float4, vecB: Float3|Float4, dest?: Float3|Float4) {
         dest = dest ? dest : zero();
         dest[0] = vecA[0] - vecB[0];
         dest[1] = vecA[1] - vecB[1];
@@ -348,7 +362,7 @@ export namespace Float3 {
         return dest;
     }
 
-    export function dot(vecA: Float3, vecB: Float3) {
+    export function dot(vecA: Float3|Float4, vecB: Float3|Float4): number {
         return vecA[0] * vecB[0] + vecA[1] * vecB[1] + vecA[2] * vecB[2];
     }
 
@@ -376,7 +390,6 @@ export namespace Float3 {
         dest[2] = vecA[2] + coEff * (vecB[2] - vecA[2]);
         return dest;
     }
-
     
     export function fromSpherical(radius: number, theta: number, phi: number, dest?: Float3) {
         dest = dest ? dest : zero();
@@ -385,6 +398,14 @@ export namespace Float3 {
         dest[1] = radius * Math.sin(theta) * Math.sin(phi);
         dest[2] = radius * Math.cos(theta);
         return dest;
+    }
+
+    export function projectToVec2(vec: Float3, axis: Axis) {
+        switch(axis) {
+            case Axis.X: return Float2.create(vec[1], vec[2]);
+            case Axis.Y: return Float2.create(vec[2], vec[0]);
+            case Axis.Z: return Float2.create(vec[0], vec[1]);
+        }
     }
 }
 

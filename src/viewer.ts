@@ -115,11 +115,11 @@ export class WoWModelViewer {
     }
 
     showDebug() {
-        this.renderEngine.showDebug();
+        this.renderEngine.enableDebug();
     }
 
     hideDebug() {
-        this.renderEngine.hideDebug();
+        this.renderEngine.disableDebug();
     }
 
     private initialize() {

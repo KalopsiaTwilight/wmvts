@@ -32,7 +32,7 @@ export class Camera implements IDisposable {
     }
 
     getViewMatrix() {
-        return this.viewMatrix;
+        return Float44.copy(this.viewMatrix);
     }
 
     resizeForBoundingBox(boundingBox?: AABB) {

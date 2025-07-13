@@ -81,6 +81,7 @@ export class RenderingEngine implements IDisposable {
     maxFpsCounterSize: number;
     fpsCounter: number[];
 
+    debugMode: boolean;
     debugContainer?: HTMLDivElement;
     fpsElement?: HTMLParagraphElement;
     batchesElement?: HTMLParagraphElement;
@@ -123,29 +124,7 @@ export class RenderingEngine implements IDisposable {
         this.timeElapsed = 0;
         this.maxFpsCounterSize = 100;
         this.fpsCounter = [];
-
-        if (document && this.containerElement) {
-            this.debugContainer = document.createElement("div");
-            this.debugContainer.style.position = "absolute";
-            this.debugContainer.style.left = "0";
-            this.debugContainer.style.top = "0";
-            this.debugContainer.style.padding = "1em";
-
-            this.fpsElement = document.createElement("p");
-            this.fpsElement.style.color = "white";
-            this.fpsElement.style.margin = "0";
-            this.fpsElement.style.display = "none";
-            this.debugContainer.append(this.fpsElement);
-
-            this.batchesElement = document.createElement("p");
-            this.batchesElement.style.color = "white";
-            this.batchesElement.style.margin = "0";
-            this.batchesElement.style.marginTop = "1.2em";
-            this.batchesElement.style.display = "none";
-            this.debugContainer.append(this.batchesElement);
-
-            this.containerElement.append(this.debugContainer);
-        }
+        this.debugMode = false;
     }
 
     dispose(): void {
@@ -173,7 +152,7 @@ export class RenderingEngine implements IDisposable {
             Float44.copy(this.sceneCamera.getViewMatrix(), this.viewMatrix);
             Float44.invert(this.viewMatrix, this.invViewMatrix);
             Float44.multiply(this.projectionMatrix, this.viewMatrix, this.projViewMatrix);
-            Frustrum.fromMatrix(this.projViewMatrix, this.cameraFrustrum);
+            Frustrum.fromViewMatrix(this.projViewMatrix, this.cameraFrustrum);
             Float44.getTranslation(this.invViewMatrix, this.cameraPosition);
 
             this.textureCache.update(deltaTime);
@@ -217,7 +196,9 @@ export class RenderingEngine implements IDisposable {
             }
             this.batchRequests = [];
 
-            this.framesDrawn++;
+            if (requests.length > 0) {
+                this.framesDrawn++;
+            }
             this.timeElapsed+=deltaTime;
         }
         catch(err) {
@@ -246,22 +227,14 @@ export class RenderingEngine implements IDisposable {
         drawFrame();
     }
 
-    showDebug() {
-        if (this.fpsElement) {
-            this.fpsElement.style.display = 'block';
-        }
-        if (this.batchesElement) {
-            this.batchesElement.style.display = 'block';
-        }
+    enableDebug() {
+        this.debugMode = true;
+        this.setupDebugElements();
     }
 
-    hideDebug() {
-        if (this.fpsElement) {
-            this.fpsElement.style.display = 'none';
-        }
-        if (this.batchesElement) {
-            this.batchesElement.style.display = 'none';
-        }
+    disableDebug() {
+        this.debugMode = false;
+        this.destroyDebugElements();
     }
 
     resize(width: number, height: number) {
@@ -292,13 +265,14 @@ export class RenderingEngine implements IDisposable {
     getTexture(fileId: number, opts?: ITextureOptions): Promise<ITexture> {
         return new Promise<ITexture>((res, rej) => {
             const handleTexture = (imgData : string | null) => {
+                this.progress?.removeFileIdFromOperation(fileId);
                 if (imgData === null) {
                     this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve image data for file: " + fileId);
                     res(this.getUnknownTexture());
+                    delete this.runningRequests[fileId];
                     return;
                 }
 
-                this.progress?.removeFileIdFromOperation(fileId);
                 const img = new Image();
                 img.onload = () => {
                     const texture = this.graphics.createTextureFromImg(img, opts);
@@ -414,5 +388,43 @@ export class RenderingEngine implements IDisposable {
 
     getRandomNumberGenerator(seed?: number|string) {
         return new AleaPrngGenerator(seed ? seed : 0xb00b1e5);
+    }
+
+    private setupDebugElements() {
+        if (document && this.containerElement) {
+            this.debugContainer = document.createElement("div");
+            this.debugContainer.style.position = "absolute";
+            this.debugContainer.style.left = "0";
+            this.debugContainer.style.top = "0";
+            this.debugContainer.style.padding = "1em";
+
+            this.fpsElement = document.createElement("p");
+            this.fpsElement.style.color = "white";
+            this.fpsElement.style.margin = "0";
+            this.debugContainer.append(this.fpsElement);
+
+            this.batchesElement = document.createElement("p");
+            this.batchesElement.style.color = "white";
+            this.batchesElement.style.margin = "0";
+            this.batchesElement.style.marginTop = "1.2em";
+            this.debugContainer.append(this.batchesElement);
+
+            this.containerElement.append(this.debugContainer);
+        }
+    }
+
+    private destroyDebugElements() {
+        if(this.fpsElement) {
+            this.fpsElement.remove()
+            this.fpsElement = null;
+        }
+        if (this.batchesElement) {
+            this.batchesElement.remove();
+            this.batchesElement = null;
+        }
+        if (this.debugContainer) {
+            this.debugContainer.remove()
+            this.debugContainer = null;
+        }
     }
 }
