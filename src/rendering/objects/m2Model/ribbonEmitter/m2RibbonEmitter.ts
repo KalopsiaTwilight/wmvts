@@ -137,7 +137,6 @@ export class M2RibbonEmitter implements IDisposable {
         this.initializedPosition = false;
         this.didSingletonUpdate = false;
 
-        // TODO: RENAME THIS
         this.edgeStart = 0;
         this.edgeEnd = 0;
 

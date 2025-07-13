@@ -461,8 +461,7 @@ export class WMOModel extends BaseRenderObject {
             
             for (const doodad of this.groupDoodads[group]) {
                 const distance = AABB.distanceToPointIgnoreAxis(doodad.worldBoundingBox, this.localCamera, Axis.Z);
-                // TODO make this distance configurable;
-                if (distance > 200) {
+                if (distance > this.engine.doodadRenderDistance) {
                     continue;
                 }
 

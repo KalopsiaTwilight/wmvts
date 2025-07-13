@@ -64,7 +64,6 @@ export class RenderingEngine implements IDisposable {
     ambientColor: Float4;
     lightColor: Float4;
     lightDir: Float3;
-    lightingDisabled: boolean;
 
     textureCache: SimpleCache<ITexture>;
     shaderCache: SimpleCache<IShaderProgram>;
@@ -81,10 +80,14 @@ export class RenderingEngine implements IDisposable {
     maxFpsCounterSize: number;
     fpsCounter: number[];
 
-    debugPortals: boolean;
     debugContainer?: HTMLDivElement;
     fpsElement?: HTMLParagraphElement;
     batchesElement?: HTMLParagraphElement;
+
+    // various options
+    debugPortals: boolean;
+    lightingDisabled: boolean;
+    doodadRenderDistance: number;
 
     constructor(graphics: IGraphics, dataLoader: IDataLoader, requestFrame: RequestFrameFunction,
         options: RenderingEngineOptions) {
@@ -124,7 +127,10 @@ export class RenderingEngine implements IDisposable {
         this.timeElapsed = 0;
         this.maxFpsCounterSize = 100;
         this.fpsCounter = [];
+
+        // Set opts to defaults
         this.debugPortals = false;
+        this.doodadRenderDistance = 200;
     }
 
     dispose(): void {

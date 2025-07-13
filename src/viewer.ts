@@ -130,6 +130,10 @@ export class WoWModelViewer {
         this.renderEngine.disableDebugPortals();
     }
 
+    setDoodadRenderDistance(value: number) {
+        this.renderEngine.doodadRenderDistance = value;
+    }
+
     private initialize() {
         if (this.options.canvas.createCanvas) {
             this.canvas = this.options.canvas.createCanvas();
