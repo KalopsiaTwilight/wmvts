@@ -281,49 +281,53 @@ export class RenderingEngine implements IDisposable {
         object.dispose();
     }
 
-    getTexture(fileId: number, opts?: ITextureOptions): Promise<ITexture> {
+    private async processTexture(fileId: number, imgData: string | null, opts?: ITextureOptions) {
         return new Promise<ITexture>((res, rej) => {
-            const handleTexture = (imgData : string | null) => {
-                if (imgData === null) {
-                    this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve image data for file: " + fileId);
-                    this.progress?.removeFileIdFromOperation(fileId);
-                    delete this.runningRequests[fileId];
-                    res(this.getUnknownTexture());
-                    return;
-                }
-
-                const img = new Image();
-                img.onload = () => {
-                    const texture = this.graphics.createTextureFromImg(img, opts);
-                    this.textureCache.store(fileId, texture); 
-                    this.progress?.removeFileIdFromOperation(fileId);
-                    delete this.runningRequests[fileId];
-                    res(texture);
-                }
-                img.onerror = (err) => {
-                    this.errorHandler?.(DataProcessingErrorType, "Unable to process image data for file: " + fileId);
-                    this.progress?.removeFileIdFromOperation(fileId);
-                    delete this.runningRequests[fileId];
-                    res(null);
-                }
-                img.src = imgData;
+            if (imgData === null) {
+                this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve image data for file: " + fileId);
+                this.progress?.removeFileIdFromOperation(fileId);
+                delete this.runningRequests[fileId];
+                res(this.getUnknownTexture());
             }
 
-            if (this.runningRequests[fileId]) {
-                this.runningRequests[fileId].then(handleTexture);
-                return;
+            const img = new Image();
+            img.onload = () => {
+                const texture = this.graphics.createTextureFromImg(img, opts);
+                this.textureCache.store(fileId, texture); 
+                this.progress?.removeFileIdFromOperation(fileId);
+                delete this.runningRequests[fileId];
+                res(texture);
             }
-            if(this.textureCache.contains(fileId)) {
-                res(this.textureCache.get(fileId));
-                return;
+            img.onerror = (err) => {
+                this.errorHandler?.(DataProcessingErrorType, "Unable to process image data for file: " + fileId);
+                this.progress?.removeFileIdFromOperation(fileId);
+                delete this.runningRequests[fileId];
+                res(this.getUnknownTexture());
             }
-            
-            this.progress?.setOperation(LoadDataOperationText);
-            this.progress?.addFileIdToOperation(fileId);
-            const req = this.dataLoader.loadTexture(fileId);
-            this.runningRequests[fileId] = req;
-            req.then(handleTexture);
+            img.src = imgData;
         });
+    } 
+
+    async getTexture(fileId: number, opts?: ITextureOptions): Promise<ITexture> {
+        if (this.runningRequests[fileId]) {
+            const texture = await this.runningRequests[fileId];
+            return texture as ITexture;
+        }
+        
+        // Try to resolve from cache
+        if(this.textureCache.contains(fileId)) {
+            return this.textureCache.get(fileId);
+        }
+        
+        // Retrieve texture from dataloader & process into WebGL Texture
+        this.progress?.setOperation(LoadDataOperationText);
+        this.progress?.addFileIdToOperation(fileId);
+        const req = this.dataLoader.loadTexture(fileId)
+            .then((imgData) => this.processTexture(fileId, imgData, opts));
+        
+        this.runningRequests[fileId] = req;
+        const texture = await req;
+        return texture;
     }
 
     getUnknownTexture(): ITexture {
