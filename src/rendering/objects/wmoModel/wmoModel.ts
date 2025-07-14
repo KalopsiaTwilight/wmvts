@@ -116,10 +116,6 @@ export class WMOModel extends BaseRenderObject {
         if (this.engine.debugPortals) {
             this.drawPortals();
         }
-
-        for (const child of this.children) {
-            child.draw();
-        }
     }
 
     override dispose(): void {
@@ -397,6 +393,7 @@ export class WMOModel extends BaseRenderObject {
     // TODO: Move culling outside of WMO
     private findVisibleGroupsAndDoodads() {
         this.activeGroups = [];
+        this.activeDoodads = [];
         this.groupViews = { };
         const groupIndexCameraIsIn = this.findGroupIndexForPoint(this.localCamera);
 
@@ -451,7 +448,6 @@ export class WMOModel extends BaseRenderObject {
         }
         this.activeGroups = this.activeGroups.concat([...visibleGroups]);
 
-        this.activeDoodads = [];
         // Test for visible doodads to update/draw
         for(const group of this.activeGroups) {
             const groupData = this.modelData.groupInfo[group];
