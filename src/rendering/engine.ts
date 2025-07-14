@@ -151,6 +151,13 @@ export class RenderingEngine implements IDisposable {
             const deltaTime = (currentTime - this.lastTime);
             this.lastTime = currentTime;
 
+            // Only start drawing if all objects in the scene are loaded:
+            for(const obj of this.sceneObjects) {
+                if (!obj.isLoaded) {
+                    return;
+                }
+            }
+
             this.graphics.startFrame(this.width, this.height);
             this.graphics.clearFrame(this.clearColor);
             
@@ -277,11 +284,11 @@ export class RenderingEngine implements IDisposable {
     getTexture(fileId: number, opts?: ITextureOptions): Promise<ITexture> {
         return new Promise<ITexture>((res, rej) => {
             const handleTexture = (imgData : string | null) => {
-                this.progress?.removeFileIdFromOperation(fileId);
                 if (imgData === null) {
                     this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve image data for file: " + fileId);
-                    res(this.getUnknownTexture());
+                    this.progress?.removeFileIdFromOperation(fileId);
                     delete this.runningRequests[fileId];
+                    res(this.getUnknownTexture());
                     return;
                 }
 
@@ -289,11 +296,14 @@ export class RenderingEngine implements IDisposable {
                 img.onload = () => {
                     const texture = this.graphics.createTextureFromImg(img, opts);
                     this.textureCache.store(fileId, texture); 
+                    this.progress?.removeFileIdFromOperation(fileId);
                     delete this.runningRequests[fileId];
                     res(texture);
                 }
                 img.onerror = (err) => {
                     this.errorHandler?.(DataProcessingErrorType, "Unable to process image data for file: " + fileId);
+                    this.progress?.removeFileIdFromOperation(fileId);
+                    delete this.runningRequests[fileId];
                     res(null);
                 }
                 img.src = imgData;
@@ -394,7 +404,6 @@ export class RenderingEngine implements IDisposable {
         this.wmoCache.store(fileId, data);
         delete this.runningRequests[fileId];
         this.progress?.removeFileIdFromOperation(fileId);
-        this.progress?.finishOperation();
         return data;
     }
 

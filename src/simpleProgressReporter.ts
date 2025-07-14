@@ -5,62 +5,48 @@ export interface SimpleProgressReporterOptions {
 }
 
 export class SimpleProgressReporter extends BaseProgressReporter {
-    private addXPerUpdate: number;
-    private indeterminateProgressBarWidth: number;
-
     options?: SimpleProgressReporterOptions;
 
     progressContainer: HTMLDivElement;
-    progressBackground: HTMLDivElement;
-    progressBar: HTMLDivElement;
     textContainer: HTMLParagraphElement;
     
     constructor(container: HTMLElement, options?: SimpleProgressReporterOptions) {
         super(container);
 
         this.options = options;
-
-        this.timeBetweenUpdates = 20;
-        this.addXPerUpdate = 5;
-        this.indeterminateProgressBarWidth = 24;
-
         this.setupElements();
     }
 
-    drawProgressFrame() {
-        let currentX = parseInt(this.progressBar.style.left, 10);
 
-        const absMaxX = this.progressBackground.clientWidth;
-        const shrinkX = absMaxX - this.indeterminateProgressBarWidth;
-        currentX += this.addXPerUpdate;
-        if (currentX > absMaxX) {
-            currentX = this.addXPerUpdate;
-            this.progressBar.style.width = "0px";
-        } else if (currentX > shrinkX) {
-            this.progressBar.style.width = this.indeterminateProgressBarWidth - (currentX - shrinkX) + "px";
-        }
-
-        if (currentX == this.addXPerUpdate && this.progressBar.clientWidth < this.indeterminateProgressBarWidth) {
-            this.progressBar.style.width = this.progressBar.clientWidth + currentX + "px"
-            currentX = 0;
-        }
-        this.progressBar.style.left = currentX + "px";
+    override onUpdateCount() {
+        this.textContainer.textContent = this.currentOperation + ` (${this.filesProcessed} / ${this.totalFiles})`;
     }
 
     setupElements(): void {
         this.container.style.position = "relative";
 
-        const barHeight = 24;
+        const styleElem = document.createElement('style');
+        styleElem.textContent = `.simpleProgress {
+  padding: 0 5px 8px 0;
+  background: repeating-linear-gradient(90deg,currentColor 0 8%,#0000 0 10%) 200% 100%/200% 3px no-repeat;
+  animation: l3 2s steps(6) infinite;
+}
+@keyframes l3 {to{background-position: 80% 100%}}`
+
+        document.head.appendChild(styleElem);
+
         this.progressContainer = document.createElement("div");
+        this.progressContainer.className = "simpleProgress"
         this.progressContainer.style.display = "none";
         this.progressContainer.style.position = "absolute"
         this.progressContainer.style.bottom = "1em";
         this.progressContainer.style.right = "0";
-        this.progressContainer.style.left = "0";
-        this.progressContainer.style.width = "100%";
+        this.progressContainer.style.left = "25%";
+        this.progressContainer.style.width = "50%";
         this.progressContainer.style.zIndex = "1";
-        this.container.appendChild(this.progressContainer);
+        this.progressContainer.style.color = "#FFF";
 
+        this.container.appendChild(this.progressContainer);
         this.textContainer = document.createElement("p");
         this.textContainer.style.position = "relative"
         this.textContainer.style.margin = "0"
@@ -68,30 +54,13 @@ export class SimpleProgressReporter extends BaseProgressReporter {
         this.textContainer.style.textAlign = "center";
         this.textContainer.style.marginBottom = "1em";
         this.progressContainer.appendChild(this.textContainer);
-        
-        this.progressBackground = document.createElement("div");
-        this.progressBackground.style.position = "relative"
-        this.progressBackground.style.marginInline = "auto";
-        this.progressBackground.style.width = "50%";
-        this.progressBackground.style.height = barHeight + "px"
-        this.progressBackground.style.background = "#aaa";
-        this.progressContainer.appendChild(this.progressBackground);
-
-        this.progressBar = document.createElement("div");
-        this.progressBar.style.position = "absolute"
-        this.progressBar.style.background = "#333";
-        this.progressBar.style.left = "0";
-        this.progressBar.style.width = "0";
-        this.progressBar.style.height = "24px";
-        this.progressBar.style.height = barHeight + "px";
-        this.progressBackground.appendChild(this.progressBar);
 
         this.options?.onSetupElements(this);
     }
     
     showElements(): void {
         this.progressContainer.style.display = "block";
-        this.textContainer.textContent = this.currentOperation;
+        this.onUpdateCount();
     }
 
     hideElements(): void {

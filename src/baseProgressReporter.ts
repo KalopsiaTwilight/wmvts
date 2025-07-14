@@ -3,13 +3,13 @@ import { IProgressReporter } from ".";
 export abstract class BaseProgressReporter implements IProgressReporter {
     isDisposing: boolean;
 
-    private timeSinceLastUpdate: number;
-    timeBetweenUpdates: number;
-    private lastTime: number;
-
     currentOperation: string;
+    finishLoadingAfterMs: number;
     show: boolean;
     progressPerFile: { [key: number]: number }
+
+    filesProcessed: number;
+    totalFiles: number;
 
     container: HTMLElement;
     
@@ -17,13 +17,7 @@ export abstract class BaseProgressReporter implements IProgressReporter {
         this.resetState();
         this.isDisposing = false;
         this.container = container;
-
-        this.timeBetweenUpdates = 20;
-        this.timeSinceLastUpdate = 0;
-    }
-
-    private now() {
-        return window.performance && window.performance.now ? window.performance.now() : Date.now();
+        this.finishLoadingAfterMs = 100;
     }
 
     dispose() {
@@ -31,43 +25,42 @@ export abstract class BaseProgressReporter implements IProgressReporter {
         this.progressPerFile = null;
     }
 
-    draw(currentTime: number) {
-        const deltaTime = (currentTime - this.lastTime);
-        this.lastTime = currentTime;
-
-        this.timeSinceLastUpdate += deltaTime;
-        if(this.timeBetweenUpdates > this.timeSinceLastUpdate) {
-            return;
-        }
-        this.timeSinceLastUpdate -= this.timeBetweenUpdates;
-
-        this.drawProgressFrame();
-    }
-
     calcTotalProgress() {
         let progress = 0;
-        let nrFiles = 0;
         for(const file in this.progressPerFile) {
             progress += this.progressPerFile[file]
-            nrFiles++;
         }
-        progress = progress / nrFiles;
+        progress = progress / this.totalFiles;
         return progress;
     }
-
-    abstract drawProgressFrame(): void;
 
     update(fileId: number, progress: number): void {
         this.progressPerFile[fileId] = progress;
     }
 
+    onUpdateCount() {
+        
+    }
+
     addFileIdToOperation(fileId: number): void {
+        this.totalFiles++;
+        this.onUpdateCount();
         this.progressPerFile[fileId] = 0;
         this.startDrawing();
     }
 
     removeFileIdFromOperation(fileId: number): void {
-        delete this.progressPerFile[fileId];
+        if (typeof(this.progressPerFile[fileId]) !== 'undefined') {
+            delete this.progressPerFile[fileId];
+            this.filesProcessed++
+        }
+        this.onUpdateCount();
+        if (Object.keys(this.progressPerFile).length === 0) {
+            setTimeout(this.checkFinish.bind(this), this.finishLoadingAfterMs)
+        }
+    }
+
+    checkFinish() {
         if (Object.keys(this.progressPerFile).length === 0) {
             this.finishOperation();
         }
@@ -89,20 +82,7 @@ export abstract class BaseProgressReporter implements IProgressReporter {
             return;
         }
         this.show = true;
-        this.lastTime = this.now();
-
         this.showElements();
-
-        const me = this;
-        const drawFrame = () => {
-            if (this.isDisposing || !this.show) {
-                return;
-            }
-            const now = me.now();
-            me.draw(now);
-            window.requestAnimationFrame(drawFrame)
-        }
-        drawFrame();
     }
 
     abstract showElements(): void;
@@ -113,5 +93,7 @@ export abstract class BaseProgressReporter implements IProgressReporter {
         this.show = false;
         this.currentOperation = '';
         this.progressPerFile = { }
+        this.filesProcessed = 0;
+        this.totalFiles = 0;
     }
 }

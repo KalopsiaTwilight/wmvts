@@ -96,10 +96,6 @@ export class WMOModel extends BaseRenderObject {
         for (let i = 0; i < this.activeDoodads.length; i++) {
             this.activeDoodads[i].update(deltaTime);
         }
-
-        for (const child of this.children) {
-            child.update(deltaTime);
-        }
     }
 
     draw(): void {
@@ -262,6 +258,7 @@ export class WMOModel extends BaseRenderObject {
                     doodadModel.initialize(this.engine);
 
                     this.groupDoodads[i].push(doodadModel);
+                    this.children.push(doodadModel);
                 }
             }
         }
