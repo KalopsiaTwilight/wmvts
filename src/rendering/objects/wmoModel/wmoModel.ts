@@ -85,9 +85,9 @@ export class WMOModel extends BaseRenderObject {
             return;
         }
 
-        Float44.transformDirection3(this.engine.cameraPosition, this.invModelMatrix, this.localCamera);
+        Float44.transformDirection3(this.engine.cameraPosition, this.invWorldModelMatrix, this.localCamera);
         Frustrum.copy(this.engine.cameraFrustrum, this.localCameraFrustrum);
-        Frustrum.transformSelf(this.localCameraFrustrum, this.invModelMatrix);
+        Frustrum.transformSelf(this.localCameraFrustrum, this.invWorldModelMatrix);
 
         this.findVisibleGroupsAndDoodads();
         this.setLODGroupsForVisibleGroups();
@@ -622,7 +622,7 @@ export class WMOModel extends BaseRenderObject {
 
             batchRequest.useShaderProgram(this.shaderProgram);
             batchRequest.useUniforms({
-                "u_modelMatrix": this.modelMatrix,
+                "u_modelMatrix": this.worldModelMatrix,
                 "u_cameraPos": cameraPos,
                 "u_pixelShader": ps,
                 "u_vertexShader": vs,
@@ -655,7 +655,7 @@ export class WMOModel extends BaseRenderObject {
             batchRequest.useColorMask(ColorMask.Alpha | ColorMask.Red | ColorMask.Blue | ColorMask.Green);
             batchRequest.useShaderProgram(this.portalShader);
             batchRequest.useUniforms({
-                "u_modelMatrix": this.modelMatrix,
+                "u_modelMatrix": this.worldModelMatrix,
                 "u_color": Float4.create(0.8, 0.1, 0.1, 0.25)
             });
             batchRequest.useVertexArrayObject(this.portalVao);

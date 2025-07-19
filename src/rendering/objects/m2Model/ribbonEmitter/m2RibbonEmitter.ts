@@ -369,7 +369,7 @@ export class M2RibbonEmitter implements IDisposable {
     private updatePosition() {
         if (this.visible) {
             const posMatrix = Float44.identity();
-            Float44.multiply(this.parent.modelMatrix, this.parent.boneData[this.m2data.boneIndex].positionMatrix, posMatrix);
+            Float44.multiply(this.parent.worldModelMatrix, this.parent.boneData[this.m2data.boneIndex].positionMatrix, posMatrix);
             Float44.translate(posMatrix, this.m2data.position, posMatrix);
 
             const position = Float3.zero();

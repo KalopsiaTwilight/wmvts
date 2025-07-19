@@ -16,5 +16,5 @@ export interface RenderObject extends IDisposable {
     isLoaded: boolean;
     parent?: RenderObject;
     children: RenderObject[];
-    modelMatrix: Float44;
+    worldModelMatrix: Float44;
 }

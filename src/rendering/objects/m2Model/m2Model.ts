@@ -107,7 +107,7 @@ export class M2Model extends BaseRenderObject
 
         this.animationState.update(deltaTime);
 
-        Float44.multiply(this.modelMatrix, this.engine.viewMatrix, this.modelViewMatrix);
+        Float44.multiply(this.worldModelMatrix, this.engine.viewMatrix, this.modelViewMatrix);
         Float44.invert(this.modelViewMatrix, this.invModelViewMatrix);
 
         for(const data of this.boneData) {
@@ -220,7 +220,7 @@ export class M2Model extends BaseRenderObject
                     Float44.setColumn(parentPosMatrix, 3, translationVec);
                 }
 
-                Float44.multiply(this.invModelMatrix, parentPosMatrix, parentPosMatrix);
+                Float44.multiply(this.invWorldModelMatrix, parentPosMatrix, parentPosMatrix);
             }
 
             Float44.multiply(data.positionMatrix, parentPosMatrix, data.positionMatrix);
@@ -473,7 +473,7 @@ export class M2Model extends BaseRenderObject
         batchRequest.useColorMask(ColorMask.Alpha | ColorMask.Blue | ColorMask.Green | ColorMask.Red);
         batchRequest.useUniforms({
             "u_boneMatrices": this.bonePositionBuffer,
-            "u_modelMatrix": this.modelMatrix,
+            "u_modelMatrix": this.worldModelMatrix,
             "u_textureTransformMatrix1": data.textureMatrices[0],
             "u_textureTransformMatrix2": data.textureMatrices[1],
             "u_color": data.color,
@@ -512,9 +512,9 @@ export class M2Model extends BaseRenderObject
         this.loadedTextures = null;
         this.textureUnitData = null;
         this.boneData = null;
-        this.modelMatrix = null;
+        this.worldModelMatrix = null;
         this.modelViewMatrix = null;
-        this.invModelMatrix = null;
+        this.invWorldModelMatrix = null;
         this.invModelViewMatrix = null;
         this.drawOrderTexUnits = null;
     }
@@ -532,7 +532,7 @@ export class M2Model extends BaseRenderObject
 
         // TODO: Change this margin?
         this.localBoundingBox = AABB.fromVertices(this.modelData.vertices.map(x => x.position), 10);
-        this.worldBoundingBox = AABB.transform(this.localBoundingBox, this.modelMatrix);
+        this.worldBoundingBox = AABB.transform(this.localBoundingBox, this.worldModelMatrix);
         
         this.animationState = new AnimationState(this);
         this.animationState.useAnimation(0);

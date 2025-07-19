@@ -6,16 +6,18 @@ export abstract class BaseRenderObject implements RenderObject {
     isDisposing: boolean;
     abstract fileId: number;
 
-    parent?: RenderObject;
-    children: RenderObject[];
-    modelMatrix: Float44;
-    invModelMatrix: Float44;
+    parent?: BaseRenderObject;
+    children: BaseRenderObject[];
+    localModelMatrix: Float44;
+    worldModelMatrix: Float44;
+    invWorldModelMatrix: Float44;
     engine: RenderingEngine;
 
     constructor() {
         this.children = [];
-        this.modelMatrix = Float44.identity();
-        this.invModelMatrix = Float44.invert(this.modelMatrix);
+        this.worldModelMatrix = Float44.identity();
+        this.localModelMatrix = Float44.identity();
+        this.invWorldModelMatrix = Float44.invert(this.worldModelMatrix);
         this.isDisposing = false;
     }
 
@@ -49,28 +51,36 @@ export abstract class BaseRenderObject implements RenderObject {
         }
         this.children = null;
         this.engine = null;
-        this.modelMatrix = null;
-        this.invModelMatrix = null;
+        this.worldModelMatrix = null;
+        this.invWorldModelMatrix = null;
+    }
+
+    updateModelMatrixFromParent() {
+        Float44.copy(this.localModelMatrix, this.worldModelMatrix);
+        let parent = this.parent;
+        while (parent) {
+            Float44.multiply(this.worldModelMatrix, parent.worldModelMatrix, this.worldModelMatrix);
+            parent = parent.parent;
+        }
+        Float44.invert(this.worldModelMatrix, this.invWorldModelMatrix);
     }
     
     setModelMatrix(position: Float3|null, rotation: Float4|null, scale: Float3|null) {
-        Float44.identity(this.modelMatrix);
+        Float44.identity(this.localModelMatrix);
         if (position !== null) {
-            Float44.translate(this.modelMatrix, position, this.modelMatrix);
+            Float44.translate(this.localModelMatrix, position, this.localModelMatrix);
         }
         if (rotation != null) {
-            Float44.multiply(this.modelMatrix, Float44.fromQuat(rotation), this.modelMatrix);
+            Float44.multiply(this.localModelMatrix, Float44.fromQuat(rotation), this.localModelMatrix);
         }
         if (scale != null) {
-            Float44.scale(this.modelMatrix, scale, this.modelMatrix);
+            Float44.scale(this.localModelMatrix, scale, this.localModelMatrix);
         }
+        
+        this.updateModelMatrixFromParent();
 
-        let parent = this.parent;
-        while (parent) {
-            Float44.multiply(this.modelMatrix, parent.modelMatrix, this.modelMatrix);
-            parent = parent.parent;
+        for(const child of this.children) {
+            child.updateModelMatrixFromParent();
         }
-
-        Float44.invert(this.modelMatrix, this.invModelMatrix);
     }
 }

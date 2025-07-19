@@ -120,15 +120,15 @@ export class AnimationState {
     }
 
     getFloat3TrackValue(track: WoWTrackData<Float3>, fallback?: Float3, dest?: Float3) {
-        return this.getTrackValueInt(Float3.lerp, Float3.copy, track, fallback, dest);
+        return this.getTrackValueInt<Float3>(Float3.lerp, Float3.copy, track, fallback, dest);
     }
 
-    getFloat4TrackValue(track: WoWTrackData<Float4>, fallback?: Float4, dest?: Float4) {
-        return this.getTrackValueInt(Float4.lerp, Float4.copy, track, fallback, dest);
+    getFloat4TrackValue(track: WoWTrackData<Float4>, fallback?: Float4, dest?: Float4): Float4 {
+        return this.getTrackValueInt<Float4>(Float4.lerp, Float4.copy, track, fallback, dest);
     }
 
-    getNumberTrackValue(track: WoWTrackData<number>, fallback?: number) {
-        return this.getTrackValueInt(lerpNum, copyNum, track, fallback, 0);
+    getNumberTrackValue(track: WoWTrackData<number>, fallback?: number): number {
+        return this.getTrackValueInt<number>(lerpNum, copyNum, track, fallback, 0);
     }
 
     private getTrackValueInt<T>(lerpFn: LerpFn<T>, copyFn: CopyFn<T>, track: WoWTrackData<T>, fallback?: T, dest?: T) {
