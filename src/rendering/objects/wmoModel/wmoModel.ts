@@ -440,23 +440,20 @@ export class WMOModel extends BaseRenderObject {
                 }
             }
         }
+
+        let traversalGroups: number[] = []
+        let currentlyInside = false;
         // Not inside any group, i.e. out of bounds
         if (groupIndexCameraIsIn < 0) {
-            // Draw only visible exteriors without doodads
-            this.activeGroups = this.activeGroups.concat(exteriorsInCameraFrustrum);
-            for (let i = 0; i < this.activeGroups.length; i++) {
-                this.groupViews[this.activeGroups[i]] = [this.localCameraFrustrum];
+            // Traverse exteriors
+            traversalGroups = exteriorsInCameraFrustrum;
+        } else {
+            const cameraGroup = this.modelData.groupInfo[groupIndexCameraIsIn];
+            currentlyInside = (cameraGroup.flags & WowWorldModelGroupFlags.Interior) > 0;
+            traversalGroups = [groupIndexCameraIsIn];
+            if (!currentlyInside) {
+                traversalGroups = traversalGroups.concat(exteriorsInCameraFrustrum);
             }
-            return;
-        }
-
-        const cameraGroup = this.modelData.groupInfo[groupIndexCameraIsIn];
-
-        // Occlussion culling via portals
-        const currentlyInside = (cameraGroup.flags & WowWorldModelGroupFlags.Interior) > 0;
-        let traversalGroups = [groupIndexCameraIsIn];
-        if (!currentlyInside) {
-            traversalGroups = traversalGroups.concat(exteriorsInCameraFrustrum);
         }
 
         const visibleGroups: Set<number> = new Set();
