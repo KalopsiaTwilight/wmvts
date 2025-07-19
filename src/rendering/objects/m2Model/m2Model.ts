@@ -530,8 +530,7 @@ export class M2Model extends BaseRenderObject
 
         this.modelData = data;
 
-        // TODO: Change this margin?
-        this.localBoundingBox = AABB.fromVertices(this.modelData.vertices.map(x => x.position), 10);
+        this.localBoundingBox = AABB.fromVertices(this.modelData.vertices.map(x => x.position), 0);
         this.worldBoundingBox = AABB.transform(this.localBoundingBox, this.worldModelMatrix);
         
         this.animationState = new AnimationState(this);
