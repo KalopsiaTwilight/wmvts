@@ -4,6 +4,7 @@ import { RenderObject, IDisposable } from "./objects";
 import { GxBlend, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest } from "./graphics";
 import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData, RequestFrameFunction } from "..";
 import { SimpleCache } from "./cache";
+import { LiquidTypeMetadata } from "@app/metadata/liquid";
 
 const UNKNOWN_TEXTURE_ID = -123;
 
@@ -69,6 +70,7 @@ export class RenderingEngine implements IDisposable {
     shaderCache: SimpleCache<IShaderProgram>;
     wmoCache: SimpleCache<WoWWorldModelData>;
     m2Cache: SimpleCache<WoWModelData>;
+    liquidCache: SimpleCache<LiquidTypeMetadata>;
     runningRequests: { [key:string]: Promise<unknown> }
 
     batchRequests: RenderingBatchRequest[];
@@ -113,6 +115,7 @@ export class RenderingEngine implements IDisposable {
         this.shaderCache = new SimpleCache(cacheTtl);
         this.wmoCache = new SimpleCache(cacheTtl);
         this.m2Cache = new SimpleCache(cacheTtl);
+        this.liquidCache = new SimpleCache(cacheTtl);
         this.runningRequests = { };
         this.batchRequests = [];
 
@@ -171,6 +174,7 @@ export class RenderingEngine implements IDisposable {
             this.textureCache.update(deltaTime);
             this.wmoCache.update(deltaTime);
             this.m2Cache.update(deltaTime);
+            this.liquidCache.update(deltaTime);
             for(const obj of this.sceneObjects) {
                 obj.update(deltaTime);
             }
@@ -281,11 +285,11 @@ export class RenderingEngine implements IDisposable {
         object.dispose();
     }
 
-    private async processTexture(fileId: number, imgData: string | null, opts?: ITextureOptions) {
+    private async processTexture(fileId: number|string, imgData: string | null, opts?: ITextureOptions) {
         return new Promise<ITexture>((res, rej) => {
             if (imgData === null) {
                 this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve image data for file: " + fileId);
-                this.progress?.removeFileIdFromOperation(fileId);
+                this.progress?.removeFileFromOperation(fileId);
                 delete this.runningRequests[fileId];
                 res(this.getUnknownTexture());
             }
@@ -294,13 +298,13 @@ export class RenderingEngine implements IDisposable {
             img.onload = () => {
                 const texture = this.graphics.createTextureFromImg(img, opts);
                 this.textureCache.store(fileId, texture); 
-                this.progress?.removeFileIdFromOperation(fileId);
+                this.progress?.removeFileFromOperation(fileId);
                 delete this.runningRequests[fileId];
                 res(texture);
             }
             img.onerror = (err) => {
                 this.errorHandler?.(DataProcessingErrorType, "Unable to process image data for file: " + fileId);
-                this.progress?.removeFileIdFromOperation(fileId);
+                this.progress?.removeFileFromOperation(fileId);
                 delete this.runningRequests[fileId];
                 res(this.getUnknownTexture());
             }
@@ -321,7 +325,7 @@ export class RenderingEngine implements IDisposable {
         
         // Retrieve texture from dataloader & process into WebGL Texture
         this.progress?.setOperation(LoadDataOperationText);
-        this.progress?.addFileIdToOperation(fileId);
+        this.progress?.addFileToOperation(fileId);
         const req = this.dataLoader.loadTexture(fileId)
             .then((imgData) => this.processTexture(fileId, imgData, opts));
         
@@ -376,7 +380,7 @@ export class RenderingEngine implements IDisposable {
         }
 
         this.progress?.setOperation(LoadDataOperationText);
-        this.progress?.addFileIdToOperation(fileId);
+        this.progress?.addFileToOperation(fileId);
         const req = this.dataLoader.loadModelFile(fileId);
         this.runningRequests[fileId] = req;
         const data = await req;
@@ -385,7 +389,7 @@ export class RenderingEngine implements IDisposable {
         }
         delete this.runningRequests[fileId];
         this.m2Cache.store(fileId, data);
-        this.progress?.removeFileIdFromOperation(fileId);
+        this.progress?.removeFileFromOperation(fileId);
         return data;
     }
 
@@ -398,7 +402,7 @@ export class RenderingEngine implements IDisposable {
             return this.wmoCache.get(fileId);
         }
         this.progress?.setOperation(LoadDataOperationText);
-        this.progress?.addFileIdToOperation(fileId);
+        this.progress?.addFileToOperation(fileId);
         const req = this.dataLoader.loadWorldModelFile(fileId);
         this.runningRequests[fileId] = req;
         const data = await req;
@@ -407,7 +411,34 @@ export class RenderingEngine implements IDisposable {
         }
         this.wmoCache.store(fileId, data);
         delete this.runningRequests[fileId];
-        this.progress?.removeFileIdFromOperation(fileId);
+        this.progress?.removeFileFromOperation(fileId);
+        return data;
+    }
+
+    async getLiquidTypeMetadata(liquidId: number): Promise<LiquidTypeMetadata | null> {
+        const key = liquidId;
+
+        if (this.runningRequests[key]) {
+            const data = await this.runningRequests[key];
+            return data as LiquidTypeMetadata|null;
+        }
+
+        if (this.liquidCache.contains(liquidId)) {
+            return this.liquidCache.get(liquidId);
+        }
+
+        this.progress?.setOperation(LoadDataOperationText);
+        // TODO: Make this key based LIQUID - ID, FILE - ID etc.
+        this.progress?.addFileToOperation(key);
+        const req = this.dataLoader.loadLiquidTypeMetadata(liquidId);
+        this.runningRequests[key] = req;
+        const data = await req;
+        if (data === null) {
+            this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve Liquid data for liquid: " + liquidId);
+        }
+        this.liquidCache.store(liquidId, data);
+        delete this.runningRequests[key];
+        this.progress?.removeFileFromOperation(key);
         return data;
     }
 

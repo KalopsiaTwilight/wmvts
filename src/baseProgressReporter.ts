@@ -6,7 +6,7 @@ export abstract class BaseProgressReporter implements IProgressReporter {
     currentOperation: string;
     finishLoadingAfterMs: number;
     show: boolean;
-    progressPerFile: { [key: number]: number }
+    progressPerFile: { [key: number|string]: number }
 
     filesProcessed: number;
     totalFiles: number;
@@ -42,14 +42,14 @@ export abstract class BaseProgressReporter implements IProgressReporter {
         
     }
 
-    addFileIdToOperation(fileId: number): void {
+    addFileToOperation(fileId: number|string): void {
         this.totalFiles++;
         this.onUpdateCount();
         this.progressPerFile[fileId] = 0;
         this.startDrawing();
     }
 
-    removeFileIdFromOperation(fileId: number): void {
+    removeFileFromOperation(fileId: number|string): void {
         if (typeof(this.progressPerFile[fileId]) !== 'undefined') {
             delete this.progressPerFile[fileId];
             this.filesProcessed++

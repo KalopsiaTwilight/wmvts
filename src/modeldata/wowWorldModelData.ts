@@ -272,7 +272,9 @@ export interface WoWWorldModelLiquidTile {
 }
 
 export interface WoWWorldModelLiquid {
+    // Width, height    
     liquidVertices: Int2;
+    // width, height
     liquidTiles: Int2;
     position: Float3;
     materialId: number;

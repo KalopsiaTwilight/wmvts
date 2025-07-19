@@ -12,6 +12,7 @@ import fragmentShaderProgramText from "./wmoModel.frag";
 import vertexShaderProgramText from "./wmoModel.vert";
 import portalFragmentShaderProgramText from "./wmoPortal.frag";
 import portalVertexShaderProgramText from "./wmoPortal.vert";
+import { WMOLiquid } from "./wmoLiquid";
 
 export interface PortalMapData {
     index: number;
@@ -32,6 +33,7 @@ export class WMOModel extends BaseRenderObject {
     loadedTextures: { [key: number]: ITexture }
     // Used to cull / load doodads based on group
     groupDoodads: { [key: number]: M2Model[] }
+    groupLiquids: { [key: number]: WMOLiquid[] }
     activeGroups: number[];
     activeDoodads: M2Model[];
     lodGroupMap: number[];
@@ -63,6 +65,7 @@ export class WMOModel extends BaseRenderObject {
         this.loadedTextures = {};
         this.groupDoodads = {};
         this.portalsByGroup = {};
+        this.groupLiquids = {};
         this.activeGroups = [];
         this.activeDoodads = [];
 
@@ -96,6 +99,12 @@ export class WMOModel extends BaseRenderObject {
         for (let i = 0; i < this.activeDoodads.length; i++) {
             this.activeDoodads[i].update(deltaTime);
         }
+
+        for(const group of this.activeGroups) {
+            for(const liquid of this.groupLiquids[group]) {
+                liquid.update(deltaTime);
+            }
+        }
     }
 
     draw(): void {
@@ -107,6 +116,10 @@ export class WMOModel extends BaseRenderObject {
         for (let i = 0; i < this.activeGroups.length; i++) {
             const groupDataIndex = this.activeGroups[i];
             this.drawGroup(groupDataIndex, cameraPos)
+            
+            for(const liquid of this.groupLiquids[groupDataIndex]) {
+                liquid.draw();
+            }
         }
 
         for(let i = 0; i < this.activeDoodads.length; i++) {
@@ -169,6 +182,7 @@ export class WMOModel extends BaseRenderObject {
         this.makeLodMap();
         this.loadTextures();
         this.loadDoodads();
+        this.loadLiquids();
 
         this.setupGraphics();
         this.setupPortalGraphics();
@@ -231,6 +245,10 @@ export class WMOModel extends BaseRenderObject {
         vb.setData(buffer);
         return vb;
     }
+    
+    private resizeForBounds() {
+        this.engine.sceneCamera.resizeForBoundingBox(this.modelData.boundingBox);
+    }
 
     private loadDoodads() {
         // TODO: Check if model references should be shared amongst LOD groups
@@ -260,10 +278,6 @@ export class WMOModel extends BaseRenderObject {
         }
     }
 
-    private resizeForBounds() {
-        this.engine.sceneCamera.resizeForBoundingBox(this.modelData.boundingBox);
-    }
-
     private loadTextures() {
         const loadingPromises: Promise<void>[] = []
         this.loadedTextures[0] = this.engine.getUnknownTexture();
@@ -291,6 +305,21 @@ export class WMOModel extends BaseRenderObject {
         Promise.all(loadingPromises).then(() => {
             this.isTexturesLoaded = true;
         })
+    }
+
+    private loadLiquids() {
+        for(let i = 0; i < this.modelData.groups.length; i++) {
+            this.groupLiquids[i] = [];
+            const groupData = this.modelData.groups[i];
+            for(const liquidData of groupData.liquidData) {
+                const liquidWmo = new WMOLiquid(liquidData, groupData, this.modelData.flags);
+                liquidWmo.parent = this;
+                liquidWmo.updateModelMatrixFromParent();
+                liquidWmo.initialize(this.engine);
+                this.children.push(liquidWmo);
+                this.groupLiquids[i].push(liquidWmo);
+            }
+        }
     }
 
     private getDoodadSetRefs() {
@@ -718,6 +747,6 @@ export class WMOModel extends BaseRenderObject {
     override setModelMatrix(position: Float3 | null, rotation: Float4 | null, scale: Float3 | null): void {
         super.setModelMatrix(position, rotation, scale);
 
-        Float44.tranpose(this.invModelMatrix, this.transposeInvModelMatrix);
+        Float44.tranpose(this.invWorldModelMatrix, this.transposeInvModelMatrix);
     }
 }

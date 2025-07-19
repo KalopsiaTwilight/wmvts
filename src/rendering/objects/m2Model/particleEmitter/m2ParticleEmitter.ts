@@ -329,7 +329,7 @@ export class M2ParticleEmitter implements IDisposable {
         this.updateAnimatedProps();
 
         const currentModelMatrix = Float44.identity();
-        Float44.multiply(currentModelMatrix, this.parent.modelMatrix, currentModelMatrix);
+        Float44.multiply(currentModelMatrix, this.parent.worldModelMatrix, currentModelMatrix);
         Float44.multiply(currentModelMatrix, this.parent.boneData[this.m2data.bone].positionMatrix, currentModelMatrix);
 
         const offsetMatrix = Float44.identity();
