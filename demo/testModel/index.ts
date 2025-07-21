@@ -1,10 +1,10 @@
-import { BaseRenderObject, BufferDataType, Float44, GxBlend, IShaderProgram, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderingBatchRequest, RenderingEngine, RenderObject } from "@app/index";
+import { WorldPositionedObject, BufferDataType, Float44, GxBlend, IShaderProgram, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderingBatchRequest, RenderingEngine, RenderObject } from "@app/index";
 
 import fs from "./testModel.frag";
 import vs from "./testModel.vert";
 
 
-export class TestModel extends BaseRenderObject {
+export class TestModel extends WorldPositionedObject {
     isLoaded: boolean;
     program: IShaderProgram;
 

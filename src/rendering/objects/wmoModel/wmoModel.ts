@@ -5,7 +5,7 @@ import {
 import { BinaryWriter } from "@app/utils";
 import { WoWWorldModelBspNode, WoWWorldModelData, WowWorldModelGroupFlags, WoWWorldModelMaterialMaterialFlags, WoWWorldModelPortalRef } from "@app/modeldata";
 
-import { BaseRenderObject } from "../baseRenderObject";
+import { WorldPositionedObject } from "../worldPositionedObject";
 
 import { getWMOPixelShader, getWMOVertexShader } from "./wmoShaders";
 import fragmentShaderProgramText from "./wmoModel.frag";
@@ -23,7 +23,7 @@ export interface PortalMapData {
     plane: Plane;
 }
 
-export class WMOModel extends BaseRenderObject {
+export class WMOModel extends WorldPositionedObject {
     isModelDataLoaded: boolean;
     isTexturesLoaded: boolean;
 

@@ -5,7 +5,7 @@ import {
 import { BinaryWriter } from "@app/utils";
 import { LiquidTypeMetadata } from "@app/metadata";
 
-import { BaseRenderObject } from "../baseRenderObject";
+import { WorldPositionedObject } from "../worldPositionedObject";
 
 import fragmentShaderProgramText from "./wmoLiquid.frag";
 import vertexShaderProgramText from "./wmoLiquid.vert";
@@ -45,7 +45,7 @@ const LIQUID_WMO_OCEAN = 14;
 const LIQUID_WMO_WATER = 13;
 const LIQUID_WMO_SLIME = 20;
 
-export class WMOLiquid extends BaseRenderObject {
+export class WMOLiquid extends WorldPositionedObject {
     fileId: number;
     data: WoWWorldModelLiquid
     groupData: WoWWorldModelGroup

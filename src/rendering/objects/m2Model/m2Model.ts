@@ -10,7 +10,7 @@ import { AnimationState } from "./animatedValue";
 import fragmentShaderProgramText from "./m2Model.frag"; 
 import vertexShaderProgramText from "./m2Model.vert";
 import { getM2PixelShaderId, getM2VertexShaderId} from "./m2Shaders";
-import { BaseRenderObject } from "../baseRenderObject";
+import { WorldPositionedObject } from "../worldPositionedObject";
 import { M2ParticleEmitter } from "./particleEmitter/m2ParticleEmitter";
 import { M2RibbonEmitter } from "./ribbonEmitter/m2RibbonEmitter";
 
@@ -30,7 +30,7 @@ export interface BoneData {
     positionMatrix: Float44;
 }
 
-export class M2Model extends BaseRenderObject
+export class M2Model extends WorldPositionedObject
 {
     isModelDataLoaded: boolean;
     isTexturesLoaded: boolean;

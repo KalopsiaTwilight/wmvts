@@ -2,12 +2,12 @@ import { RenderingEngine } from "../engine";
 import { Float3, Float4, Float44 } from "../math";
 import { RenderObject } from "./interfaces";
 
-export abstract class BaseRenderObject implements RenderObject {
+export abstract class WorldPositionedObject implements RenderObject {
     isDisposing: boolean;
     abstract fileId: number;
 
-    parent?: BaseRenderObject;
-    children: BaseRenderObject[];
+    parent?: WorldPositionedObject;
+    children: WorldPositionedObject[];
     localModelMatrix: Float44;
     worldModelMatrix: Float44;
     invWorldModelMatrix: Float44;
