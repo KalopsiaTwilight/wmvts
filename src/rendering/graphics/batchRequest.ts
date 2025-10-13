@@ -13,21 +13,23 @@ export interface DrawInstruction {
 }
 
 export enum RenderType {
+    Unknown,
     WMOGroup,
     WMOLiquid,
     M2TextureUnit,
     M2Particle,
     M2Ribbon,
-    Unknown
 }
 
 export class RenderKey {
     ownerId: number;
     batchType: RenderType;
+    materialId: number;
 
-    constructor(fileId: number, batchType: RenderType) {
+    constructor(fileId: number, batchType: RenderType, materialId: number = -1) {
         this.ownerId = fileId;
         this.batchType = batchType;
+        this.materialId = materialId;
     }
 
     static create(fileId: number, batchType: RenderType) {
@@ -35,16 +37,17 @@ export class RenderKey {
     }
 
     compare(other: RenderKey | null) {
-        if (!other || !other.ownerId || !other.batchType) {
-            return 0;
-        }
-
         const ownerDiff = this.ownerId - other.ownerId;
         if (ownerDiff != 0) {
             return ownerDiff;
         }
 
-        return this.batchType - other.batchType;
+        const typeDiff = this.batchType - other.batchType;
+        if (typeDiff != 0) {
+            return typeDiff;
+        }
+
+        return this.materialId - other.materialId;
     }
 }
 
@@ -56,15 +59,13 @@ export class RenderingBatchRequest {
     backFaceCulling: boolean;
     counterClockWiseFrontFaces: boolean;
     colorMask: ColorMask;
+    uniforms: IUniformsData;
 
     vertexIndexBuffer?: IVertexIndexBuffer;
     vertexDataBuffer?: IVertexDataBuffer;
     shaderProgram?: IShaderProgram;
     vao?: IVertexArrayObject;
-    
     drawInstruction?: DrawInstruction;
-
-    uniforms: IUniformsData;
 
     constructor(key: RenderKey) {
         this.ownerKey = key;
@@ -75,6 +76,24 @@ export class RenderingBatchRequest {
         this.counterClockWiseFrontFaces = false;
         this.colorMask = ColorMask.Alpha | ColorMask.Blue | ColorMask.Green |ColorMask.Red;
         this.uniforms = { };
+    }
+
+    static from(template: RenderingBatchRequest) {
+        const newRequest = new RenderingBatchRequest(template.ownerKey);
+        newRequest.blendMode = template.blendMode;
+        newRequest.depthWrite = template.depthWrite
+        newRequest.depthTest = template.depthTest;
+        newRequest.backFaceCulling = template.backFaceCulling;
+        newRequest.counterClockWiseFrontFaces = template.counterClockWiseFrontFaces;
+        newRequest.colorMask = template.colorMask;
+        newRequest.uniforms = template.uniforms;
+
+        newRequest.vertexIndexBuffer = template.vertexIndexBuffer;
+        newRequest.vertexDataBuffer = template.vertexDataBuffer;
+        newRequest.shaderProgram = template.shaderProgram;
+        newRequest.vao = template.vao;
+        newRequest.drawInstruction = template.drawInstruction;
+        return newRequest;
     }
 
     useBlendMode(blendMode: GxBlend) {
@@ -108,7 +127,12 @@ export class RenderingBatchRequest {
         this.vao = vao;
     }
     useUniforms(uniforms: IUniformsData) {
-        this.uniforms = { ...this.uniforms, ...uniforms}
+        if (!this.uniforms) {
+            this.uniforms = uniforms;
+        }
+        for(let prop in uniforms) {
+            this.uniforms[prop] = uniforms[prop];
+        }
     }
     drawTriangles(offset: number, count: number) {
         this.drawInstruction = {

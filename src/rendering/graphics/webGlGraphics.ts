@@ -305,6 +305,7 @@ export class WebGLShaderProgram implements IShaderProgram
 {
     gl: WebGLRenderingContext;
     programInfo: ProgramInfo;
+    lastUniforms: IUniformsData;
 
     constructor(gl: WebGLRenderingContext, vertexShader: string, fragmentShader: string) {
         this.gl = gl
@@ -322,6 +323,10 @@ export class WebGLShaderProgram implements IShaderProgram
     }
 
     useUniforms(uniforms: IUniformsData) {
+        if (uniforms === this.lastUniforms) {
+            return;
+        }
+        this.lastUniforms = uniforms;
         for(let prop in uniforms) {
             if (uniforms[prop] && uniforms[prop].texture) {
                 uniforms[prop] = uniforms[prop].texture;

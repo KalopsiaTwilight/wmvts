@@ -36,6 +36,7 @@ export class WMOModel extends WorldPositionedObject {
     // Used to cull / load doodads based on group
     groupDoodads: { [key: number]: M2Model[] }
     groupLiquids: { [key: number]: WMOLiquid[] }
+    groupMaterials: { [key: number]: RenderingBatchRequest }
     activeGroups: number[];
     activeDoodads: M2Model[];
     lodGroupMap: number[];
@@ -69,6 +70,7 @@ export class WMOModel extends WorldPositionedObject {
         this.groupDoodads = {};
         this.portalsByGroup = {};
         this.groupLiquids = {};
+        this.groupMaterials = {};
         this.activeGroups = [];
         this.activeDoodads = [];
 
@@ -117,10 +119,9 @@ export class WMOModel extends WorldPositionedObject {
             return;
         }
 
-        const cameraPos = this.engine.cameraPosition;
         for (let i = 0; i < this.activeGroups.length; i++) {
             const groupDataIndex = this.activeGroups[i];
-            this.drawGroup(groupDataIndex, cameraPos)
+            this.drawGroup(groupDataIndex)
             
             for(const liquid of this.groupLiquids[groupDataIndex]) {
                 liquid.draw();
@@ -308,6 +309,7 @@ export class WMOModel extends WorldPositionedObject {
             }
         }
         Promise.all(loadingPromises).then(() => {
+            this.setupMaterials();
             this.isTexturesLoaded = true;
         })
     }
@@ -631,39 +633,11 @@ export class WMOModel extends WorldPositionedObject {
         }
     }
 
-    private drawGroup(i: number, cameraPos: Float3) {
+    private drawGroup(i: number) {
         const groupData = this.modelData.groups[i];
         for (let j = 0; j < groupData.batches.length; j++) {
             const batchData = groupData.batches[j];
-            const material = this.modelData.materials[batchData.materialId];
-
-            const blendMode = M2BlendModeToEGxBlend(material.blendMode);
-            const vs = getWMOVertexShader(material.shader);
-            const ps = getWMOPixelShader(material.shader);
-            const unlit = (material.flags & WoWWorldModelMaterialMaterialFlags.Unlit) ? true : false
-            const doubleSided = (material.flags & WoWWorldModelMaterialMaterialFlags.Unculled) != 0;
-
-            const batchRequest = new RenderingBatchRequest(this.renderKey);
-            batchRequest.useCounterClockWiseFrontFaces(true);
-            batchRequest.useBackFaceCulling(!doubleSided);
-            batchRequest.useBlendMode(blendMode)
-            batchRequest.useDepthTest(true);
-            batchRequest.useDepthWrite(true);
-            batchRequest.useColorMask(ColorMask.Alpha | ColorMask.Red | ColorMask.Blue | ColorMask.Green);
-
-            batchRequest.useShaderProgram(this.shaderProgram);
-            batchRequest.useUniforms({
-                "u_modelMatrix": this.worldModelMatrix,
-                "u_cameraPos": cameraPos,
-                "u_pixelShader": ps,
-                "u_vertexShader": vs,
-                "u_blendMode": material.blendMode,
-                "u_unlit": unlit,
-                "u_texture1": this.loadedTextures[material.texture1],
-                "u_texture2": this.loadedTextures[material.texture2],
-                "u_texture3": this.loadedTextures[material.texture3]
-            });
-
+            const batchRequest = RenderingBatchRequest.from(this.groupMaterials[batchData.materialId]);
             batchRequest.useVertexArrayObject(this.groupVaos[i]);
             batchRequest.drawIndexedTriangles(batchData.startIndex * 2, batchData.indexCount);
             this.engine.submitBatchRequest(batchRequest);
@@ -744,6 +718,39 @@ export class WMOModel extends WorldPositionedObject {
         this.portalVao = this.engine.graphics.createVertexArrayObject();
         this.portalVao.addVertexDataBuffer(portalVB);
         this.portalVao.setIndexBuffer(portalIB);
+    }
+
+    private setupMaterials() {
+        for (let i = 0; i < this.modelData.materials.length; i++) {
+            const material = this.modelData.materials[i];
+            const blendMode = M2BlendModeToEGxBlend(material.blendMode);
+            const vs = getWMOVertexShader(material.shader);
+            const ps = getWMOPixelShader(material.shader);
+            const unlit = (material.flags & WoWWorldModelMaterialMaterialFlags.Unlit) ? true : false
+            const doubleSided = (material.flags & WoWWorldModelMaterialMaterialFlags.Unculled) != 0;
+
+            const batchRequest = new RenderingBatchRequest(new RenderKey(this.fileId, RenderType.WMOGroup, i));
+            batchRequest.useCounterClockWiseFrontFaces(true);
+            batchRequest.useBackFaceCulling(!doubleSided);
+            batchRequest.useBlendMode(blendMode)
+            batchRequest.useDepthTest(true);
+            batchRequest.useDepthWrite(true);
+            batchRequest.useColorMask(ColorMask.Alpha | ColorMask.Red | ColorMask.Blue | ColorMask.Green);
+            batchRequest.useShaderProgram(this.shaderProgram);
+            batchRequest.useUniforms({
+                "u_modelMatrix": this.worldModelMatrix,
+                "u_cameraPos": this.engine.cameraPosition,
+                "u_pixelShader": ps,
+                "u_vertexShader": vs,
+                "u_blendMode": material.blendMode,
+                "u_unlit": unlit,
+                "u_texture1": this.loadedTextures[material.texture1],
+                "u_texture2": this.loadedTextures[material.texture2],
+                "u_texture3": this.loadedTextures[material.texture3]
+            });
+
+            this.groupMaterials[i] = batchRequest;
+        }
     }
 
     override setModelMatrix(position: Float3 | null, rotation: Float4 | null, scale: Float3 | null): void {
