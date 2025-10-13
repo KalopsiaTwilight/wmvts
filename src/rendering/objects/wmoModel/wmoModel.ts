@@ -1,6 +1,8 @@
 import {
     AABB, Axis, BspTree, BufferDataType, ColorMask, Float2, Float3, Float4, Float44, Frustrum, FrustrumSide, GxBlend, IShaderProgram, ITexture,
-    IVertexArrayObject, M2BlendModeToEGxBlend, M2Model, Plane, RenderingBatchRequest, RenderingEngine
+    IVertexArrayObject, M2BlendModeToEGxBlend, M2Model, Plane, RenderingBatchRequest, RenderingEngine,
+    RenderKey,
+    RenderType
 } from "@app/rendering";
 import { BinaryWriter } from "@app/utils";
 import { WoWWorldModelBspNode, WoWWorldModelData, WowWorldModelGroupFlags, WoWWorldModelMaterialMaterialFlags, WoWWorldModelPortalRef } from "@app/modeldata";
@@ -37,6 +39,7 @@ export class WMOModel extends WorldPositionedObject {
     activeGroups: number[];
     activeDoodads: M2Model[];
     lodGroupMap: number[];
+    renderKey: RenderKey;
 
     shaderProgram: IShaderProgram;
     groupVaos: IVertexArrayObject[]
@@ -72,6 +75,8 @@ export class WMOModel extends WorldPositionedObject {
         this.transposeInvModelMatrix = Float44.identity();
         this.localCamera = Float3.zero();
         this.localCameraFrustrum = Frustrum.zero();
+
+        this.renderKey = new RenderKey(fileId, RenderType.WMOGroup)
     }
 
     override initialize(engine: RenderingEngine): void {
@@ -638,7 +643,7 @@ export class WMOModel extends WorldPositionedObject {
             const unlit = (material.flags & WoWWorldModelMaterialMaterialFlags.Unlit) ? true : false
             const doubleSided = (material.flags & WoWWorldModelMaterialMaterialFlags.Unculled) != 0;
 
-            const batchRequest = new RenderingBatchRequest();
+            const batchRequest = new RenderingBatchRequest(this.renderKey);
             batchRequest.useCounterClockWiseFrontFaces(true);
             batchRequest.useBackFaceCulling(!doubleSided);
             batchRequest.useBlendMode(blendMode)
@@ -672,7 +677,7 @@ export class WMOModel extends WorldPositionedObject {
                 continue;
             }
 
-            const batchRequest = new RenderingBatchRequest();
+            const batchRequest = new RenderingBatchRequest(this.renderKey);
             batchRequest.useCounterClockWiseFrontFaces(false);
             batchRequest.useBackFaceCulling(false);
             batchRequest.useBlendMode(GxBlend.GxBlend_Alpha)

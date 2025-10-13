@@ -1,5 +1,5 @@
 import { WoWExtendedParticleData, WoWParticleEmitterData } from "@app/modeldata";
-import { BufferDataType, ColorMask, Float2, Float3, Float33, Float4, Float44, GxBlend, IDisposable, IPseudoRandomNumberGenerator, IShaderProgram, ITexture, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderingBatchRequest, RenderingEngine } from "@app/rendering";
+import { BufferDataType, ColorMask, Float2, Float3, Float33, Float4, Float44, GxBlend, IDisposable, IPseudoRandomNumberGenerator, IShaderProgram, ITexture, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderingBatchRequest, RenderingEngine, RenderKey, RenderType } from "@app/rendering";
 import { M2Model } from "../m2Model";
 
 import fragmentShaderProgramText from "./m2ParticleEmitter.frag"; 
@@ -84,6 +84,7 @@ export class M2ParticleEmitter implements IDisposable {
     isDisposing: boolean;
 
     // Graphics 
+    renderKey: RenderKey;
     shaderProgram: IShaderProgram;
     indexBuffer: IVertexIndexBuffer
     vertexBuffer: IVertexDataBuffer;
@@ -171,6 +172,8 @@ export class M2ParticleEmitter implements IDisposable {
         this.tailCellTrack = new LocalAnimatedNumber(this.m2data.tailCellTrack);
         this.isDisposing = false;
 
+        this.renderKey = new RenderKey(this.parent.fileId, RenderType.M2Particle);
+
         this.initialize();
     }
 
@@ -188,6 +191,7 @@ export class M2ParticleEmitter implements IDisposable {
         this.indexBuffer = null;
         this.vertexBuffer = null;
         this.vao = null;
+        this.renderKey = null;
 
         this.textures = null;
         this.particleColorOverride = null;
@@ -355,7 +359,7 @@ export class M2ParticleEmitter implements IDisposable {
         this.updateVertexBuffer();
         this.vertexBuffer.setData(new Float32Array(this.vertexData));
 
-        const batchRequest = new RenderingBatchRequest();
+        const batchRequest = new RenderingBatchRequest(this.renderKey);
         batchRequest.useVertexArrayObject(this.vao);
         batchRequest.useShaderProgram(this.shaderProgram);
 

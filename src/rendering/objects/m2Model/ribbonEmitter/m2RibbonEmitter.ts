@@ -1,7 +1,9 @@
 import { WoWRibbonEmiterData } from "@app/modeldata";
 import { 
     BufferDataType, ColorMask, Float2, Float3, Float4, Float44, GxBlend, IDisposable, IShaderProgram, IVertexArrayObject, IVertexDataBuffer, 
-    IVertexIndexBuffer, M2BlendModeToEGxBlend, M2Model, RenderingBatchRequest, RenderingEngine 
+    IVertexIndexBuffer, M2BlendModeToEGxBlend, M2Model, RenderingBatchRequest, RenderingEngine, 
+    RenderKey,
+    RenderType
 } from "@app/rendering";
 
 
@@ -34,6 +36,7 @@ export class M2RibbonEmitter implements IDisposable {
     m2data: WoWRibbonEmiterData;
     engine: RenderingEngine;
 
+    renderKey: RenderKey;
     indexBuffer: IVertexIndexBuffer;
     vertexBuffer: IVertexDataBuffer;
     vao: IVertexArrayObject;
@@ -162,6 +165,10 @@ export class M2RibbonEmitter implements IDisposable {
 
     dispose(): void {
         this.isDisposing = true;
+
+        this.renderKey = null;
+
+        // TODO: Dispose stuff?
     }
 
     update(deltaTime: number): void {
@@ -304,7 +311,7 @@ export class M2RibbonEmitter implements IDisposable {
                 blendMode = GxBlend.GxBlend_Alpha;
             }
 
-            const batchRequest = new RenderingBatchRequest();
+            const batchRequest = new RenderingBatchRequest(this.renderKey);
             batchRequest.useVertexArrayObject(this.vao);
             batchRequest.useShaderProgram(this.shaderProgram);
             batchRequest.useBackFaceCulling(false);
@@ -470,6 +477,7 @@ export class M2RibbonEmitter implements IDisposable {
     }
 
     private setupGraphics() {
+        this.renderKey = new RenderKey(this.parent.fileId, RenderType.M2Ribbon);
         this.shaderProgram = this.engine.getShaderProgram('M2RibbonEmitter',
             vertexShaderProgramText, fragmentShaderProgramText);
 

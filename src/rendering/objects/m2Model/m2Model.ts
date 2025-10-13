@@ -1,9 +1,11 @@
 import { WoWBoneData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureUnitData, WoWVertexData } from "@app/modeldata";
 import { BinaryWriter } from "@app/utils";
-import { RenderingEngine, BufferDataType, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderObject, ColorMask, 
+import { RenderingEngine, BufferDataType, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, ColorMask, 
     Float4, Float3, ITexture, Float44, IShaderProgram, GxBlend, M2BlendModeToEGxBlend, 
     RenderingBatchRequest,
-    AABB
+    AABB,
+    RenderKey,
+    RenderType
 } from "@app/rendering";
 import { AnimationState } from "./animatedValue";
 
@@ -13,6 +15,7 @@ import { getM2PixelShaderId, getM2VertexShaderId} from "./m2Shaders";
 import { WorldPositionedObject } from "../worldPositionedObject";
 import { M2ParticleEmitter } from "./particleEmitter/m2ParticleEmitter";
 import { M2RibbonEmitter } from "./ribbonEmitter/m2RibbonEmitter";
+import { IM2DataBuffers } from "./m2DataBuffers";
 
 const MAX_BONES = 256;
 
@@ -39,10 +42,9 @@ export class M2Model extends WorldPositionedObject
     modelData: WoWModelData;
 
     shaderProgram: IShaderProgram;
-    vertexDataBuffer: IVertexDataBuffer
-    vertexIndexBuffer: IVertexIndexBuffer
-    vao: IVertexArrayObject
-    bonePositionBuffer: Float32Array; 
+    bonePositionBuffer: Float32Array;
+    dataBuffers: IM2DataBuffers
+    renderKey: RenderKey;
 
     animationState: AnimationState;
     loadedTextures: { [key: number]: ITexture };
@@ -74,6 +76,7 @@ export class M2Model extends WorldPositionedObject
         this.children = [];
         this.particleEmitters = [];
         this.ribbonEmitters = [];
+        this.renderKey = new RenderKey(this.fileId, RenderType.M2TextureUnit);
     }
 
     get isLoaded() {
@@ -83,18 +86,6 @@ export class M2Model extends WorldPositionedObject
     override initialize(engine: RenderingEngine): void {
         super.initialize(engine);
         this.shaderProgram = this.engine.getShaderProgram("M2", vertexShaderProgramText, fragmentShaderProgramText);
-
-        this.vao = this.engine.graphics.createVertexArrayObject();
-        this.vertexIndexBuffer = this.engine.graphics.createVertexIndexBuffer(true);
-        this.vertexDataBuffer = this.engine.graphics.createVertexDataBuffer([
-            { index: this.shaderProgram.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: 48, offset: 0 },
-            { index: this.shaderProgram.getAttribLocation('a_normal'), size: 3, type: BufferDataType.Float, normalized: false, stride: 48, offset: 12 },
-            { index: this.shaderProgram.getAttribLocation('a_bones'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: 48, offset: 24},
-            { index: this.shaderProgram.getAttribLocation('a_boneWeights'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: 48, offset: 28 },
-            { index: this.shaderProgram.getAttribLocation('a_texcoord1'), size: 2, type: BufferDataType.Float, normalized: false, stride: 48, offset: 32 },
-            { index: this.shaderProgram.getAttribLocation('a_texcoord2'), size: 2, type: BufferDataType.Float, normalized: false, stride: 48, offset: 40 },
-        ], true);
-
 
         this.engine.getM2ModelFile(this.fileId).then(this.onModelLoaded.bind(this));
     }
@@ -460,8 +451,8 @@ export class M2Model extends WorldPositionedObject
             return;
         }
 
-        const batchRequest = new RenderingBatchRequest();
-        batchRequest.useVertexArrayObject(this.vao);
+        const batchRequest = new RenderingBatchRequest(this.renderKey);
+        batchRequest.useVertexArrayObject(this.dataBuffers.vao);
         batchRequest.useShaderProgram(this.shaderProgram);
 
         batchRequest.useBackFaceCulling((4 & material.flags) == 0);
@@ -504,9 +495,7 @@ export class M2Model extends WorldPositionedObject
         super.dispose();
         this.modelData = null;
         this.shaderProgram = null;
-        this.vertexDataBuffer = null;
-        this.vertexIndexBuffer = null;
-        this.vao = null;
+        this.dataBuffers = null;
         this.bonePositionBuffer = null;
         this.animationState = null;
         this.loadedTextures = null;
@@ -517,6 +506,7 @@ export class M2Model extends WorldPositionedObject
         this.invWorldModelMatrix = null;
         this.invModelViewMatrix = null;
         this.drawOrderTexUnits = null;
+        this.renderKey = null;
     }
 
     onModelLoaded(data: WoWModelData|null) {
@@ -540,10 +530,8 @@ export class M2Model extends WorldPositionedObject
         }
 
         this.loadTextures();
-        this.uploadVertexData(this.modelData.vertices);
-        this.vertexIndexBuffer.setData(new Uint16Array(this.modelData.skinTriangles));
-        this.vao.setIndexBuffer(this.vertexIndexBuffer);
-        this.vao.addVertexDataBuffer(this.vertexDataBuffer);
+
+        this.dataBuffers = this.engine.getM2DataBuffers(this.fileId, this.shaderProgram, this.modelData);
 
         this.boneData = new Array(this.modelData.bones.length);
         for (let i = 0; i < this.modelData.bones.length; i++) {
@@ -607,33 +595,5 @@ export class M2Model extends WorldPositionedObject
         Promise.all(loadingPromises).then(() => {
             this.isTexturesLoaded = true;
         })
-    }
-
-    private uploadVertexData(vertices: WoWVertexData[]) {
-        const bufferSize = 48 * vertices.length;
-        const buffer = new Uint8Array(bufferSize);
-
-        const writer = new BinaryWriter(buffer.buffer);
-        for (let i = 0; i < vertices.length; ++i) {
-            writer.writeFloatLE(vertices[i].position[0]);
-            writer.writeFloatLE(vertices[i].position[1]);
-            writer.writeFloatLE(vertices[i].position[2]);
-            writer.writeFloatLE(vertices[i].normal[0]);
-            writer.writeFloatLE(vertices[i].normal[1]);
-            writer.writeFloatLE(vertices[i].normal[2]);
-            writer.writeUInt8(vertices[i].boneIndices[0]);
-            writer.writeUInt8(vertices[i].boneIndices[1]);
-            writer.writeUInt8(vertices[i].boneIndices[2]);
-            writer.writeUInt8(vertices[i].boneIndices[3]);
-            writer.writeUInt8(vertices[i].boneWeights[0]);
-            writer.writeUInt8(vertices[i].boneWeights[1]);
-            writer.writeUInt8(vertices[i].boneWeights[2]);
-            writer.writeUInt8(vertices[i].boneWeights[3]);
-            writer.writeFloatLE(vertices[i].texCoords1[0]);
-            writer.writeFloatLE(vertices[i].texCoords1[1]);
-            writer.writeFloatLE(vertices[i].texCoords2[0]);
-            writer.writeFloatLE(vertices[i].texCoords2[1]);
-        }
-        this.vertexDataBuffer.setData(buffer);
     }
 }

@@ -12,15 +12,50 @@ export interface DrawInstruction {
     type: DrawInstructionType
 }
 
+export enum RenderType {
+    WMOGroup,
+    WMOLiquid,
+    M2TextureUnit,
+    M2Particle,
+    M2Ribbon,
+    Unknown
+}
+
+export class RenderKey {
+    ownerId: number;
+    batchType: RenderType;
+
+    constructor(fileId: number, batchType: RenderType) {
+        this.ownerId = fileId;
+        this.batchType = batchType;
+    }
+
+    static create(fileId: number, batchType: RenderType) {
+        return new RenderKey(fileId, batchType);
+    }
+
+    compare(other: RenderKey | null) {
+        if (!other || !other.ownerId || !other.batchType) {
+            return 0;
+        }
+
+        const ownerDiff = this.ownerId - other.ownerId;
+        if (ownerDiff != 0) {
+            return ownerDiff;
+        }
+
+        return this.batchType - other.batchType;
+    }
+}
+
 export class RenderingBatchRequest {
- 
+    ownerKey: RenderKey;
     blendMode: GxBlend;
     depthWrite: boolean;
     depthTest: boolean;
     backFaceCulling: boolean;
     counterClockWiseFrontFaces: boolean;
     colorMask: ColorMask;
-    priority: number;
 
     vertexIndexBuffer?: IVertexIndexBuffer;
     vertexDataBuffer?: IVertexDataBuffer;
@@ -31,14 +66,14 @@ export class RenderingBatchRequest {
 
     uniforms: IUniformsData;
 
-    constructor() {
+    constructor(key: RenderKey) {
+        this.ownerKey = key;
         this.blendMode = GxBlend.GxBlend_Opaque;
         this.depthWrite = true;
         this.depthTest = true;
         this.backFaceCulling = true;
         this.counterClockWiseFrontFaces = false;
         this.colorMask = ColorMask.Alpha | ColorMask.Blue | ColorMask.Green |ColorMask.Red;
-        this.priority = 0;
         this.uniforms = { };
     }
 
@@ -74,9 +109,6 @@ export class RenderingBatchRequest {
     }
     useUniforms(uniforms: IUniformsData) {
         this.uniforms = { ...this.uniforms, ...uniforms}
-    }
-    usePriority(priority: number) {
-        this.priority = priority;
     }
     drawTriangles(offset: number, count: number) {
         this.drawInstruction = {
@@ -134,7 +166,5 @@ export class RenderingBatchRequest {
                 graphics.drawIndexedTriangleStrip(this.drawInstruction.offset, this.drawInstruction.count)
             }
         }
-
-        graphics.useVertexArrayObject(undefined);
     }
 }

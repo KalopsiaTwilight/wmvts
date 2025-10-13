@@ -1,4 +1,4 @@
-import { WorldPositionedObject, BufferDataType, Float44, GxBlend, IShaderProgram, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderingBatchRequest, RenderingEngine, RenderObject } from "@app/index";
+import { WorldPositionedObject, BufferDataType, Float44, GxBlend, IShaderProgram, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderingBatchRequest, RenderingEngine, RenderObject, RenderKey, RenderType } from "@app/index";
 
 import fs from "./testModel.frag";
 import vs from "./testModel.vert";
@@ -64,7 +64,7 @@ export class TestModel extends WorldPositionedObject {
     }
 
     draw() {
-        const batchRequest = new RenderingBatchRequest();
+        const batchRequest = new RenderingBatchRequest(new RenderKey(-1, RenderType.Unknown));
 
         batchRequest.useBlendMode(GxBlend.GxBlend_Opaque);
         batchRequest.useBackFaceCulling(true);

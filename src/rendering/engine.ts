@@ -1,6 +1,6 @@
 import { AleaPrngGenerator, Float3, Float4, Float44, Frustrum } from "./math";
 import { Camera } from "../cameras";
-import { RenderObject, IDisposable } from "./objects";
+import { RenderObject, IDisposable, IM2DataBuffers, StaticM2DataBuffers } from "./objects";
 import { GxBlend, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest } from "./graphics";
 import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData, RequestFrameFunction } from "..";
 import { SimpleCache } from "./cache";
@@ -71,6 +71,7 @@ export class RenderingEngine implements IDisposable {
     wmoCache: SimpleCache<WoWWorldModelData>;
     m2Cache: SimpleCache<WoWModelData>;
     liquidCache: SimpleCache<LiquidTypeMetadata>;
+    m2DataBufferCache: SimpleCache<IM2DataBuffers>;
     runningRequests: { [key:string]: Promise<unknown> }
 
     batchRequests: RenderingBatchRequest[];
@@ -116,6 +117,7 @@ export class RenderingEngine implements IDisposable {
         this.wmoCache = new SimpleCache(cacheTtl);
         this.m2Cache = new SimpleCache(cacheTtl);
         this.liquidCache = new SimpleCache(cacheTtl);
+        this.m2DataBufferCache = new SimpleCache(cacheTtl);
         this.runningRequests = { };
         this.batchRequests = [];
 
@@ -194,12 +196,13 @@ export class RenderingEngine implements IDisposable {
                 if (layerDiff != 0) {
                     return layerDiff;
                 }
-                return r1.priority - r2.priority;
+                
+                return r1.ownerKey.compare(r2.ownerKey);
             });
             for(const batch of requests) {
                 batch.submit(this.graphics);
             }
-
+            this.graphics.useVertexArrayObject(undefined);
             if (this.fpsElement) {
                 this.fpsCounter.push(1/(deltaTime/1000));
                 if (this.fpsCounter.length > this.maxFpsCounterSize) {
@@ -440,6 +443,17 @@ export class RenderingEngine implements IDisposable {
         delete this.runningRequests[key];
         this.progress?.removeFileFromOperation(key);
         return data;
+    }
+    
+    getM2DataBuffers(fileId: number, shaderProgram: IShaderProgram, modelData: WoWModelData): IM2DataBuffers {
+        if (this.m2DataBufferCache.contains(fileId)) {
+            return this.m2DataBufferCache.get(fileId);
+        }
+
+        var buffers = new StaticM2DataBuffers();
+        buffers.createFromModelData(this.graphics, shaderProgram, modelData);
+        this.m2DataBufferCache.store(fileId, buffers);
+        return buffers;
     }
 
     getRandomNumberGenerator(seed?: number|string) {

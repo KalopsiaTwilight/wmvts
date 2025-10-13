@@ -1,7 +1,9 @@
 import { 
     WoWWorldModelLiquid, RenderingEngine, ITexture, WowWorldModelGroupFlags, Float3, AABB, WorldModelRootFlags, 
     WoWWorldModelGroup, RenderingBatchRequest, Float2, Float4, GxBlend, ColorMask, IShaderProgram, IVertexArrayObject, 
-    BufferDataType } from "@app/index";
+    BufferDataType, 
+    RenderKey,
+    RenderType} from "@app/index";
 import { BinaryWriter } from "@app/utils";
 import { LiquidTypeMetadata } from "@app/metadata";
 
@@ -57,6 +59,7 @@ export class WMOLiquid extends WorldPositionedObject {
     vertices: WMOLiquidVertexData[] = [];
     indices: number[] = [];
     boundingBox: AABB;
+    renderKey: RenderKey;
 
     liquidCategory: LiquidCategory;
     proceduralTextureType: ProceduralTextureType;
@@ -178,7 +181,7 @@ export class WMOLiquid extends WorldPositionedObject {
         const timePerTexture = 1000 / 10;
         const texture = this.textures[Math.floor((this.engine.timeElapsed / timePerTexture) % this.animatingTextureCount)];
 
-        const batchRequest = new RenderingBatchRequest();
+        const batchRequest = new RenderingBatchRequest(this.renderKey);
         batchRequest.useCounterClockWiseFrontFaces(true);
         batchRequest.useBackFaceCulling(false);
         batchRequest.useBlendMode(GxBlend.GxBlend_Alpha)
@@ -203,6 +206,13 @@ export class WMOLiquid extends WorldPositionedObject {
         this.engine.submitBatchRequest(batchRequest);
     }
 
+    override dispose() {
+        super.dispose();
+        // TODO: Dispose
+
+        this.renderKey = null;
+    }
+
     get isLoaded(): boolean {
         return this.metadataLoaded && this.texturesLoaded;
     }
@@ -214,6 +224,7 @@ export class WMOLiquid extends WorldPositionedObject {
         }
 
         this.liquidTypeMetadata = metadata;
+        this.renderKey = new RenderKey(this.liquidTypeMetadata.id, RenderType.WMOLiquid);
         if (this.liquidTypeMetadata.name.includes("Slime")) {
             this.liquidCategory = LiquidCategory.Slime;
         } else if (this.liquidTypeMetadata.name.includes("Magma") || this.liquidTypeMetadata.name.includes("Lava")) {
