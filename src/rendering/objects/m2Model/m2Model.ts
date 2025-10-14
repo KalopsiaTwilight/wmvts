@@ -1,11 +1,9 @@
 import { WoWBoneData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureUnitData, WoWVertexData } from "@app/modeldata";
-import { BinaryWriter } from "@app/utils";
 import { RenderingEngine, BufferDataType, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, ColorMask, 
     Float4, Float3, ITexture, Float44, IShaderProgram, GxBlend, M2BlendModeToEGxBlend, 
-    RenderingBatchRequest,
-    AABB,
-    RenderKey,
-    RenderType
+    RenderingBatchRequest, AABB, MaterialKey,
+    RenderMaterial,
+    MaterialType,
 } from "@app/rendering";
 import { AnimationState } from "./animatedValue";
 
@@ -20,8 +18,8 @@ import { IM2DataBuffers } from "./m2DataBuffers";
 const MAX_BONES = 256;
 
 export interface TextureUnitData {
-    texturesLoaded: boolean;
     color: Float4;
+    material: RenderMaterial,
     textureWeights: Float4;
     textures: ITexture[];
     textureMatrices: Float44[];
@@ -44,7 +42,7 @@ export class M2Model extends WorldPositionedObject
     shaderProgram: IShaderProgram;
     bonePositionBuffer: Float32Array;
     dataBuffers: IM2DataBuffers
-    renderKey: RenderKey;
+    renderKey: MaterialKey;
 
     animationState: AnimationState;
     loadedTextures: { [key: number]: ITexture };
@@ -76,7 +74,6 @@ export class M2Model extends WorldPositionedObject
         this.children = [];
         this.particleEmitters = [];
         this.ribbonEmitters = [];
-        this.renderKey = new RenderKey(this.fileId, RenderType.M2TextureUnit);
     }
 
     get isLoaded() {
@@ -128,7 +125,7 @@ export class M2Model extends WorldPositionedObject
             this.bonePositionBuffer.set(this.boneData[i].positionMatrix, 16 * i);
         }
 
-        for(let i = 0; i < this.modelData.textureUnits.length; i++) {
+        for(let i = 0; i < this.drawOrderTexUnits.length; i++) {
             this.drawTextureUnit(this.modelData.textureUnits[i], i);
         }
         for(let i = 0; i < this.modelData.particleEmitters.length; i++) {
@@ -352,28 +349,6 @@ export class M2Model extends WorldPositionedObject
     private updateTextureUnit(texUnit: WoWTextureUnitData, index: number) {
         const data = this.textureUnitData[index];
 
-        if (!data.texturesLoaded) {
-            const unkTexture = this.engine.getUnknownTexture();
-            data.textures = [unkTexture, unkTexture, unkTexture, unkTexture];
-            if (texUnit.textureComboIndex < 0 || texUnit.textureComboIndex > this.modelData.textureCombos.length) {
-                data.texturesLoaded = true;
-            }
-
-            data.texturesLoaded = true;
-            for(let i = 0; i < texUnit.textureCount; i++) {
-                const textureIndex = this.modelData.textureCombos[texUnit.textureComboIndex + i];
-                if (textureIndex > -1 && textureIndex < this.modelData.textures.length) {
-                    const textureData = this.modelData.textures[textureIndex];
-                    if (this.loadedTextures[textureData.textureId]) {
-                        data.textures[i] = this.loadedTextures[textureData.textureId];
-                    } else {
-                        data.texturesLoaded = false;
-                        return;
-                    }
-                }
-            }
-        }
-
         Float4.set(data.color, 1, 1, 1, 1);
         const colorData = this.modelData.colors[texUnit.colorIndex];
         if (colorData) {
@@ -443,43 +418,10 @@ export class M2Model extends WorldPositionedObject
     }
 
     private drawTextureUnit(texUnit: WoWTextureUnitData, index: number) {
-        const material = this.modelData.materials[texUnit.materialIndex];
-        const data = this.textureUnitData[index];
-
-        const blendMode = M2BlendModeToEGxBlend(material.blendingMode);
-        if (!data.texturesLoaded) {
-            return;
-        }
-
-        const batchRequest = new RenderingBatchRequest(this.renderKey);
-        batchRequest.useVertexArrayObject(this.dataBuffers.vao);
-        batchRequest.useShaderProgram(this.shaderProgram);
-
-        batchRequest.useBackFaceCulling((4 & material.flags) == 0);
-        batchRequest.useCounterClockWiseFrontFaces(!this.isMirrored);
-        batchRequest.useBlendMode(blendMode);
-        batchRequest.useDepthTest((WoWMaterialFlags.DepthTest & material.flags) == 0);
-        batchRequest.useDepthWrite((WoWMaterialFlags.DepthWrite & material.flags) == 0);
-
-        batchRequest.useColorMask(ColorMask.Alpha | ColorMask.Blue | ColorMask.Green | ColorMask.Red);
-        batchRequest.useUniforms({
-            "u_boneMatrices": this.bonePositionBuffer,
-            "u_modelMatrix": this.worldModelMatrix,
-            "u_textureTransformMatrix1": data.textureMatrices[0],
-            "u_textureTransformMatrix2": data.textureMatrices[1],
-            "u_color": data.color,
-            "u_vertexShader": getM2VertexShaderId(texUnit.shaderId, texUnit.textureCount), 
-            "u_blendMode": blendMode,
-            "u_pixelShader": getM2PixelShaderId(texUnit.shaderId, texUnit.textureCount),
-            "u_unlit": 0 != (WoWMaterialFlags.Unlit & material.flags),
-            "u_texture1": data.textures[0],
-            "u_texture2": data.textures[1],
-            "u_texture3": data.textures[2],
-            "u_texture4": data.textures[3],
-            "u_textureWeights": data.textureWeights
-        })
-
+        const texUnitData = this.textureUnitData[index];
+        const batchRequest = new RenderingBatchRequest(texUnitData.material);
         const subMesh = this.modelData.submeshes[texUnit.skinSectionIndex];
+        batchRequest.useVertexArrayObject(this.dataBuffers.vao);
         batchRequest.drawIndexedTriangles(2 * (subMesh.triangleStart + 65536 * subMesh.level), subMesh.triangleCount);
         this.engine.submitBatchRequest(batchRequest);
     }
@@ -542,35 +484,10 @@ export class M2Model extends WorldPositionedObject
             };
         }
 
-        this.textureUnitData = new Array(this.modelData.textureUnits.length);
-        for(let i = 0; i < this.modelData.textureUnits.length; i++) {
-            this.textureUnitData[i] = { 
-                color: Float4.one(),
-                textureMatrices: [Float44.identity(), Float44.identity()],
-                textures: [],
-                texturesLoaded: false,
-                textureWeights: Float4.one()
-            }
-        }
-
         this.drawOrderTexUnits = this.modelData.textureUnits.sort((a, b) => a.priority != b.priority 
                 ? a.priority - b.priority 
                 : this.modelData.submeshes[a.skinSectionIndex].submeshId - this.modelData.submeshes[b.skinSectionIndex].submeshId
         );
-
-        for(let i = 0; i < this.modelData.particleEmitters.length; i++) {
-            const exp2Data = this.modelData.particles[i];
-            const emitterData = this.modelData.particleEmitters[i];
-            // TODO: Refactor ctor to use parent.engine
-            const emitter = new M2ParticleEmitter(this.engine, this, emitterData, exp2Data);
-            this.particleEmitters.push(emitter)
-        }
-
-        for(let i = 0; i < this.modelData.ribbonEmitters.length; i++) {
-            const emitterData = this.modelData.ribbonEmitters[i];
-            const emitter = new M2RibbonEmitter(this, emitterData);
-            this.ribbonEmitters.push(emitter)
-        }
 
         this.isModelDataLoaded = true;
     }
@@ -594,6 +511,83 @@ export class M2Model extends WorldPositionedObject
 
         Promise.all(loadingPromises).then(() => {
             this.isTexturesLoaded = true;
+            this.onTexturesLoaded();
         })
+    }
+
+    private onTexturesLoaded() {
+        for(let i = 0; i < this.modelData.particleEmitters.length; i++) {
+            const exp2Data = this.modelData.particles[i];
+            const emitterData = this.modelData.particleEmitters[i];
+            // TODO: Refactor ctor to use parent.engine
+            const emitter = new M2ParticleEmitter(this.engine, this, emitterData, exp2Data);
+            this.particleEmitters.push(emitter)
+        }
+
+        for(let i = 0; i < this.modelData.ribbonEmitters.length; i++) {
+            const emitterData = this.modelData.ribbonEmitters[i];
+            const emitter = new M2RibbonEmitter(this, emitterData);
+            this.ribbonEmitters.push(emitter)
+        }
+
+        
+        this.textureUnitData = new Array(this.modelData.textureUnits.length);
+        for(let i = 0; i < this.modelData.textureUnits.length; i++) {
+            const texUnit = this.modelData.textureUnits[i];
+            
+            const materialKey = new MaterialKey(this.fileId, MaterialType.M2Material, i);
+            let renderMaterial = new RenderMaterial(materialKey);
+
+            const unkTexture = this.engine.getUnknownTexture();
+            const texUnitData = { 
+                color: Float4.one(),
+                textureMatrices: [Float44.identity(), Float44.identity()],
+                textureWeights: Float4.one(),
+                textures: [unkTexture, unkTexture, unkTexture, unkTexture],
+                material: renderMaterial
+            }
+
+            if (!(texUnit.textureComboIndex < 0 || texUnit.textureComboIndex > this.modelData.textureCombos.length)) {
+                for(let j = 0; j < texUnit.textureCount; j++) {
+                    const textureIndex = this.modelData.textureCombos[texUnit.textureComboIndex + j];
+                    if (textureIndex > -1 && textureIndex < this.modelData.textures.length) {
+                        const textureData = this.modelData.textures[textureIndex];
+                        if (this.loadedTextures[textureData.textureId]) {
+                            texUnitData.textures[j] = this.loadedTextures[textureData.textureId];
+                        }
+                    }
+                }
+            }
+
+            // TODO: Check if these materials can be made static without reference to texunit data if no animated values.
+            const material = this.modelData.materials[texUnit.materialIndex];
+            const blendMode = M2BlendModeToEGxBlend(material.blendingMode);
+            renderMaterial.useShaderProgram(this.shaderProgram);
+            renderMaterial.useBackFaceCulling((4 & material.flags) == 0);
+            renderMaterial.useCounterClockWiseFrontFaces(!this.isMirrored);
+            renderMaterial.useBlendMode(blendMode);
+            renderMaterial.useDepthTest((WoWMaterialFlags.DepthTest & material.flags) == 0);
+            renderMaterial.useDepthWrite((WoWMaterialFlags.DepthWrite & material.flags) == 0);
+            renderMaterial.useColorMask(ColorMask.Alpha | ColorMask.Blue | ColorMask.Green | ColorMask.Red);
+            renderMaterial.useUniforms({
+                "u_boneMatrices": this.bonePositionBuffer,
+                "u_modelMatrix": this.worldModelMatrix,
+                "u_textureTransformMatrix1": texUnitData.textureMatrices[0],
+                "u_textureTransformMatrix2": texUnitData.textureMatrices[1],
+                "u_color": texUnitData.color,
+                "u_vertexShader": getM2VertexShaderId(texUnit.shaderId, texUnit.textureCount), 
+                "u_blendMode": blendMode,
+                "u_pixelShader": getM2PixelShaderId(texUnit.shaderId, texUnit.textureCount),
+                "u_unlit": 0 != (WoWMaterialFlags.Unlit & material.flags),
+                "u_texture1": texUnitData.textures[0],
+                "u_texture2": texUnitData.textures[1],
+                "u_texture3": texUnitData.textures[2],
+                "u_texture4": texUnitData.textures[3],
+                "u_textureWeights": texUnitData.textureWeights
+            })
+
+            this.engine.addEngineMaterialParams(renderMaterial);
+            this.textureUnitData[i] = texUnitData;
+        }
     }
 }

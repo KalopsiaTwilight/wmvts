@@ -320,6 +320,7 @@ export class WebGLShaderProgram implements IShaderProgram
 
     bind() {
         this.gl.useProgram(this.programInfo.program);
+        this.lastUniforms = null;
     }
 
     useUniforms(uniforms: IUniformsData) {

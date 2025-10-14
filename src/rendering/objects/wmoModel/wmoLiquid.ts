@@ -2,8 +2,10 @@ import {
     WoWWorldModelLiquid, RenderingEngine, ITexture, WowWorldModelGroupFlags, Float3, AABB, WorldModelRootFlags, 
     WoWWorldModelGroup, RenderingBatchRequest, Float2, Float4, GxBlend, ColorMask, IShaderProgram, IVertexArrayObject, 
     BufferDataType, 
-    RenderKey,
-    RenderType} from "@app/index";
+    MaterialKey,
+    MaterialType,
+    RenderMaterial,
+} from "@app/index";
 import { BinaryWriter } from "@app/utils";
 import { LiquidTypeMetadata } from "@app/metadata";
 
@@ -59,7 +61,7 @@ export class WMOLiquid extends WorldPositionedObject {
     vertices: WMOLiquidVertexData[] = [];
     indices: number[] = [];
     boundingBox: AABB;
-    renderKey: RenderKey;
+    materials: RenderMaterial[];
 
     liquidCategory: LiquidCategory;
     proceduralTextureType: ProceduralTextureType;
@@ -68,6 +70,7 @@ export class WMOLiquid extends WorldPositionedObject {
     metadataLoaded: boolean;
     texturesLoaded: boolean;
 
+    currentTexture: ITexture;
     textures: ITexture[];
     animatingTextureCount: number;
 
@@ -177,30 +180,13 @@ export class WMOLiquid extends WorldPositionedObject {
         if (!this.isLoaded || this.isDisposing) {
             return;
         }
-        // Select texture based upon time 
+
+        // Select material based upon time 
         const timePerTexture = 1000 / 10;
-        const texture = this.textures[Math.floor((this.engine.timeElapsed / timePerTexture) % this.animatingTextureCount)];
+        const materialIndex = Math.floor((this.engine.timeElapsed / timePerTexture) % this.animatingTextureCount);
+        const material = this.materials[materialIndex];
 
-        const batchRequest = new RenderingBatchRequest(this.renderKey);
-        batchRequest.useCounterClockWiseFrontFaces(true);
-        batchRequest.useBackFaceCulling(false);
-        batchRequest.useBlendMode(GxBlend.GxBlend_Alpha)
-        batchRequest.useDepthTest(true);
-        batchRequest.useDepthWrite(true);
-        batchRequest.useColorMask(ColorMask.Alpha | ColorMask.Red | ColorMask.Blue | ColorMask.Green);
-        batchRequest.useUniforms({
-            "u_texture": texture,
-            "u_modelMatrix": this.worldModelMatrix,
-            "u_waterParams": Float2.create(this.liquidCategory, 0),
-            "u_oceanCloseColor": Float4.create(17 / 255, 75 / 255, 89 / 255, 1),
-            "u_oceanFarColor": Float4.create(0, 29 / 255, 41 / 255, 1),
-            "u_riverCloseColor": Float4.create(41 / 255, 76 / 255, 81 / 255, 1),
-            "u_riverFarColor": Float4.create(26 / 255, 46 / 255, 51 / 255, 1),
-            "u_waterAlphas": Float4.create(0.3, 0.8, 0.5, 1)
-        })
-
-        batchRequest.useShaderProgram(this.shaderProgram);
-
+        const batchRequest = new RenderingBatchRequest(material);
         batchRequest.useVertexArrayObject(this.vao);
         batchRequest.drawIndexedTriangles(0, this.indices.length);
         this.engine.submitBatchRequest(batchRequest);
@@ -210,7 +196,7 @@ export class WMOLiquid extends WorldPositionedObject {
         super.dispose();
         // TODO: Dispose
 
-        this.renderKey = null;
+        this.materials = null;
     }
 
     get isLoaded(): boolean {
@@ -224,7 +210,6 @@ export class WMOLiquid extends WorldPositionedObject {
         }
 
         this.liquidTypeMetadata = metadata;
-        this.renderKey = new RenderKey(this.liquidTypeMetadata.id, RenderType.WMOLiquid);
         if (this.liquidTypeMetadata.name.includes("Slime")) {
             this.liquidCategory = LiquidCategory.Slime;
         } else if (this.liquidTypeMetadata.name.includes("Magma") || this.liquidTypeMetadata.name.includes("Lava")) {
@@ -276,6 +261,7 @@ export class WMOLiquid extends WorldPositionedObject {
         this.animatingTextureCount = Math.max(0, this.animatingTextureCount);
 
         Promise.all(texturePromises).then(() => {
+            this.setupMaterials();
             this.texturesLoaded = true;
         })
         this.metadataLoaded = true;
@@ -310,6 +296,33 @@ export class WMOLiquid extends WorldPositionedObject {
             return LIQUID_WMO_OCEAN;
         } else {
             return LIQUID_WMO_WATER;
+        }
+    }
+
+    private setupMaterials() {
+        this.materials = new Array(this.textures.length);
+        for (let i = 0; i < this.textures.length; i++) {
+            const texture = this.textures[i];
+            const material = new RenderMaterial(new MaterialKey(this.liquidTypeMetadata.id, MaterialType.WMOLiquid));
+            material.useCounterClockWiseFrontFaces(true);
+            material.useBackFaceCulling(false);
+            material.useBlendMode(GxBlend.GxBlend_Alpha)
+            material.useDepthTest(true);
+            material.useDepthWrite(true);
+            material.useColorMask(ColorMask.Alpha | ColorMask.Red | ColorMask.Blue | ColorMask.Green);
+            material.useUniforms({
+                "u_texture": texture,
+                "u_modelMatrix": this.worldModelMatrix,
+                "u_waterParams": Float2.create(this.liquidCategory, 0),
+                "u_oceanCloseColor": Float4.create(17 / 255, 75 / 255, 89 / 255, 1),
+                "u_oceanFarColor": Float4.create(0, 29 / 255, 41 / 255, 1),
+                "u_riverCloseColor": Float4.create(41 / 255, 76 / 255, 81 / 255, 1),
+                "u_riverFarColor": Float4.create(26 / 255, 46 / 255, 51 / 255, 1),
+                "u_waterAlphas": Float4.create(0.3, 0.8, 0.5, 1)
+            })
+            material.useShaderProgram(this.shaderProgram);
+            this.engine.addEngineMaterialParams(material);
+            this.materials[i] = material;
         }
     }
 }

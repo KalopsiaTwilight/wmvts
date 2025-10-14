@@ -12,47 +12,47 @@ export interface DrawInstruction {
     type: DrawInstructionType
 }
 
-export enum RenderType {
+export enum MaterialType {
     Unknown,
-    WMOGroup,
+    WMOMaterial,
+    WMOPortal,
     WMOLiquid,
-    M2TextureUnit,
-    M2Particle,
-    M2Ribbon,
+    M2Material,
+    M2ParticleMaterial,
+    M2RibbonMaterial
 }
 
-export class RenderKey {
+export class MaterialKey {
     ownerId: number;
-    batchType: RenderType;
+    type: MaterialType;
     materialId: number;
 
-    constructor(fileId: number, batchType: RenderType, materialId: number = -1) {
+    constructor(fileId: number, type: MaterialType, materialId: number = -1) {
         this.ownerId = fileId;
-        this.batchType = batchType;
+        this.type = type;
         this.materialId = materialId;
     }
 
-    static create(fileId: number, batchType: RenderType) {
-        return new RenderKey(fileId, batchType);
-    }
-
-    compare(other: RenderKey | null) {
+    compare(other: MaterialKey | null) {
         const ownerDiff = this.ownerId - other.ownerId;
         if (ownerDiff != 0) {
             return ownerDiff;
         }
 
-        const typeDiff = this.batchType - other.batchType;
+        const typeDiff = this.type - other.type;
         if (typeDiff != 0) {
             return typeDiff;
         }
-
         return this.materialId - other.materialId;
+    }
+
+    toString() {
+        return this.ownerId + "-" + this.materialId;
     }
 }
 
-export class RenderingBatchRequest {
-    ownerKey: RenderKey;
+export class RenderMaterial {
+    key: MaterialKey;
     blendMode: GxBlend;
     depthWrite: boolean;
     depthTest: boolean;
@@ -61,39 +61,10 @@ export class RenderingBatchRequest {
     colorMask: ColorMask;
     uniforms: IUniformsData;
 
-    vertexIndexBuffer?: IVertexIndexBuffer;
-    vertexDataBuffer?: IVertexDataBuffer;
     shaderProgram?: IShaderProgram;
-    vao?: IVertexArrayObject;
-    drawInstruction?: DrawInstruction;
 
-    constructor(key: RenderKey) {
-        this.ownerKey = key;
-        this.blendMode = GxBlend.GxBlend_Opaque;
-        this.depthWrite = true;
-        this.depthTest = true;
-        this.backFaceCulling = true;
-        this.counterClockWiseFrontFaces = false;
-        this.colorMask = ColorMask.Alpha | ColorMask.Blue | ColorMask.Green |ColorMask.Red;
-        this.uniforms = { };
-    }
-
-    static from(template: RenderingBatchRequest) {
-        const newRequest = new RenderingBatchRequest(template.ownerKey);
-        newRequest.blendMode = template.blendMode;
-        newRequest.depthWrite = template.depthWrite
-        newRequest.depthTest = template.depthTest;
-        newRequest.backFaceCulling = template.backFaceCulling;
-        newRequest.counterClockWiseFrontFaces = template.counterClockWiseFrontFaces;
-        newRequest.colorMask = template.colorMask;
-        newRequest.uniforms = template.uniforms;
-
-        newRequest.vertexIndexBuffer = template.vertexIndexBuffer;
-        newRequest.vertexDataBuffer = template.vertexDataBuffer;
-        newRequest.shaderProgram = template.shaderProgram;
-        newRequest.vao = template.vao;
-        newRequest.drawInstruction = template.drawInstruction;
-        return newRequest;
+    constructor(key: MaterialKey) {
+        this.key = key;
     }
 
     useBlendMode(blendMode: GxBlend) {
@@ -114,26 +85,44 @@ export class RenderingBatchRequest {
     useColorMask(mask: ColorMask) {
         this.colorMask = mask;
     }
-    useVertexIndexBuffer(buffer?: IVertexIndexBuffer) {
-        this.vertexIndexBuffer = buffer;
-    }
-    useVertexDataBuffer(buffer?: IVertexDataBuffer) {
-        this.vertexDataBuffer = buffer;
-    }
     useShaderProgram(program?: IShaderProgram) {
         this.shaderProgram = program;
     }
-    useVertexArrayObject(vao?: IVertexArrayObject) {
-        this.vao = vao;
-    }
     useUniforms(uniforms: IUniformsData) {
-        if (!this.uniforms) {
-            this.uniforms = uniforms;
-        }
-        for(let prop in uniforms) {
-            this.uniforms[prop] = uniforms[prop];
+        this.uniforms = { ...this.uniforms, ...uniforms };
+    }
+
+    bind(graphics: IGraphics) {
+        graphics.useBackFaceCulling(this.backFaceCulling);
+        graphics.useBlendMode(this.blendMode);
+        graphics.useColorMask(this.colorMask);
+        graphics.useCounterClockWiseFrontFaces(this.counterClockWiseFrontFaces);
+        graphics.useDepthTest(this.depthTest);
+        graphics.useDepthWrite(this.depthWrite);
+
+        if (this.shaderProgram) {
+            graphics.useShaderProgram(this.shaderProgram);
+            this.shaderProgram.useUniforms(this.uniforms);
         }
     }
+}
+
+export class RenderingBatchRequest {
+    material: RenderMaterial;
+    drawInstruction: DrawInstruction;
+
+    vertexIndexBuffer?: IVertexIndexBuffer;
+    vertexDataBuffer?: IVertexDataBuffer;
+    vao?: IVertexArrayObject;
+
+    constructor(material: RenderMaterial) {
+        this.material = material;
+    }
+
+    useMaterial(material: RenderMaterial) {
+        this.material = material
+    }
+
     drawTriangles(offset: number, count: number) {
         this.drawInstruction = {
             indexed: false,
@@ -156,18 +145,19 @@ export class RenderingBatchRequest {
         };
     }
 
-    submit(graphics: IGraphics) {
-        graphics.useBackFaceCulling(this.backFaceCulling);
-        graphics.useBlendMode(this.blendMode);
-        graphics.useColorMask(this.colorMask);
-        graphics.useCounterClockWiseFrontFaces(this.counterClockWiseFrontFaces);
-        graphics.useDepthTest(this.depthTest);
-        graphics.useDepthWrite(this.depthWrite);
+    useVertexIndexBuffer(buffer?: IVertexIndexBuffer) {
+        this.vertexIndexBuffer = buffer;
+    }
+    useVertexDataBuffer(buffer?: IVertexDataBuffer) {
+        this.vertexDataBuffer = buffer;
+    }
+    useVertexArrayObject(vao?: IVertexArrayObject) {
+        this.vao = vao;
+    }
 
-        if (this.shaderProgram) {
-            graphics.useShaderProgram(this.shaderProgram);
-            this.shaderProgram.useUniforms(this.uniforms);
-        }
+    submit(graphics: IGraphics) {
+        this.material.bind(graphics);
+        
         if (this.vertexDataBuffer) {
             graphics.useVertexDataBuffer(this.vertexDataBuffer);
         }

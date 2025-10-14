@@ -1,9 +1,8 @@
 import { WoWRibbonEmiterData } from "@app/modeldata";
 import { 
     BufferDataType, ColorMask, Float2, Float3, Float4, Float44, GxBlend, IDisposable, IShaderProgram, IVertexArrayObject, IVertexDataBuffer, 
-    IVertexIndexBuffer, M2BlendModeToEGxBlend, M2Model, RenderingBatchRequest, RenderingEngine, 
-    RenderKey,
-    RenderType
+    IVertexIndexBuffer, M2BlendModeToEGxBlend, M2Model, RenderingBatchRequest, RenderingEngine, MaterialKey, RenderMaterial,
+    MaterialType
 } from "@app/rendering";
 
 
@@ -36,7 +35,7 @@ export class M2RibbonEmitter implements IDisposable {
     m2data: WoWRibbonEmiterData;
     engine: RenderingEngine;
 
-    renderKey: RenderKey;
+    materials: RenderMaterial[];
     indexBuffer: IVertexIndexBuffer;
     vertexBuffer: IVertexDataBuffer;
     vao: IVertexArrayObject;
@@ -165,9 +164,7 @@ export class M2RibbonEmitter implements IDisposable {
 
     dispose(): void {
         this.isDisposing = true;
-
-        this.renderKey = null;
-
+        this.materials = null;
         // TODO: Dispose stuff?
     }
 
@@ -286,43 +283,9 @@ export class M2RibbonEmitter implements IDisposable {
             return;
         }
 
-        for(let i = 0; i < this.m2data.textureIndices.length; i++) {
-            const textureId = this.m2data.textureIndices[i];
-            if (textureId <= -1 || textureId > this.parent.modelData.textures.length) {
-                continue;
-            }
-
-            const textureData = this.parent.modelData.textures[textureId];
-            if (textureData.textureId <= -1) {
-                continue;
-            }
-            const texture = this.parent.loadedTextures[textureData.textureId]
-
-            let materialIndex = i;
-            if (materialIndex >= this.m2data.materialIndices.length) {
-                materialIndex = 0;
-            }
-            const material = this.parent.modelData.materials[this.m2data.materialIndices[materialIndex]];
-
-
-            let blendMode = M2BlendModeToEGxBlend(material.blendingMode);
-            // Assume ribbons are always at least transparent.
-            if (blendMode === GxBlend.GxBlend_Opaque) {
-                blendMode = GxBlend.GxBlend_Alpha;
-            }
-
-            const batchRequest = new RenderingBatchRequest(this.renderKey);
+        for (const material of this.materials) {
+            const batchRequest = new RenderingBatchRequest(material);
             batchRequest.useVertexArrayObject(this.vao);
-            batchRequest.useShaderProgram(this.shaderProgram);
-            batchRequest.useBackFaceCulling(false);
-            batchRequest.useCounterClockWiseFrontFaces(!this.parent.isMirrored);
-            batchRequest.useBlendMode(blendMode);
-            batchRequest.useDepthTest(true);
-            batchRequest.useDepthWrite(false);
-            batchRequest.useColorMask(ColorMask.Alpha | ColorMask.Blue | ColorMask.Green | ColorMask.Red);
-            batchRequest.useUniforms({
-                "u_texture": texture
-            });
             const count = this.edgeEnd > this.edgeStart 
                 ? 2 * (this.edgeEnd - this.edgeStart) + 2 
                 : 2 * (this.edgeLifetimes.length + this.edgeEnd - this.edgeStart) + 2;
@@ -477,9 +440,9 @@ export class M2RibbonEmitter implements IDisposable {
     }
 
     private setupGraphics() {
-        this.renderKey = new RenderKey(this.parent.fileId, RenderType.M2Ribbon);
+        // Set up buffers
         this.shaderProgram = this.engine.getShaderProgram('M2RibbonEmitter',
-            vertexShaderProgramText, fragmentShaderProgramText);
+            vertexShaderProgramText, fragmentShaderProgramText)
 
         this.vertexBuffer = this.engine.graphics.createVertexDataBuffer([
             { index: this.shaderProgram.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: 36, offset: 0 },
@@ -497,5 +460,48 @@ export class M2RibbonEmitter implements IDisposable {
         this.vao = this.engine.graphics.createVertexArrayObject();
         this.vao.addVertexDataBuffer(this.vertexBuffer);
         this.vao.setIndexBuffer(this.indexBuffer);
+
+        // Set up materials
+        this.materials = [];
+        for(let i = 0; i < this.m2data.textureIndices.length; i++) {
+            const textureId = this.m2data.textureIndices[i];
+            if (textureId <= -1 || textureId > this.parent.modelData.textures.length) {
+                continue;
+            }
+
+            const textureData = this.parent.modelData.textures[textureId];
+            if (textureData.textureId <= -1) {
+                continue;
+            }
+            const texture = this.parent.loadedTextures[textureData.textureId]
+
+            let materialIndex = i;
+            if (materialIndex >= this.m2data.materialIndices.length) {
+                materialIndex = 0;
+            }
+
+            const material = this.parent.modelData.materials[this.m2data.materialIndices[materialIndex]];
+            let blendMode = M2BlendModeToEGxBlend(material.blendingMode);
+            // Assume ribbons are always at least transparent.
+            if (blendMode === GxBlend.GxBlend_Opaque) {
+                blendMode = GxBlend.GxBlend_Alpha;
+            }
+
+            const materialKey = new MaterialKey(this.parent.fileId, MaterialType.M2RibbonMaterial, materialIndex);
+            let renderMaterial = new RenderMaterial(materialKey);
+            renderMaterial.useShaderProgram(this.shaderProgram);
+            renderMaterial.useBackFaceCulling(false);
+            renderMaterial.useCounterClockWiseFrontFaces(!this.parent.isMirrored);
+            renderMaterial.useBlendMode(blendMode);
+            renderMaterial.useDepthTest(true);
+            renderMaterial.useDepthWrite(false);
+            renderMaterial.useColorMask(ColorMask.Alpha | ColorMask.Blue | ColorMask.Green | ColorMask.Red);
+            renderMaterial.useUniforms({
+                "u_texture": texture
+            });
+
+            this.engine.addEngineMaterialParams(renderMaterial)
+            this.materials.push(renderMaterial);
+        }
     }
 }

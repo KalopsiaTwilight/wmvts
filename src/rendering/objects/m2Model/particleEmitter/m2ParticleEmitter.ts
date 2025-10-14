@@ -1,5 +1,5 @@
 import { WoWExtendedParticleData, WoWParticleEmitterData } from "@app/modeldata";
-import { BufferDataType, ColorMask, Float2, Float3, Float33, Float4, Float44, GxBlend, IDisposable, IPseudoRandomNumberGenerator, IShaderProgram, ITexture, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderingBatchRequest, RenderingEngine, RenderKey, RenderType } from "@app/rendering";
+import { BufferDataType, ColorMask, Float2, Float3, Float33, Float4, Float44, GxBlend, IDisposable, IPseudoRandomNumberGenerator, IShaderProgram, ITexture, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderingBatchRequest, RenderingEngine, MaterialKey, RenderMaterial, MaterialType } from "@app/rendering";
 import { M2Model } from "../m2Model";
 
 import fragmentShaderProgramText from "./m2ParticleEmitter.frag"; 
@@ -84,14 +84,13 @@ export class M2ParticleEmitter implements IDisposable {
     isDisposing: boolean;
 
     // Graphics 
-    renderKey: RenderKey;
     shaderProgram: IShaderProgram;
     indexBuffer: IVertexIndexBuffer
     vertexBuffer: IVertexDataBuffer;
     vao: IVertexArrayObject;
+    material: RenderMaterial;
 
     // Operating data derivatives
-    textures: ITexture[]
     followMult: number;
     followBase: number;
     textureIndexMask: number;
@@ -116,7 +115,6 @@ export class M2ParticleEmitter implements IDisposable {
 
     // Calculation data
     particlesFixMat: Float44;
-    isTexturesLoaded: boolean;
     particles: ParticleData[];
     emitterModelMatrix: Float44;
     previousPosition: Float3;
@@ -160,8 +158,6 @@ export class M2ParticleEmitter implements IDisposable {
         this.quadToView = Float33.identity();
         this.quadToViewZVector = Float3.zero();
         this.nrQuads = 0;
-        this.isTexturesLoaded = false;
-
         if (exp2Data?.alphaCutoff) {
             this.alphaCutOffTrack = new LocalAnimatedNumber(exp2Data.alphaCutoff)
         }
@@ -171,8 +167,6 @@ export class M2ParticleEmitter implements IDisposable {
         this.headCellTrack = new LocalAnimatedNumber(this.m2data.headCellTrack);
         this.tailCellTrack = new LocalAnimatedNumber(this.m2data.tailCellTrack);
         this.isDisposing = false;
-
-        this.renderKey = new RenderKey(this.parent.fileId, RenderType.M2Particle);
 
         this.initialize();
     }
@@ -191,9 +185,7 @@ export class M2ParticleEmitter implements IDisposable {
         this.indexBuffer = null;
         this.vertexBuffer = null;
         this.vao = null;
-        this.renderKey = null;
-
-        this.textures = null;
+        this.material = null;
         this.particleColorOverride = null;
 
         this.colorTrack = null;
@@ -303,33 +295,6 @@ export class M2ParticleEmitter implements IDisposable {
 
         deltaTime *= 0.001;
 
-        if (this.parent.isTexturesLoaded && !this.isTexturesLoaded) {
-            const textureId = this.m2data.texture
-            this.textures = [null, null, null];
-            if (this.m2data.flags & 0x10000000) {
-                const multiTextureIds = [0, 0, 0];
-                multiTextureIds[0] = 31 & textureId;
-                multiTextureIds[1] = (textureId >> 5) & 31;
-                multiTextureIds[2] = (textureId >> 10) & 31;
-                for (let i = 0; i < multiTextureIds.length; i++) {
-                    const textureId = multiTextureIds[i];
-                    const textureData = this.parent.modelData.textures[textureId];
-                    if (textureData.textureId > -1) {
-                        this.textures[i] = this.parent.loadedTextures[textureData.textureId]
-                    }
-                }
-            }
-            else {
-                if (textureId > -1) {
-                    const textureData = this.parent.modelData.textures[textureId];
-                    if (textureData.textureId > -1) {
-                        this.textures[0] = this.parent.loadedTextures[textureData.textureId]
-                    }
-                }
-            }
-            this.isTexturesLoaded = true;
-        }
-
         this.updateAnimatedProps();
 
         const currentModelMatrix = Float44.identity();
@@ -352,46 +317,13 @@ export class M2ParticleEmitter implements IDisposable {
         if (this.particles.length <= 0) {
             return;
         }
-        if (!this.isTexturesLoaded) {
-            return;
-        }
         
         this.updateVertexBuffer();
         this.vertexBuffer.setData(new Float32Array(this.vertexData));
 
-        const batchRequest = new RenderingBatchRequest(this.renderKey);
+
+        const batchRequest = new RenderingBatchRequest(this.material);
         batchRequest.useVertexArrayObject(this.vao);
-        batchRequest.useShaderProgram(this.shaderProgram);
-
-
-        let blendMode = this.m2data.blendingType;
-        let alphaTreshold;
-        if (blendMode === 0) {
-            alphaTreshold = -1;
-        } else if (blendMode === 1)  {
-            alphaTreshold = 0.501960814;
-        } else {
-            alphaTreshold = 0.0039215689;
-        }
-        batchRequest.useBackFaceCulling(false);
-        batchRequest.useCounterClockWiseFrontFaces(!this.parent.isMirrored);
-        batchRequest.useBlendMode(blendMode < particleBlendTypeToGxBlend.length 
-            ? particleBlendTypeToGxBlend[blendMode] 
-            : GxBlend.GxBlend_Opaque
-        );
-        batchRequest.useDepthTest(true);
-        batchRequest.useDepthWrite(false);
-        batchRequest.useColorMask(ColorMask.Alpha | ColorMask.Blue | ColorMask.Green | ColorMask.Red);
-
-        batchRequest.useUniforms({
-            "u_pixelShader": this.getPixelShader(),
-            "u_texture1": this.textures[0],
-            "u_texture2": this.textures[1],
-            "u_texture3": this.textures[2],
-            "u_alphaTreshold": alphaTreshold,
-            "u_alphaMult": this.exp2Data ? this.exp2Data.alphaMult : 1,
-            "u_colorMult": this.exp2Data ? this.exp2Data.colorMult : 1
-        });
         batchRequest.drawIndexedTriangles(0, (6 * this.nrQuads) >> 0);
         this.engine.submitBatchRequest(batchRequest);
     }
@@ -947,9 +879,9 @@ export class M2ParticleEmitter implements IDisposable {
     }
 
     setupGraphics() {
+        // Set up buffers;
         this.shaderProgram = this.engine.getShaderProgram('M2ParticleEmitter', 
             vertexShaderProgramText, fragmentShaderProgramText);
-
         this.vertexBuffer = this.engine.graphics.createVertexDataBuffer([
             { index: this.shaderProgram.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: 56, offset: 0 },
             { index: this.shaderProgram.getAttribLocation('a_color'), size: 4, type: BufferDataType.Float, normalized: false, stride: 56, offset: 12 },
@@ -974,5 +906,64 @@ export class M2ParticleEmitter implements IDisposable {
         this.vao = this.engine.graphics.createVertexArrayObject();
         this.vao.addVertexDataBuffer(this.vertexBuffer);
         this.vao.setIndexBuffer(this.indexBuffer);
+
+        // Set up material
+        const textureId = this.m2data.texture
+        const textures: ITexture[] = [null, null, null];
+        if (this.m2data.flags & 0x10000000) {
+            const multiTextureIds = [0, 0, 0];
+            multiTextureIds[0] = 31 & textureId;
+            multiTextureIds[1] = (textureId >> 5) & 31;
+            multiTextureIds[2] = (textureId >> 10) & 31;
+            for (let i = 0; i < multiTextureIds.length; i++) {
+                const textureId = multiTextureIds[i];
+                const textureData = this.parent.modelData.textures[textureId];
+                if (textureData.textureId > -1) {
+                    textures[i] = this.parent.loadedTextures[textureData.textureId]
+                }
+            }
+        }
+        else {
+            if (textureId > -1) {
+                const textureData = this.parent.modelData.textures[textureId];
+                if (textureData.textureId > -1) {
+                    textures[0] = this.parent.loadedTextures[textureData.textureId]
+                }
+            }
+        }
+        
+        // TODO: Is this always unique?
+        const materialKey = new MaterialKey(this.parent.fileId, MaterialType.M2ParticleMaterial, textureId);
+        this.material = new RenderMaterial(materialKey);
+        this.material.useShaderProgram(this.shaderProgram);
+        let blendMode = this.m2data.blendingType;
+        let alphaTreshold;
+        if (blendMode === 0) {
+            alphaTreshold = -1;
+        } else if (blendMode === 1)  {
+            alphaTreshold = 0.501960814;
+        } else {
+            alphaTreshold = 0.0039215689;
+        }
+        this.material.useBackFaceCulling(false);
+        this.material.useCounterClockWiseFrontFaces(!this.parent.isMirrored);
+        this.material.useBlendMode(blendMode < particleBlendTypeToGxBlend.length 
+            ? particleBlendTypeToGxBlend[blendMode] 
+            : GxBlend.GxBlend_Opaque
+        );
+        this.material.useDepthTest(true);
+        this.material.useDepthWrite(false);
+        this.material.useColorMask(ColorMask.Alpha | ColorMask.Blue | ColorMask.Green | ColorMask.Red);
+        this.material.useUniforms({
+            "u_pixelShader": this.getPixelShader(),
+            "u_texture1": textures[0],
+            "u_texture2": textures[1],
+            "u_texture3": textures[2],
+            "u_alphaTreshold": alphaTreshold,
+            "u_alphaMult": this.exp2Data ? this.exp2Data.alphaMult : 1,
+            "u_colorMult": this.exp2Data ? this.exp2Data.colorMult : 1
+        });
+
+        this.engine.addEngineMaterialParams(this.material);
     }
 }

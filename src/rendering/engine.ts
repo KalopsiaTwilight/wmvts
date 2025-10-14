@@ -1,7 +1,7 @@
 import { AleaPrngGenerator, Float3, Float4, Float44, Frustrum } from "./math";
 import { Camera } from "../cameras";
 import { RenderObject, IDisposable, IM2DataBuffers, StaticM2DataBuffers } from "./objects";
-import { GxBlend, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest } from "./graphics";
+import { GxBlend, IGraphics, IShaderProgram, ITexture, ITextureOptions, MaterialKey, MaterialType, RenderingBatchRequest, RenderMaterial } from "./graphics";
 import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData, RequestFrameFunction } from "..";
 import { SimpleCache } from "./cache";
 import { LiquidTypeMetadata } from "@app/metadata/liquid";
@@ -23,9 +23,9 @@ export interface RenderingEngineRequirements {
     requestFrame: RequestFrameFunction,
 }
 
-export interface RenderingEngineOptions{
-    progress?: IProgressReporter, 
-    container?: HTMLElement, 
+export interface RenderingEngineOptions {
+    progress?: IProgressReporter,
+    container?: HTMLElement,
     errorHandler?: ErrorHandlerFn,
     cameraFov?: number;
     lightDirection?: Float3;
@@ -72,7 +72,8 @@ export class RenderingEngine implements IDisposable {
     m2Cache: SimpleCache<WoWModelData>;
     liquidCache: SimpleCache<LiquidTypeMetadata>;
     m2DataBufferCache: SimpleCache<IM2DataBuffers>;
-    runningRequests: { [key:string]: Promise<unknown> }
+    materialCache: SimpleCache<RenderMaterial>;
+    runningRequests: { [key: string]: Promise<unknown> }
 
     batchRequests: RenderingBatchRequest[];
 
@@ -118,12 +119,13 @@ export class RenderingEngine implements IDisposable {
         this.m2Cache = new SimpleCache(cacheTtl);
         this.liquidCache = new SimpleCache(cacheTtl);
         this.m2DataBufferCache = new SimpleCache(cacheTtl);
-        this.runningRequests = { };
+        this.materialCache = new SimpleCache(cacheTtl);
+        this.runningRequests = {};
         this.batchRequests = [];
 
         this.clearColor = options.clearColor ? options.clearColor : Float4.create(0.1, 0.1, 0.1, 1);
         this.fov = options.cameraFov ? options.cameraFov : 60;
-        this.ambientColor = options.ambientColor ? options.ambientColor : Float4.create(1/3, 1/3, 1/3, 1);
+        this.ambientColor = options.ambientColor ? options.ambientColor : Float4.create(1 / 3, 1 / 3, 1 / 3, 1);
         this.lightColor = options.lightColor ? options.lightColor : Float4.one()
         this.lightDir = Float3.normalize(options.lightDirection ? options.lightDirection : [0, 0, 1]);
         this.lightingDisabled = options.disableLighting ? options.disableLighting : false;
@@ -142,7 +144,7 @@ export class RenderingEngine implements IDisposable {
         this.viewMatrix = null;
         this.invViewMatrix = null;
         this.sceneCamera.dispose();
-        for(const object of this.sceneObjects) {
+        for (const object of this.sceneObjects) {
             object.dispose();
         }
     }
@@ -157,7 +159,7 @@ export class RenderingEngine implements IDisposable {
             this.lastTime = currentTime;
 
             // Only start drawing if all objects in the scene are loaded:
-            for(const obj of this.sceneObjects) {
+            for (const obj of this.sceneObjects) {
                 if (!obj.isLoaded) {
                     return;
                 }
@@ -165,7 +167,7 @@ export class RenderingEngine implements IDisposable {
 
             this.graphics.startFrame(this.width, this.height);
             this.graphics.clearFrame(this.clearColor);
-            
+
             this.sceneCamera.update(deltaTime);
             Float44.copy(this.sceneCamera.getViewMatrix(), this.viewMatrix);
             Float44.invert(this.viewMatrix, this.invViewMatrix);
@@ -177,38 +179,38 @@ export class RenderingEngine implements IDisposable {
             this.wmoCache.update(deltaTime);
             this.m2Cache.update(deltaTime);
             this.liquidCache.update(deltaTime);
-            for(const obj of this.sceneObjects) {
+            for (const obj of this.sceneObjects) {
                 obj.update(deltaTime);
             }
-            for(const obj of this.sceneObjects) {
+            for (const obj of this.sceneObjects) {
                 obj.draw();
             }
 
             // Sort batches in draw order.
             const requests = this.batchRequests
                 .sort((r1, r2) => {
-                const layer1 = r1.blendMode > GxBlend.GxBlend_Opaque ?
-                    r1.blendMode == GxBlend.GxBlend_AlphaKey ? 1 : 2  : 0
-                const layer2 = r2.blendMode > GxBlend.GxBlend_Opaque ?
-                    r2.blendMode == GxBlend.GxBlend_AlphaKey ? 1 : 2  : 0
+                    const layer1 = r1.material.blendMode > GxBlend.GxBlend_Opaque ?
+                        r1.material.blendMode == GxBlend.GxBlend_AlphaKey ? 1 : 2 : 0
+                    const layer2 = r2.material.blendMode > GxBlend.GxBlend_Opaque ?
+                        r2.material.blendMode == GxBlend.GxBlend_AlphaKey ? 1 : 2 : 0
 
-                const layerDiff = layer1 - layer2;
-                if (layerDiff != 0) {
-                    return layerDiff;
-                }
-                
-                return r1.ownerKey.compare(r2.ownerKey);
-            });
-            for(const batch of requests) {
+                    const layerDiff = layer1 - layer2;
+                    if (layerDiff != 0) {
+                        return layerDiff;
+                    }
+
+                    return r1.material.key.compare(r2.material.key);
+                });
+            for (const batch of requests) {
                 batch.submit(this.graphics);
             }
             this.graphics.useVertexArrayObject(undefined);
             if (this.fpsElement) {
-                this.fpsCounter.push(1/(deltaTime/1000));
+                this.fpsCounter.push(1 / (deltaTime / 1000));
                 if (this.fpsCounter.length > this.maxFpsCounterSize) {
                     this.fpsCounter.splice(0, 1);
                 }
-                const avgFps = this.fpsCounter.reduce((acc, next)  => acc+next, 0) / this.fpsCounter.length;
+                const avgFps = this.fpsCounter.reduce((acc, next) => acc + next, 0) / this.fpsCounter.length;
                 this.fpsElement.textContent = "FPS: " + Math.floor(avgFps);
             }
             if (this.batchesElement) {
@@ -219,9 +221,9 @@ export class RenderingEngine implements IDisposable {
             if (requests.length > 0) {
                 this.framesDrawn++;
             }
-            this.timeElapsed+=deltaTime;
+            this.timeElapsed += deltaTime;
         }
-        catch(err) {
+        catch (err) {
             this.errorHandler?.(RenderingErrorType, err.toString());
         }
     }
@@ -288,7 +290,7 @@ export class RenderingEngine implements IDisposable {
         object.dispose();
     }
 
-    private async processTexture(fileId: number|string, imgData: string | null, opts?: ITextureOptions) {
+    private async processTexture(fileId: number | string, imgData: string | null, opts?: ITextureOptions) {
         return new Promise<ITexture>((res, rej) => {
             if (imgData === null) {
                 this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve image data for file: " + fileId);
@@ -300,7 +302,7 @@ export class RenderingEngine implements IDisposable {
             const img = new Image();
             img.onload = () => {
                 const texture = this.graphics.createTextureFromImg(img, opts);
-                this.textureCache.store(fileId, texture); 
+                this.textureCache.store(fileId, texture);
                 this.progress?.removeFileFromOperation(fileId);
                 delete this.runningRequests[fileId];
                 res(texture);
@@ -313,25 +315,25 @@ export class RenderingEngine implements IDisposable {
             }
             img.src = imgData;
         });
-    } 
+    }
 
     async getTexture(fileId: number, opts?: ITextureOptions): Promise<ITexture> {
         if (this.runningRequests[fileId]) {
             const texture = await this.runningRequests[fileId];
             return texture as ITexture;
         }
-        
+
         // Try to resolve from cache
-        if(this.textureCache.contains(fileId)) {
+        if (this.textureCache.contains(fileId)) {
             return this.textureCache.get(fileId);
         }
-        
+
         // Retrieve texture from dataloader & process into WebGL Texture
         this.progress?.setOperation(LoadDataOperationText);
         this.progress?.addFileToOperation(fileId);
         const req = this.dataLoader.loadTexture(fileId)
             .then((imgData) => this.processTexture(fileId, imgData, opts));
-        
+
         this.runningRequests[fileId] = req;
         const texture = await req;
         return texture;
@@ -348,18 +350,6 @@ export class RenderingEngine implements IDisposable {
     }
 
     submitBatchRequest(request: RenderingBatchRequest) {
-        request.useUniforms({
-            "u_ambientColor": this.ambientColor,
-            "u_lightColor": this.lightColor,
-            "u_lightDir": this.lightDir,
-            "u_viewMatrix": this.viewMatrix,
-            "u_projectionMatrix": this.projectionMatrix,
-        });
-        if (this.lightingDisabled) {
-            request.useUniforms({
-                "u_unlit": true
-            })
-        }
         this.batchRequests.push(request);
     }
 
@@ -373,10 +363,10 @@ export class RenderingEngine implements IDisposable {
         return program;
     }
 
-    async getM2ModelFile(fileId: number): Promise<WoWModelData|null> {
+    async getM2ModelFile(fileId: number): Promise<WoWModelData | null> {
         if (this.runningRequests[fileId]) {
             const data = await this.runningRequests[fileId];
-            return data as WoWModelData|null;
+            return data as WoWModelData | null;
         }
         if (this.m2Cache.contains(fileId)) {
             return this.m2Cache.get(fileId);
@@ -396,10 +386,10 @@ export class RenderingEngine implements IDisposable {
         return data;
     }
 
-    async getWMOModelFile(fileId: number): Promise<WoWWorldModelData|null> {
+    async getWMOModelFile(fileId: number): Promise<WoWWorldModelData | null> {
         if (this.runningRequests[fileId]) {
             const data = await this.runningRequests[fileId];
-            return data as WoWWorldModelData|null;
+            return data as WoWWorldModelData | null;
         }
         if (this.wmoCache.contains(fileId)) {
             return this.wmoCache.get(fileId);
@@ -423,7 +413,7 @@ export class RenderingEngine implements IDisposable {
 
         if (this.runningRequests[key]) {
             const data = await this.runningRequests[key];
-            return data as LiquidTypeMetadata|null;
+            return data as LiquidTypeMetadata | null;
         }
 
         if (this.liquidCache.contains(liquidId)) {
@@ -444,7 +434,7 @@ export class RenderingEngine implements IDisposable {
         this.progress?.removeFileFromOperation(key);
         return data;
     }
-    
+
     getM2DataBuffers(fileId: number, shaderProgram: IShaderProgram, modelData: WoWModelData): IM2DataBuffers {
         if (this.m2DataBufferCache.contains(fileId)) {
             return this.m2DataBufferCache.get(fileId);
@@ -456,7 +446,17 @@ export class RenderingEngine implements IDisposable {
         return buffers;
     }
 
-    getRandomNumberGenerator(seed?: number|string) {
+    addEngineMaterialParams(material: RenderMaterial) {
+        material.useUniforms({
+            "u_ambientColor": this.ambientColor,
+            "u_lightColor": this.lightColor,
+            "u_lightDir": this.lightDir,
+            "u_viewMatrix": this.viewMatrix,
+            "u_projectionMatrix": this.projectionMatrix,
+        });
+    }
+
+    getRandomNumberGenerator(seed?: number | string) {
         return new AleaPrngGenerator(seed ? seed : 0xb00b1e5);
     }
 
@@ -484,7 +484,7 @@ export class RenderingEngine implements IDisposable {
     }
 
     private destroyDebugElements() {
-        if(this.fpsElement) {
+        if (this.fpsElement) {
             this.fpsElement.remove()
             this.fpsElement = null;
         }
