@@ -617,6 +617,7 @@ export class WMOModel extends WorldPositionedObject {
                 if (Plane.distanceToPoint(plane, testPoint) > 0) {
                     Float4.scale(plane, -1, plane);
                 }
+                portalView.push(plane);
             }
 
             const thisGroup = this.modelData.groupInfo[groupIndex]
@@ -651,7 +652,6 @@ export class WMOModel extends WorldPositionedObject {
             const batchRequest = new RenderingBatchRequest(this.groupMaterials[-1]);
             batchRequest.useVertexArrayObject(this.portalVao);
             batchRequest.drawIndexedTriangles(portalData.startVertex * 1.5 * 2, portalData.vertexCount * 1.5);
-            // batchRequest.drawIndexedTriangles(0, this.portalCount);
             this.engine.submitBatchRequest(batchRequest);
         }
     }

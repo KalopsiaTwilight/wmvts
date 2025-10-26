@@ -137,7 +137,7 @@ export class RenderingEngine implements IDisposable {
 
         // Set opts to defaults
         this.debugPortals = false;
-        this.doodadRenderDistance = 200;
+        this.doodadRenderDistance = 300;
     }
 
     dispose(): void {
