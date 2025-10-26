@@ -24,9 +24,9 @@ export interface WoWModelViewerOptions {
         lightDirection?: Float3;
         lightColor?: Float4;
         ambientColor?: Float4;
-        disableLighting?: boolean;
         camera?: Camera;
-        objects?: RenderObject[]
+        objects?: RenderObject[];
+        disableLighting?: boolean;
     }
     misc?: {
         cacheTtl?: number
@@ -91,27 +91,19 @@ export class WoWModelViewer {
     }
 
     useLightDirection(newLightDir: Float3) {
-        this.renderEngine.lightDir = Float3.normalize(newLightDir);
+        Float3.copy(Float3.normalize(newLightDir), this.renderEngine.lightDir);
     }
 
     useLightColor(lightColor: Float4) {
-        this.renderEngine.lightColor = lightColor;
+        Float4.copy(lightColor, this.renderEngine.lightColor);
     }
     
     useAmbientColor(ambientColor: Float4) {
-        this.renderEngine.ambientColor = ambientColor;
+        Float4.copy(ambientColor, this.renderEngine.ambientColor);
     }
 
     useClearColor(color: Float4) {
-        this.renderEngine.clearColor = color;
-    }
-
-    disableLighting() {
-        this.renderEngine.lightingDisabled = true;
-    }
-
-    enableLighting() {
-        this.renderEngine.lightingDisabled = false;
+        Float4.copy(color, this.renderEngine.clearColor);
     }
 
     showDebug() {
@@ -132,6 +124,12 @@ export class WoWModelViewer {
 
     setDoodadRenderDistance(value: number) {
         this.renderEngine.doodadRenderDistance = value;
+    }
+
+    disableLighting() {
+    }
+
+    enableLighting() {
     }
 
     private initialize() {
@@ -188,8 +186,7 @@ export class WoWModelViewer {
             cameraFov: this.options.scene?.cameraFov,
             clearColor: this.options.canvas?.clearColor,
             lightColor: this.options.scene?.lightColor,
-            lightDirection: this.options.scene?.lightDirection,
-            disableLighting: this.options.scene?.disableLighting
+            lightDirection: this.options.scene?.lightDirection
         });
         this.resize(this.width, this.height);
         this.renderEngine.sceneCamera = this.options.scene?.camera ?? new Camera();

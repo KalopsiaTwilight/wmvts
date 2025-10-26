@@ -90,7 +90,6 @@ export class RenderingEngine implements IDisposable {
 
     // various options
     debugPortals: boolean;
-    lightingDisabled: boolean;
     doodadRenderDistance: number;
 
     constructor(graphics: IGraphics, dataLoader: IDataLoader, requestFrame: RequestFrameFunction,
@@ -128,7 +127,6 @@ export class RenderingEngine implements IDisposable {
         this.ambientColor = options.ambientColor ? options.ambientColor : Float4.create(1 / 3, 1 / 3, 1 / 3, 1);
         this.lightColor = options.lightColor ? options.lightColor : Float4.one()
         this.lightDir = Float3.normalize(options.lightDirection ? options.lightDirection : [0, 0, 1]);
-        this.lightingDisabled = options.disableLighting ? options.disableLighting : false;
 
         this.framesDrawn = 0;
         this.timeElapsed = 0;
