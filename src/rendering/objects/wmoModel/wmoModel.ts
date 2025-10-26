@@ -614,7 +614,7 @@ export class WMOModel extends WorldPositionedObject {
                 const testPoint = portal.vertices[(i - 1 + portal.vertices.length) % portal.vertices.length];
 
                 const plane = Plane.fromEyeAndVertices(this.localCamera, vertexA, vertexB)
-                if (Plane.distanceToPoint(plane, testPoint) > 0) {
+                if (Plane.distanceToPoint(plane, testPoint) < 0) {
                     Float4.scale(plane, -1, plane);
                 }
                 portalView.push(plane);
@@ -698,7 +698,6 @@ export class WMOModel extends WorldPositionedObject {
                 portalBuffer.push(portalData.startVertex + j + 2)
             }
         }
-        this.portalCount = portalBuffer.length;
         portalIB.setData(new Uint16Array(portalBuffer));
 
         this.portalVao = this.engine.graphics.createVertexArrayObject();
@@ -753,6 +752,7 @@ export class WMOModel extends WorldPositionedObject {
             "u_modelMatrix": this.worldModelMatrix,
             "u_color": Float4.create(0.8, 0.1, 0.1, 0.25)
         });
+        this.engine.addEngineMaterialParams(renderMaterial);
         this.groupMaterials[-1] = renderMaterial;
     }
 

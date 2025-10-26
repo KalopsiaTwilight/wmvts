@@ -171,7 +171,7 @@ void main() {
         gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);
         return;
     }
-;
+
     if (!u_unlit) {
         vec4 lightColor = u_ambientColor;
         float diffStrength = max(0.0, dot(v_normal, u_lightDir));
