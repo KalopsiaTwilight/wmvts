@@ -1,6 +1,6 @@
-import { WoWBoneData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureUnitData, WoWVertexData } from "@app/modeldata";
-import { RenderingEngine, BufferDataType, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, ColorMask, 
-    Float4, Float3, ITexture, Float44, IShaderProgram, GxBlend, M2BlendModeToEGxBlend, 
+import { WoWBoneData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureUnitData } from "@app/modeldata";
+import { RenderingEngine, ColorMask, 
+    Float4, Float3, ITexture, Float44, IShaderProgram, M2BlendModeToEGxBlend, 
     RenderingBatchRequest, AABB, MaterialKey,
     RenderMaterial,
     MaterialType,
@@ -42,7 +42,6 @@ export class M2Model extends WorldPositionedObject
     shaderProgram: IShaderProgram;
     bonePositionBuffer: Float32Array;
     dataBuffers: IM2DataBuffers
-    renderKey: MaterialKey;
 
     animationState: AnimationState;
     loadedTextures: { [key: number]: ITexture };
@@ -448,7 +447,6 @@ export class M2Model extends WorldPositionedObject
         this.invWorldModelMatrix = null;
         this.invModelViewMatrix = null;
         this.drawOrderTexUnits = null;
-        this.renderKey = null;
     }
 
     onModelLoaded(data: WoWModelData|null) {
