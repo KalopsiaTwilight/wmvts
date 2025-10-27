@@ -31,6 +31,16 @@ export interface BoneData {
     positionMatrix: Float44;
 }
 
+export enum AsyncActionType {
+    Unknown,
+    ReplaceTexture,
+}
+
+export interface AsyncAction {
+    type: AsyncActionType,
+    params: any[];
+}
+
 export class M2Model extends WorldPositionedObject
 {
     isModelDataLoaded: boolean;
@@ -55,6 +65,8 @@ export class M2Model extends WorldPositionedObject
     particleEmitters: M2ParticleEmitter[];
     ribbonEmitters: M2RibbonEmitter[];
 
+    onModelLoadedQueue: AsyncAction[];
+
     localBoundingBox: AABB;
     worldBoundingBox: AABB;
 
@@ -70,9 +82,9 @@ export class M2Model extends WorldPositionedObject
         this.invModelViewMatrix = Float44.identity();
         this.bonePositionBuffer = new Float32Array(16 * MAX_BONES);
 
+        this.onModelLoadedQueue = [];
+
         this.children = [];
-        this.particleEmitters = [];
-        this.ribbonEmitters = [];
     }
 
     get isLoaded() {
@@ -133,6 +145,18 @@ export class M2Model extends WorldPositionedObject
         for(let i = 0; i < this.modelData.ribbonEmitters.length; i++) {
             this.ribbonEmitters[i].draw();
         }
+    }
+
+    setTexture(index: number, fileId: number) {
+        if (!this.isModelDataLoaded) {
+            this.onModelLoadedQueue.push({
+                type: AsyncActionType.ReplaceTexture,
+                params: [index, fileId]
+            })
+            return;
+        }
+        this.modelData.textures[index].textureId = fileId;
+        this.loadTextures();
     }
 
     // Referenced from https://github.com/Deamon87/WebWowViewerCpp/blob/master/wowViewerLib/src/engine/managers/animationManager.cpp#L398
@@ -449,7 +473,7 @@ export class M2Model extends WorldPositionedObject
         this.drawOrderTexUnits = null;
     }
 
-    onModelLoaded(data: WoWModelData|null) {
+    private onModelLoaded(data: WoWModelData|null) {
         if (data === null) {
             this.dispose();
             return;
@@ -459,6 +483,9 @@ export class M2Model extends WorldPositionedObject
         }
 
         this.modelData = data;
+        for(const action of this.onModelLoadedQueue) {
+            this.applyAsyncAction(action);
+        }
 
         this.localBoundingBox = AABB.fromVertices(this.modelData.vertices.map(x => x.position), 0);
         this.worldBoundingBox = AABB.transform(this.localBoundingBox, this.worldModelMatrix);
@@ -491,6 +518,7 @@ export class M2Model extends WorldPositionedObject
     }
 
     private loadTextures() {
+        this.isTexturesLoaded = false;
         this.loadedTextures = { }
         const loadingPromises: Promise<void>[] = []
         for (let i = 0; i < this.modelData.textures.length; i++) {
@@ -514,18 +542,20 @@ export class M2Model extends WorldPositionedObject
     }
 
     private onTexturesLoaded() {
+        this.particleEmitters = new Array(this.modelData.particleEmitters.length);
+        this.ribbonEmitters = new Array(this.modelData.ribbonEmitters.length);
         for(let i = 0; i < this.modelData.particleEmitters.length; i++) {
             const exp2Data = this.modelData.particles[i];
             const emitterData = this.modelData.particleEmitters[i];
             // TODO: Refactor ctor to use parent.engine
             const emitter = new M2ParticleEmitter(this.engine, this, emitterData, exp2Data);
-            this.particleEmitters.push(emitter)
+            this.particleEmitters[i] = emitter;
         }
 
         for(let i = 0; i < this.modelData.ribbonEmitters.length; i++) {
             const emitterData = this.modelData.ribbonEmitters[i];
             const emitter = new M2RibbonEmitter(this, emitterData);
-            this.ribbonEmitters.push(emitter)
+            this.ribbonEmitters[i] = emitter;
         }
 
         
@@ -586,6 +616,12 @@ export class M2Model extends WorldPositionedObject
 
             this.engine.addEngineMaterialParams(renderMaterial);
             this.textureUnitData[i] = texUnitData;
+        }
+    }
+
+    private applyAsyncAction(action: AsyncAction) {
+        if(action.type == AsyncActionType.ReplaceTexture) {
+            this.modelData.textures[action.params[0]].textureId = action.params[1];
         }
     }
 }

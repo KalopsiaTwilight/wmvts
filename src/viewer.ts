@@ -59,11 +59,15 @@ export class WoWModelViewer {
     }
 
     addM2Model(fileId: number) {
-        this.addSceneObject(new M2Model(fileId));
+        const model = new M2Model(fileId);
+        this.addSceneObject(model);
+        return model;
     }
 
     addWMOModel(fileId: number) {
-        this.addSceneObject(new WMOModel(fileId))
+        const model = new WMOModel(fileId);
+        this.addSceneObject(model);
+        return model;
     }
 
     addSceneObject(object: RenderObject) {
