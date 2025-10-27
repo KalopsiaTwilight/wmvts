@@ -1,7 +1,7 @@
 import { parseCM2BoneFile, parseCM2File } from "./fileFormats";
 import { parseCWMOFile } from "./fileFormats/cwmo";
 import { IDataLoader, IProgressReporter } from "../iDataLoader";
-import { CharacterCustomizationMetadata, CharacterMetadata, ItemMetadata, ItemVisualMetadata, LiquidTypeMetadata } from "../metadata";
+import { CharacterCustomizationMetadata, CharacterMetadata, ItemMetadata, ItemVisualMetadata, LiquidTypeMetadata, TextureVariationsMetadata } from "../metadata";
 import { WoWBoneFileData, WoWModelData, WoWWorldModelData } from "../modeldata";
 
 
@@ -167,6 +167,23 @@ export class WoWModelServerDataProvider implements IDataLoader {
             }
 
             const data = await resp.json() as ItemVisualMetadata;
+            return data; 
+        }
+        catch {
+            return null;
+        }
+    }
+
+    async loadTextureVariationsMetadata(fileId: number) {
+        const url = `${this.rootPath}/modelviewer/metadata/texturevariations/${fileId}.json`;
+        try {
+            const resp = await fetch(url);
+
+            if (!resp.ok) {
+                return null;
+            }
+
+            const data = await resp.json() as TextureVariationsMetadata;
             return data; 
         }
         catch {

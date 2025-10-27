@@ -5,3 +5,4 @@ export * from './shared'
 export * from './spellVisualKit'
 export * from "./character"
 export * from "./liquid"
+export * from "./textureVariations"

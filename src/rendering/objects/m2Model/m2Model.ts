@@ -1,4 +1,4 @@
-import { WoWBoneData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureUnitData } from "@app/modeldata";
+import { WoWBoneData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureType, WoWTextureUnitData } from "@app/modeldata";
 import { RenderingEngine, ColorMask, 
     Float4, Float3, ITexture, Float44, IShaderProgram, M2BlendModeToEGxBlend, 
     RenderingBatchRequest, AABB, MaterialKey,
@@ -14,6 +14,7 @@ import { WorldPositionedObject } from "../worldPositionedObject";
 import { M2ParticleEmitter } from "./particleEmitter/m2ParticleEmitter";
 import { M2RibbonEmitter } from "./ribbonEmitter/m2RibbonEmitter";
 import { IM2DataBuffers } from "./m2DataBuffers";
+import { TextureVariationsMetadata } from "@app/metadata";
 
 const MAX_BONES = 256;
 
@@ -64,6 +65,8 @@ export class M2Model extends WorldPositionedObject
     drawOrderTexUnits: WoWTextureUnitData[];
     particleEmitters: M2ParticleEmitter[];
     ribbonEmitters: M2RibbonEmitter[];
+
+    textureVariations: TextureVariationsMetadata;
 
     onModelLoadedQueue: AsyncAction[];
 
@@ -156,6 +159,23 @@ export class M2Model extends WorldPositionedObject
             return;
         }
         this.modelData.textures[index].textureId = fileId;
+        this.loadTextures();
+    }
+
+    useTextureVariation(index: number) {
+        const data = this.textureVariations.textureVariations[index];
+        if (!data) {
+            return;
+        }
+
+        for(let i = 0; i < data.textureIds.length; i++) {
+            if (i >= this.modelData.textureCombos.length) {
+                break;
+            }
+            const textureCombo = this.modelData.textureCombos[i];
+            this.modelData.textures[textureCombo].textureId = data.textureIds[i];
+        }
+
         this.loadTextures();
     }
 
@@ -497,6 +517,7 @@ export class M2Model extends WorldPositionedObject
         }
 
         this.loadTextures();
+        this.engine.getTextureVariationsMetadata(this.fileId).then(this.onTextureVariationsLoaded.bind(this));
 
         this.dataBuffers = this.engine.getM2DataBuffers(this.fileId, this.shaderProgram, this.modelData);
 
@@ -515,6 +536,23 @@ export class M2Model extends WorldPositionedObject
         );
 
         this.isModelDataLoaded = true;
+    }
+
+    private onTextureVariationsLoaded(data: TextureVariationsMetadata|null) {
+        if (!data) {
+            return;
+        }
+        if (this.isDisposing) {
+            return;
+        }
+
+        this.textureVariations = data;
+        for(const textureInfo of this.modelData.textures) {
+            // Load first texture variation if any textures are undefined and have a usage type.
+            if (textureInfo.type !== WoWTextureType.None && textureInfo.textureId === 0) {
+                this.useTextureVariation(0);
+            }
+        }
     }
 
     private loadTextures() {

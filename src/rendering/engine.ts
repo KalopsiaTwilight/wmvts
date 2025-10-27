@@ -1,10 +1,10 @@
 import { AleaPrngGenerator, Float3, Float4, Float44, Frustrum } from "./math";
 import { Camera } from "../cameras";
 import { RenderObject, IDisposable, IM2DataBuffers, StaticM2DataBuffers } from "./objects";
-import { GxBlend, IGraphics, IShaderProgram, ITexture, ITextureOptions, MaterialKey, MaterialType, RenderingBatchRequest, RenderMaterial } from "./graphics";
+import { GxBlend, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest, RenderMaterial } from "./graphics";
 import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData, RequestFrameFunction } from "..";
 import { SimpleCache } from "./cache";
-import { LiquidTypeMetadata } from "@app/metadata/liquid";
+import { TextureVariationsMetadata, LiquidTypeMetadata } from "@app/metadata";
 
 const UNKNOWN_TEXTURE_ID = -123;
 
@@ -73,6 +73,7 @@ export class RenderingEngine implements IDisposable {
     liquidCache: SimpleCache<LiquidTypeMetadata>;
     m2DataBufferCache: SimpleCache<IM2DataBuffers>;
     materialCache: SimpleCache<RenderMaterial>;
+    textureVariationsCache: SimpleCache<TextureVariationsMetadata>;
     runningRequests: { [key: string]: Promise<unknown> }
 
     batchRequests: RenderingBatchRequest[];
@@ -119,6 +120,7 @@ export class RenderingEngine implements IDisposable {
         this.liquidCache = new SimpleCache(cacheTtl);
         this.m2DataBufferCache = new SimpleCache(cacheTtl);
         this.materialCache = new SimpleCache(cacheTtl);
+        this.textureVariationsCache = new SimpleCache(cacheTtl);
         this.runningRequests = {};
         this.batchRequests = [];
 
@@ -428,6 +430,29 @@ export class RenderingEngine implements IDisposable {
             this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve Liquid data for liquid: " + liquidId);
         }
         this.liquidCache.store(liquidId, data);
+        delete this.runningRequests[key];
+        this.progress?.removeFileFromOperation(key);
+        return data;
+    }
+
+    async getTextureVariationsMetadata(fileId: number): Promise<TextureVariationsMetadata | null> {
+        const key = "TextureVariations-" + fileId;
+
+        if (this.runningRequests[key]) {
+            const data = await this.runningRequests[key];
+            return data as TextureVariationsMetadata | null;
+        }
+
+        if (this.textureVariationsCache.contains(key)) {
+            return this.textureVariationsCache.get(key);
+        }
+
+        this.progress?.setOperation(LoadDataOperationText);
+        this.progress?.addFileToOperation(key);
+        const req = this.dataLoader.loadTextureVariationsMetadata(fileId);
+        this.runningRequests[key] = req;
+        const data = await req;
+        this.textureVariationsCache.store(key, data);
         delete this.runningRequests[key];
         this.progress?.removeFileFromOperation(key);
         return data;
