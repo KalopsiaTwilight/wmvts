@@ -526,10 +526,19 @@ export class M2Model extends WorldPositionedObject
     }
 
     override dispose(): void {
-        for(const emitter of this.particleEmitters) {
-            emitter.dispose();
-        }
         super.dispose();
+        if (this.particleEmitters) {
+            for(const emitter of this.particleEmitters) {
+                emitter.dispose();
+            }
+            this.particleEmitters = null;
+        }
+        if (this.ribbonEmitters) {
+            for(const emitter of this.ribbonEmitters) {
+                emitter.dispose();
+            }
+            this,this.ribbonEmitters = null;
+        }
         this.modelData = null;
         this.shaderProgram = null;
         this.dataBuffers = null;
