@@ -653,6 +653,10 @@ export class M2Model extends WorldPositionedObject
     }
 
     private onTexturesLoaded() {
+        if (this.isDisposing) {
+            return;
+        }
+        
         this.particleEmitters = new Array(this.modelData.particleEmitters.length);
         this.ribbonEmitters = new Array(this.modelData.ribbonEmitters.length);
         for(let i = 0; i < this.modelData.particleEmitters.length; i++) {
