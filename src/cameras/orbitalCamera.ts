@@ -113,12 +113,11 @@ export class OrbitalCamera extends Camera {
             }
 
             Float3.fromSpherical(this.currentRadius, this.theta, this.phi, this.position)
-            Float3.add(this.position, this.targetLocation);
         }
 
         Float44.lookAt(this.position, this.targetLocation, this.upDir, this.cameraMatrix);
+        Float44.translate(this.cameraMatrix, this.cameraTranslation, this.cameraMatrix);
         Float44.invert(this.cameraMatrix, this.viewMatrix);
-        Float44.translate(this.viewMatrix, this.cameraTranslation, this.viewMatrix);
     }
 
     override dispose() {
@@ -188,8 +187,9 @@ export class OrbitalCamera extends Camera {
         const xPct = (currentX - this.lastDragX) / this.containerWidth
         const yPct = (currentY - this.lastDragY) / this.containerHeight
         if (this.currentDragOperation === DragOperation.Translation) {
-            
-            Float3.add(this.cameraTranslation, Float3.create(xPct * this.currentRadius, 0, -yPct * this.currentRadius), this.cameraTranslation);
+
+            const deltaTranslation = Float3.create(-xPct * this.currentRadius, yPct * this.currentRadius, 0);
+            Float3.add(this.cameraTranslation, deltaTranslation, this.cameraTranslation);
         } else {
             const rotationScale = Math.PI;
             const deltaPhi = xPct * rotationScale;
@@ -199,7 +199,6 @@ export class OrbitalCamera extends Camera {
             this.phi -= deltaPhi;
 
             Float3.fromSpherical(this.currentRadius, this.theta, this.phi, this.position);
-            Float3.add(this.position, this.targetLocation);
         }
 
         this.lastDragX = currentX;
