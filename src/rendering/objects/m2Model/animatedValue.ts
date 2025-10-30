@@ -22,6 +22,10 @@ export class AnimationState {
     nextAnimActiveTime: number;
 
     blendFactor: number;
+    isPaused: boolean;
+    speed: number;
+
+    model: M2Model;
 
     constructor(model: M2Model) {
         this.animations = model.modelData.animations;
@@ -35,6 +39,9 @@ export class AnimationState {
         for(let i = 0; i < this.globalTimers.length; i++) {
             this.globalTimers[i] = 0;
         }
+
+        this.model = model;
+        this.speed = 1;
     }
 
     useAnimation(animId: number) {
@@ -48,7 +55,9 @@ export class AnimationState {
     }
 
     update(deltaTime: number) {
-        this.currentAnimActiveTime += deltaTime;
+        if (!this.isPaused) {
+            this.currentAnimActiveTime += deltaTime * this.speed;
+        }
         for(let i = 0; i < this.globalTimers.length; i++) {
             this.globalTimers[i] += deltaTime;
             if (this.globalLoops[i] > 0) {
@@ -56,7 +65,6 @@ export class AnimationState {
             }
         }
 
-        this.blendFactor = 1;
 
         let animTimeRemaining = this.currentAnimation.duration - this.currentAnimActiveTime;
         if (this.nextAnimation) {
@@ -64,10 +72,13 @@ export class AnimationState {
             if (blendTimeIn > 0 && animTimeRemaining < blendTimeIn) {
                 this.nextAnimActiveTime = (blendTimeIn - animTimeRemaining) % this.nextAnimation.duration;
                 this.blendFactor = animTimeRemaining / blendTimeIn;
+            } else {
+                this.blendFactor = 1;
             }
         }
+        
 
-        if (this.currentAnimActiveTime >= this.currentAnimation.duration) {
+        if (animTimeRemaining <= 0) {
             if (this.nextAnimation) {
                 this.currentAnimation = this.nextAnimation;
                 this.currentAnimActiveTime = this.nextAnimActiveTime;
@@ -86,7 +97,7 @@ export class AnimationState {
             let targetFreq = 32767 * Math.random(),
                 currentFreq = 0;
             
-            currentFreq += this.animations[this.currentAnimation.id].frequency;
+            currentFreq += this.animations[this.currentAnimation.variationNext].frequency;
             while(currentFreq < targetFreq && this.nextAnimation.variationNext > -1) {
                 this.nextAnimation = this.animations[this.currentAnimation.variationNext]
                 currentFreq +=  this.nextAnimation.frequency;
@@ -116,7 +127,8 @@ export class AnimationState {
             animId = FALLBACK_ANIM_ID;
         }
 
-        return track.animations[animId].timeStamps.length > 0;
+        const animTrack = track.animations[animId]; 
+        return animTrack && animTrack.timeStamps.length > 0;
     }
 
     getFloat3TrackValue(track: WoWTrackData<Float3>, fallback?: Float3, dest?: Float3) {
@@ -136,19 +148,23 @@ export class AnimationState {
             return fallback;
         }
 
-        const currentAnimId = this.currentAnimation.id;
+        let currentAnimId = this.currentAnimation.aliasNext
+        if (currentAnimId >= track.animations.length) {
+            currentAnimId = FALLBACK_ANIM_ID;
+        }
+
         let currentValue = this.calculateAnimatedValue(lerpFn, copyFn, track, currentAnimId, this.currentAnimActiveTime, fallback, dest);
-        if (this.blendFactor === 0 || this.blendFactor >= 1) {
+        if (this.blendFactor <= 0 || this.blendFactor >= 1) {
             return currentValue;
         }
         
-        let nextAnimId = this.nextAnimation.id;
+        let nextAnimId = this.nextAnimation.aliasNext;
         if (nextAnimId >= track.animations.length) {
             nextAnimId = FALLBACK_ANIM_ID;
         }
 
         const nextAnimValue = this.calculateAnimatedValue(lerpFn, copyFn, track, nextAnimId, this.nextAnimActiveTime, fallback, dest);
-        return lerpFn(currentValue, nextAnimValue, this.blendFactor, dest);
+        return lerpFn(nextAnimValue, currentValue, this.blendFactor, dest);
     }
 
     private calculateAnimatedValue<T>(lerpFn: LerpFn<T>, copyFn: CopyFn<T>, track: WoWTrackData<T>, animId: number, activeTime: number, fallback?: T, dest?: T) {
@@ -167,7 +183,11 @@ export class AnimationState {
 
             const finalTimestamp = animValues.timeStamps[animValues.timeStamps.length - 1];
             if (finalTimestamp > 0 && activeTime >= finalTimestamp) {
-                activeTime %= finalTimestamp;
+                if (track.globalSequence < 0) {
+                    activeTime %= finalTimestamp;
+                } else {
+                    activeTime = finalTimestamp;
+                }
             }
             let nextFrame = animValues.timeStamps.findIndex(x => x > activeTime);
             if (nextFrame < 0) {

@@ -5,7 +5,8 @@ import { RenderingEngine, ColorMask,
     RenderMaterial,
     MaterialType,
 } from "@app/rendering";
-import { AnimationState } from "./animatedValue";
+import { TextureVariationsMetadata } from "@app/metadata";
+import { distinct } from "@app/utils";
 
 import fragmentShaderProgramText from "./m2Model.frag"; 
 import vertexShaderProgramText from "./m2Model.vert";
@@ -14,11 +15,11 @@ import { WorldPositionedObject } from "../worldPositionedObject";
 import { M2ParticleEmitter } from "./particleEmitter/m2ParticleEmitter";
 import { M2RibbonEmitter } from "./ribbonEmitter/m2RibbonEmitter";
 import { IM2DataBuffers } from "./m2DataBuffers";
-import { TextureVariationsMetadata } from "@app/metadata";
+import { AnimationState } from "./animatedValue";
 
 const MAX_BONES = 256;
 
-export interface TextureUnitData {
+interface TextureUnitData {
     color: Float4;
     material: RenderMaterial,
     textureWeights: Float4;
@@ -26,33 +27,47 @@ export interface TextureUnitData {
     textureMatrices: Float44[];
 }
 
-export interface BoneData {
+interface BoneData {
     hasUpdatedThisTick: boolean;
     boneOffsetMatrix: Float44;
     positionMatrix: Float44;
 }
 
-export enum AsyncActionType {
+enum AsyncActionType {
     Unknown,
     ReplaceTexture,
 }
 
-export interface AsyncAction {
+interface AsyncAction {
     type: AsyncActionType,
     params: any[];
 }
 
+export type M2ModelCallbackTypes = "modelDataLoaded" | "textureVariationsLoaded"
+
+export type M2ModelModelDataLoadedCallback = (data: WoWModelData) => void;
+export type M2ModelModelTextureVariationsLoadedCallback = (data: TextureVariationsMetadata) => void;
+export type M2ModelCallbackFns = M2ModelModelDataLoadedCallback | M2ModelModelTextureVariationsLoadedCallback;
+
 export class M2Model extends WorldPositionedObject
 {
+    fileId: number;
+    modelData: WoWModelData;
+    textureVariations: TextureVariationsMetadata;
+
     isModelDataLoaded: boolean;
     isTexturesLoaded: boolean;
 
-    fileId: number;
-    modelData: WoWModelData;
+    particleEmitters: M2ParticleEmitter[];
+    ribbonEmitters: M2RibbonEmitter[];
 
+    // graphics data
     shaderProgram: IShaderProgram;
     bonePositionBuffer: Float32Array;
     dataBuffers: IM2DataBuffers
+
+    localBoundingBox: AABB;
+    worldBoundingBox: AABB;
 
     animationState: AnimationState;
     loadedTextures: { [key: number]: ITexture };
@@ -63,15 +78,11 @@ export class M2Model extends WorldPositionedObject
     invModelViewMatrix: Float44;
     isMirrored: boolean;
     drawOrderTexUnits: WoWTextureUnitData[];
-    particleEmitters: M2ParticleEmitter[];
-    ribbonEmitters: M2RibbonEmitter[];
 
-    textureVariations: TextureVariationsMetadata;
-
+    // Callbacks
     onModelLoadedQueue: AsyncAction[];
-
-    localBoundingBox: AABB;
-    worldBoundingBox: AABB;
+    dataLoadedCallbacks: M2ModelModelDataLoadedCallback[];
+    textureVariationsLoadedCallbacks: M2ModelModelTextureVariationsLoadedCallback[];
 
     constructor(fileId: number) {
         super();
@@ -86,6 +97,8 @@ export class M2Model extends WorldPositionedObject
         this.bonePositionBuffer = new Float32Array(16 * MAX_BONES);
 
         this.onModelLoadedQueue = [];
+        this.dataLoadedCallbacks = [];
+        this.textureVariationsLoadedCallbacks = [];
 
         this.children = [];
     }
@@ -177,6 +190,45 @@ export class M2Model extends WorldPositionedObject
         }
 
         this.loadTextures();
+    }
+
+    on(callbackType: "textureVariationsLoaded", fn: M2ModelModelTextureVariationsLoadedCallback): void
+    on(callbackType: "modelDataLoaded", fn: M2ModelModelDataLoadedCallback): void
+    on(callbackType: M2ModelCallbackTypes, fn: M2ModelCallbackFns): void {
+        if (callbackType === "textureVariationsLoaded") {
+            fn = fn as M2ModelModelTextureVariationsLoadedCallback;
+            this.textureVariationsLoadedCallbacks.push(fn);
+            if (this.textureVariations != null) {
+                fn(this.textureVariations);
+            }
+        } 
+        if (callbackType === "modelDataLoaded") {
+            fn = fn as M2ModelModelDataLoadedCallback;
+            this.dataLoadedCallbacks.push(fn);
+            if (this.modelData != null) {
+                fn(this.modelData);
+            }
+        }
+    }
+
+    getAnimations(): number[] {
+        return distinct(this.modelData.animations.map((x) => x.id)).sort((a,b) => a-b);
+    }
+
+    useAnimation(id: number) {
+        this.animationState.useAnimation(id);
+    }
+
+    pauseAnimation() {
+        this.animationState.isPaused = true;
+    }
+
+    resumeAnimation() {
+        this.animationState.isPaused = false;
+    }
+
+    setAnimationSpeed(speed: number) {
+        this.animationState.speed = speed;
     }
 
     // Referenced from https://github.com/Deamon87/WebWowViewerCpp/blob/master/wowViewerLib/src/engine/managers/animationManager.cpp#L398
@@ -491,6 +543,10 @@ export class M2Model extends WorldPositionedObject
         this.invWorldModelMatrix = null;
         this.invModelViewMatrix = null;
         this.drawOrderTexUnits = null;
+        this.textureVariations = null;
+        this.onModelLoadedQueue = null;
+        this.dataLoadedCallbacks = null;
+        this.textureVariationsLoadedCallbacks = null;
     }
 
     private onModelLoaded(data: WoWModelData|null) {
@@ -536,6 +592,9 @@ export class M2Model extends WorldPositionedObject
         );
 
         this.isModelDataLoaded = true;
+        for(const callback of this.dataLoadedCallbacks) {
+            callback(this.modelData);
+        }
     }
 
     private onTextureVariationsLoaded(data: TextureVariationsMetadata|null) {
@@ -552,6 +611,11 @@ export class M2Model extends WorldPositionedObject
             if (textureInfo.type !== WoWTextureType.None && textureInfo.textureId === 0) {
                 this.useTextureVariation(0);
             }
+        }
+
+        
+        for(const callback of this.textureVariationsLoadedCallbacks) {
+            callback(this.textureVariations);
         }
     }
 
@@ -625,9 +689,9 @@ export class M2Model extends WorldPositionedObject
                 }
             }
 
-            // TODO: Check if these materials can be made static without reference to texunit data if no animated values.
             const material = this.modelData.materials[texUnit.materialIndex];
             const blendMode = M2BlendModeToEGxBlend(material.blendingMode);
+            // TODO: Consider smaller shader programs per material VS/PS
             renderMaterial.useShaderProgram(this.shaderProgram);
             renderMaterial.useBackFaceCulling((4 & material.flags) == 0);
             renderMaterial.useCounterClockWiseFrontFaces(!this.isMirrored);
