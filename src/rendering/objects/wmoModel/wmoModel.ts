@@ -706,6 +706,10 @@ export class WMOModel extends WorldPositionedObject {
     }
 
     private setupMaterials() {
+        if (this.isDisposing) {
+            return;
+        }
+        
         for (let i = 0; i < this.modelData.materials.length; i++) {
             const material = this.modelData.materials[i];
             const blendMode = M2BlendModeToEGxBlend(material.blendMode);
