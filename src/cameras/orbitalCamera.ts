@@ -229,8 +229,8 @@ export class OrbitalCamera extends Camera {
         this.minRadius = 0.25 * distance;
         this.maxRadius = 2 * distance;
         this.zoomFactor = this.maxRadius / 50;
+        Float3.zero(this.cameraTranslation);
 
         Float3.fromSpherical(this.currentRadius, this.theta, this.phi, this.position);
-        Float3.add(this.position, this.targetLocation);
     }
 }
