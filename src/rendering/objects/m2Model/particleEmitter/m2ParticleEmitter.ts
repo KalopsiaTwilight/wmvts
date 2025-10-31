@@ -131,6 +131,9 @@ export class M2ParticleEmitter implements IDisposable {
     quadToViewZVector: Float3;
     nrQuads: number;
 
+    // Functional
+    show: boolean;
+
     constructor(engine: RenderingEngine, parent: M2Model, emitterData: WoWParticleEmitterData, exp2Data?: WoWExtendedParticleData) {
         this.engine = engine;
         this.parent = parent;
@@ -167,6 +170,7 @@ export class M2ParticleEmitter implements IDisposable {
         this.headCellTrack = new LocalAnimatedNumber(this.m2data.headCellTrack);
         this.tailCellTrack = new LocalAnimatedNumber(this.m2data.tailCellTrack);
         this.isDisposing = false;
+        this.show = true;
 
         this.initialize();
     }
@@ -313,7 +317,7 @@ export class M2ParticleEmitter implements IDisposable {
     }
 
     draw() {
-        if (this.isDisposing) return;
+        if (this.isDisposing || !this.show) return;
         if (this.particles.length <= 0) {
             return;
         }

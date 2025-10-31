@@ -1,6 +1,7 @@
 import { WoWBoneData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureType, WoWTextureUnitData } from "@app/modeldata";
-import { RenderingEngine, ColorMask, 
-    Float4, Float3, ITexture, Float44, IShaderProgram, M2BlendModeToEGxBlend, 
+import {
+    RenderingEngine, ColorMask,
+    Float4, Float3, ITexture, Float44, IShaderProgram, M2BlendModeToEGxBlend,
     RenderingBatchRequest, AABB, MaterialKey,
     RenderMaterial,
     MaterialType,
@@ -8,9 +9,9 @@ import { RenderingEngine, ColorMask,
 import { TextureVariationsMetadata } from "@app/metadata";
 import { distinct } from "@app/utils";
 
-import fragmentShaderProgramText from "./m2Model.frag"; 
+import fragmentShaderProgramText from "./m2Model.frag";
 import vertexShaderProgramText from "./m2Model.vert";
-import { getM2PixelShaderId, getM2VertexShaderId} from "./m2Shaders";
+import { getM2PixelShaderId, getM2VertexShaderId } from "./m2Shaders";
 import { WorldPositionedObject } from "../worldPositionedObject";
 import { M2ParticleEmitter } from "./particleEmitter/m2ParticleEmitter";
 import { M2RibbonEmitter } from "./ribbonEmitter/m2RibbonEmitter";
@@ -20,6 +21,8 @@ import { AnimationState } from "./animatedValue";
 const MAX_BONES = 256;
 
 interface TextureUnitData {
+    geoSetId: number;
+    show: boolean;
     color: Float4;
     material: RenderMaterial,
     textureWeights: Float4;
@@ -49,8 +52,9 @@ export type M2ModelModelDataLoadedCallback = (data: WoWModelData) => void;
 export type M2ModelModelTextureVariationsLoadedCallback = (data: TextureVariationsMetadata) => void;
 export type M2ModelCallbackFns = M2ModelModelDataLoadedCallback | M2ModelModelTextureVariationsLoadedCallback;
 
-export class M2Model extends WorldPositionedObject
-{
+const MAX_NUM_GEOSETS = 52;
+
+export class M2Model extends WorldPositionedObject {
     fileId: number;
     modelData: WoWModelData;
     textureVariations: TextureVariationsMetadata;
@@ -77,7 +81,7 @@ export class M2Model extends WorldPositionedObject
     modelViewMatrix: Float44;
     invModelViewMatrix: Float44;
     isMirrored: boolean;
-    drawOrderTexUnits: WoWTextureUnitData[];
+
 
     // Callbacks
     onModelLoadedQueue: AsyncAction[];
@@ -125,19 +129,19 @@ export class M2Model extends WorldPositionedObject
         Float44.multiply(this.worldModelMatrix, this.engine.viewMatrix, this.modelViewMatrix);
         Float44.invert(this.modelViewMatrix, this.invModelViewMatrix);
 
-        for(const data of this.boneData) {
+        for (const data of this.boneData) {
             data.hasUpdatedThisTick = false;
         }
         for (let i = 0; i < this.modelData.bones.length; i++) {
             this.updateBone(this.modelData.bones[i], i);
         }
-        for(let i = 0; i < this.drawOrderTexUnits.length; i++) {
+        for (let i = 0; i < this.textureUnitData.length; i++) {
             this.updateTextureUnit(this.modelData.textureUnits[i], i);
         }
-        for(let i = 0; i < this.modelData.particleEmitters.length; i++) {
+        for (let i = 0; i < this.modelData.particleEmitters.length; i++) {
             this.particleEmitters[i].update(deltaTime);
         }
-        for(let i = 0; i < this.modelData.ribbonEmitters.length; i++) {
+        for (let i = 0; i < this.modelData.ribbonEmitters.length; i++) {
             this.ribbonEmitters[i].update(deltaTime);
         }
     }
@@ -148,17 +152,20 @@ export class M2Model extends WorldPositionedObject
         }
 
         const numBones = Math.min(MAX_BONES, this.modelData.bones.length);
-        for(let i = 0; i < numBones; i++) {
+        for (let i = 0; i < numBones; i++) {
             this.bonePositionBuffer.set(this.boneData[i].positionMatrix, 16 * i);
         }
 
-        for(let i = 0; i < this.drawOrderTexUnits.length; i++) {
-            this.drawTextureUnit(this.modelData.textureUnits[i], i);
+        for (let i = 0; i < this.textureUnitData.length; i++) {
+            const texUnitData = this.textureUnitData[i];
+            if (texUnitData.show) {
+                this.drawTextureUnit(this.modelData.textureUnits[i], i);
+            }
         }
-        for(let i = 0; i < this.modelData.particleEmitters.length; i++) {
+        for (let i = 0; i < this.modelData.particleEmitters.length; i++) {
             this.particleEmitters[i].draw();
         }
-        for(let i = 0; i < this.modelData.ribbonEmitters.length; i++) {
+        for (let i = 0; i < this.modelData.ribbonEmitters.length; i++) {
             this.ribbonEmitters[i].draw();
         }
     }
@@ -181,7 +188,7 @@ export class M2Model extends WorldPositionedObject
             return;
         }
 
-        for(let i = 0; i < data.textureIds.length; i++) {
+        for (let i = 0; i < data.textureIds.length; i++) {
             if (i >= this.modelData.textureCombos.length) {
                 break;
             }
@@ -201,7 +208,7 @@ export class M2Model extends WorldPositionedObject
             if (this.textureVariations != null) {
                 fn(this.textureVariations);
             }
-        } 
+        }
         if (callbackType === "modelDataLoaded") {
             fn = fn as M2ModelModelDataLoadedCallback;
             this.dataLoadedCallbacks.push(fn);
@@ -212,7 +219,7 @@ export class M2Model extends WorldPositionedObject
     }
 
     getAnimations(): number[] {
-        return distinct(this.modelData.animations.map((x) => x.id)).sort((a,b) => a-b);
+        return distinct(this.modelData.animations.map((x) => x.id)).sort((a, b) => a - b);
     }
 
     useAnimation(id: number) {
@@ -229,6 +236,32 @@ export class M2Model extends WorldPositionedObject
 
     setAnimationSpeed(speed: number) {
         this.animationState.speed = speed;
+    }
+
+    toggleGeoset(geosetId: number, show: boolean) {
+        return this.toggleGeosets(geosetId, geosetId, show);
+    }
+
+    toggleGeosets(start: number, end: number, show: boolean) {
+        if (!this.textureUnitData || this.textureUnitData.length === 0) {
+            return;
+        }
+
+        for (let i = 0; i < this.textureUnitData.length; i++) {
+            const texUnitData = this.textureUnitData[i];
+            if (texUnitData.geoSetId >= start && texUnitData.geoSetId <= end) {
+                texUnitData.show = show;
+            }
+        }
+
+        if (this.modelData.particleEmitterGeosets && this.modelData.particleEmitterGeosets.length > 0) {
+            for (let i = 0; i < this.modelData.particleEmitterGeosets.length; ++i) {
+                let particleEmitterGeoset = this.modelData.particleEmitterGeosets[i];
+                if (particleEmitterGeoset >= start && particleEmitterGeoset <= end) {
+                    this.particleEmitters[i].show = show;
+                }
+            }
+        }
     }
 
     // Referenced from https://github.com/Deamon87/WebWowViewerCpp/blob/master/wowViewerLib/src/engine/managers/animationManager.cpp#L398
@@ -257,18 +290,18 @@ export class M2Model extends WorldPositionedObject
 
                 // Ignore both scale & rot, i.e. just use original 3x3 col vectors
                 if ((6 & bone.flags) === 6) {
-                    for(let i = 0; i < 3; i++) {
+                    for (let i = 0; i < 3; i++) {
                         Float44.setColumn(parentPosMatrix, i, Float44.getColumn4(this.modelViewMatrix, i))
                     }
                 }
                 // Ignore Rotation, i.e only apply scale 
                 else if ((4 & bone.flags)) {
-                    for(let i = 0; i < 3; i++) {
+                    for (let i = 0; i < 3; i++) {
                         const col = Float44.getColumn4(this.modelViewMatrix, i);
                         const colLength = Float4.length(col);
                         const parentCol = Float44.getColumn4(parentPosMatrix, i);
                         const parentColLength = Float4.length(parentCol);
-                        
+
                         // Apply scale to original vector by multiplying by (|scaled vector| / |orig vector|)
                         Float4.scale(col, parentColLength / colLength, col);
                         Float44.setColumn(parentPosMatrix, i, col);
@@ -276,12 +309,12 @@ export class M2Model extends WorldPositionedObject
                 }
                 // Ignore Scale, i.e. only apply rotation
                 else {
-                    for(let i = 0; i < 3; i++) {
+                    for (let i = 0; i < 3; i++) {
                         const col = Float44.getColumn4(this.modelViewMatrix, i);
                         const colLength = Float4.length(col);
                         const parentCol = Float44.getColumn4(parentPosMatrix, i);
                         const parentColLength = Float4.length(parentCol);
-                        
+
                         // Apply rotation to by scaling parent vector by (1 / |scaled vector| * |orig vector|)
                         Float4.scale(parentCol, 1 / parentColLength * colLength, col);
                         Float44.setColumn(parentPosMatrix, i, col);
@@ -372,9 +405,9 @@ export class M2Model extends WorldPositionedObject
 
                         const yAxis = Float44.getColumn4(animationMatrix, 1);
                         Float44.setColumn(positionMatrix, 1, Float4.normalize(
-                            this.isMirrored 
-                                ? Float4.create(-yAxis[1], -yAxis[2], yAxis[0], 0) 
-                                : Float4.create(yAxis[1], yAxis[2], -yAxis[0], 0) 
+                            this.isMirrored
+                                ? Float4.create(-yAxis[1], -yAxis[2], yAxis[0], 0)
+                                : Float4.create(yAxis[1], yAxis[2], -yAxis[0], 0)
                         ))
 
                         const zAxis = Float44.getColumn4(animationMatrix, 2);
@@ -383,7 +416,7 @@ export class M2Model extends WorldPositionedObject
                         ))
                     } else {
                         Float44.setColumn(positionMatrix, 0, Float4.create(0, 0, -1, 0));
-                        Float44.setColumn(positionMatrix, 1,this.isMirrored ? Float4.create(-1, 0, 0, 0) : Float4.create(1, 0, 0, 0));
+                        Float44.setColumn(positionMatrix, 1, this.isMirrored ? Float4.create(-1, 0, 0, 0) : Float4.create(1, 0, 0, 0));
                         Float44.setColumn(positionMatrix, 2, Float4.create(0, 1, 0, 0));
                     }
                 }
@@ -466,7 +499,7 @@ export class M2Model extends WorldPositionedObject
         }
 
         if (texUnit.textureWeightComboIndex > -1 && texUnit.textureWeightComboIndex < this.modelData.textureWeightCombos.length) {
-            for(let i = 0; i < texUnit.textureCount; i++) {
+            for (let i = 0; i < texUnit.textureCount; i++) {
                 const weightIndex = this.modelData.textureWeightCombos[texUnit.textureWeightComboIndex + i];
                 if (weightIndex > -1 && weightIndex < this.modelData.textureWeights.length) {
                     const weightData = this.modelData.textureWeights[weightIndex];
@@ -481,7 +514,7 @@ export class M2Model extends WorldPositionedObject
         data.color[3] *= data.textureWeights[0];
 
         if (texUnit.textureTransformComboIndex > -1 && texUnit.textureTransformComboIndex < this.modelData.textureTransformCombos.length) {
-            for(let i = 0; i < texUnit.textureCount; i++) {
+            for (let i = 0; i < texUnit.textureCount; i++) {
                 const textureMatrix = data.textureMatrices[i];
 
                 Float44.identity(textureMatrix);
@@ -528,16 +561,16 @@ export class M2Model extends WorldPositionedObject
     override dispose(): void {
         super.dispose();
         if (this.particleEmitters) {
-            for(const emitter of this.particleEmitters) {
+            for (const emitter of this.particleEmitters) {
                 emitter.dispose();
             }
             this.particleEmitters = null;
         }
         if (this.ribbonEmitters) {
-            for(const emitter of this.ribbonEmitters) {
+            for (const emitter of this.ribbonEmitters) {
                 emitter.dispose();
             }
-            this,this.ribbonEmitters = null;
+            this, this.ribbonEmitters = null;
         }
         this.modelData = null;
         this.shaderProgram = null;
@@ -551,14 +584,13 @@ export class M2Model extends WorldPositionedObject
         this.modelViewMatrix = null;
         this.invWorldModelMatrix = null;
         this.invModelViewMatrix = null;
-        this.drawOrderTexUnits = null;
         this.textureVariations = null;
         this.onModelLoadedQueue = null;
         this.dataLoadedCallbacks = null;
         this.textureVariationsLoadedCallbacks = null;
     }
 
-    private onModelLoaded(data: WoWModelData|null) {
+    private onModelLoaded(data: WoWModelData | null) {
         if (data === null) {
             this.dispose();
             return;
@@ -568,13 +600,13 @@ export class M2Model extends WorldPositionedObject
         }
 
         this.modelData = data;
-        for(const action of this.onModelLoadedQueue) {
+        for (const action of this.onModelLoadedQueue) {
             this.applyAsyncAction(action);
         }
 
         this.localBoundingBox = AABB.fromVertices(this.modelData.vertices.map(x => x.position), 0);
         this.worldBoundingBox = AABB.transform(this.localBoundingBox, this.worldModelMatrix);
-        
+
         this.animationState = new AnimationState(this);
         this.animationState.useAnimation(0);
         if (!this.parent) {
@@ -588,25 +620,20 @@ export class M2Model extends WorldPositionedObject
 
         this.boneData = new Array(this.modelData.bones.length);
         for (let i = 0; i < this.modelData.bones.length; i++) {
-            this.boneData[i] = { 
-                boneOffsetMatrix: null, 
-                hasUpdatedThisTick: false, 
-                positionMatrix: Float44.identity() 
+            this.boneData[i] = {
+                boneOffsetMatrix: null,
+                hasUpdatedThisTick: false,
+                positionMatrix: Float44.identity()
             };
         }
 
-        this.drawOrderTexUnits = this.modelData.textureUnits.sort((a, b) => a.priority != b.priority 
-                ? a.priority - b.priority 
-                : this.modelData.submeshes[a.skinSectionIndex].submeshId - this.modelData.submeshes[b.skinSectionIndex].submeshId
-        );
-
         this.isModelDataLoaded = true;
-        for(const callback of this.dataLoadedCallbacks) {
+        for (const callback of this.dataLoadedCallbacks) {
             callback(this.modelData);
         }
     }
 
-    private onTextureVariationsLoaded(data: TextureVariationsMetadata|null) {
+    private onTextureVariationsLoaded(data: TextureVariationsMetadata | null) {
         if (!data) {
             return;
         }
@@ -615,26 +642,26 @@ export class M2Model extends WorldPositionedObject
         }
 
         this.textureVariations = data;
-        for(const textureInfo of this.modelData.textures) {
+        for (const textureInfo of this.modelData.textures) {
             // Load first texture variation if any textures are undefined and have a usage type.
             if (textureInfo.type !== WoWTextureType.None && textureInfo.textureId === 0) {
                 this.useTextureVariation(0);
             }
         }
 
-        
-        for(const callback of this.textureVariationsLoadedCallbacks) {
+
+        for (const callback of this.textureVariationsLoadedCallbacks) {
             callback(this.textureVariations);
         }
     }
 
     private loadTextures() {
         this.isTexturesLoaded = false;
-        this.loadedTextures = { }
+        this.loadedTextures = {}
         const loadingPromises: Promise<void>[] = []
         for (let i = 0; i < this.modelData.textures.length; i++) {
             const textureId = this.modelData.textures[i].textureId
-            if(textureId > 0) {
+            if (textureId > 0) {
                 const promise = this.engine.getTexture(textureId).then((texture) => {
                     if (!this.isDisposing) {
                         this.loadedTextures[textureId] = texture
@@ -656,10 +683,10 @@ export class M2Model extends WorldPositionedObject
         if (this.isDisposing) {
             return;
         }
-        
+
         this.particleEmitters = new Array(this.modelData.particleEmitters.length);
         this.ribbonEmitters = new Array(this.modelData.ribbonEmitters.length);
-        for(let i = 0; i < this.modelData.particleEmitters.length; i++) {
+        for (let i = 0; i < this.modelData.particleEmitters.length; i++) {
             const exp2Data = this.modelData.particles[i];
             const emitterData = this.modelData.particleEmitters[i];
             // TODO: Refactor ctor to use parent.engine
@@ -667,75 +694,86 @@ export class M2Model extends WorldPositionedObject
             this.particleEmitters[i] = emitter;
         }
 
-        for(let i = 0; i < this.modelData.ribbonEmitters.length; i++) {
+        for (let i = 0; i < this.modelData.ribbonEmitters.length; i++) {
             const emitterData = this.modelData.ribbonEmitters[i];
             const emitter = new M2RibbonEmitter(this, emitterData);
             this.ribbonEmitters[i] = emitter;
         }
 
-        
+
         this.textureUnitData = new Array(this.modelData.textureUnits.length);
-        for(let i = 0; i < this.modelData.textureUnits.length; i++) {
-            const texUnit = this.modelData.textureUnits[i];
-            
-            const materialKey = new MaterialKey(this.fileId, MaterialType.M2Material, i);
-            let renderMaterial = new RenderMaterial(materialKey);
+        for (let i = 0; i < this.modelData.textureUnits.length; i++) {
+            this.createTextureUnitData(i);
+        }
 
-            const unkTexture = this.engine.getUnknownTexture();
-            const texUnitData = { 
-                color: Float4.one(),
-                textureMatrices: [Float44.identity(), Float44.identity()],
-                textureWeights: Float4.one(),
-                textures: [unkTexture, unkTexture, unkTexture, unkTexture],
-                material: renderMaterial
-            }
-
-            if (!(texUnit.textureComboIndex < 0 || texUnit.textureComboIndex > this.modelData.textureCombos.length)) {
-                for(let j = 0; j < texUnit.textureCount; j++) {
-                    const textureIndex = this.modelData.textureCombos[texUnit.textureComboIndex + j];
-                    if (textureIndex > -1 && textureIndex < this.modelData.textures.length) {
-                        const textureData = this.modelData.textures[textureIndex];
-                        if (this.loadedTextures[textureData.textureId]) {
-                            texUnitData.textures[j] = this.loadedTextures[textureData.textureId];
-                        }
-                    }
-                }
-            }
-
-            const material = this.modelData.materials[texUnit.materialIndex];
-            const blendMode = M2BlendModeToEGxBlend(material.blendingMode);
-            // TODO: Consider smaller shader programs per material VS/PS
-            renderMaterial.useShaderProgram(this.shaderProgram);
-            renderMaterial.useBackFaceCulling((4 & material.flags) == 0);
-            renderMaterial.useCounterClockWiseFrontFaces(!this.isMirrored);
-            renderMaterial.useBlendMode(blendMode);
-            renderMaterial.useDepthTest((WoWMaterialFlags.DepthTest & material.flags) == 0);
-            renderMaterial.useDepthWrite((WoWMaterialFlags.DepthWrite & material.flags) == 0);
-            renderMaterial.useColorMask(ColorMask.Alpha | ColorMask.Blue | ColorMask.Green | ColorMask.Red);
-            renderMaterial.useUniforms({
-                "u_boneMatrices": this.bonePositionBuffer,
-                "u_modelMatrix": this.worldModelMatrix,
-                "u_textureTransformMatrix1": texUnitData.textureMatrices[0],
-                "u_textureTransformMatrix2": texUnitData.textureMatrices[1],
-                "u_color": texUnitData.color,
-                "u_vertexShader": getM2VertexShaderId(texUnit.shaderId, texUnit.textureCount), 
-                "u_blendMode": blendMode,
-                "u_pixelShader": getM2PixelShaderId(texUnit.shaderId, texUnit.textureCount),
-                "u_unlit": 0 != (WoWMaterialFlags.Unlit & material.flags),
-                "u_texture1": texUnitData.textures[0],
-                "u_texture2": texUnitData.textures[1],
-                "u_texture3": texUnitData.textures[2],
-                "u_texture4": texUnitData.textures[3],
-                "u_textureWeights": texUnitData.textureWeights
-            })
-
-            this.engine.addEngineMaterialParams(renderMaterial);
-            this.textureUnitData[i] = texUnitData;
+        this.toggleGeosets(1, MAX_NUM_GEOSETS * 100, false);
+        for(let i = 0; i < MAX_NUM_GEOSETS; i++) {
+            this.toggleGeoset(i * 100 + 1, true);
         }
     }
 
+    private createTextureUnitData(i: number) {
+        const texUnit = this.modelData.textureUnits[i];
+
+        const materialKey = new MaterialKey(this.fileId, MaterialType.M2Material, i);
+        let renderMaterial = new RenderMaterial(materialKey);
+
+        const unkTexture = this.engine.getUnknownTexture();
+        const texUnitData: TextureUnitData = {
+            color: Float4.one(),
+            textureMatrices: [Float44.identity(), Float44.identity()],
+            textureWeights: Float4.one(),
+            textures: [unkTexture, unkTexture, unkTexture, unkTexture],
+            material: renderMaterial,
+            geoSetId: this.modelData.submeshes[texUnit.skinSectionIndex].submeshId,
+            show: true
+        }
+
+        if (!(texUnit.textureComboIndex < 0 || texUnit.textureComboIndex > this.modelData.textureCombos.length)) {
+            for (let j = 0; j < texUnit.textureCount; j++) {
+                const textureIndex = this.modelData.textureCombos[texUnit.textureComboIndex + j];
+                if (textureIndex > -1 && textureIndex < this.modelData.textures.length) {
+                    const textureData = this.modelData.textures[textureIndex];
+                    if (this.loadedTextures[textureData.textureId]) {
+                        texUnitData.textures[j] = this.loadedTextures[textureData.textureId];
+                    }
+                }
+            }
+        }
+
+        const material = this.modelData.materials[texUnit.materialIndex];
+        const blendMode = M2BlendModeToEGxBlend(material.blendingMode);
+        // TODO: Consider smaller shader programs per material VS/PS
+        renderMaterial.useShaderProgram(this.shaderProgram);
+        renderMaterial.useBackFaceCulling((4 & material.flags) == 0);
+        renderMaterial.useCounterClockWiseFrontFaces(!this.isMirrored);
+        renderMaterial.useBlendMode(blendMode);
+        renderMaterial.useDepthTest((WoWMaterialFlags.DepthTest & material.flags) == 0);
+        renderMaterial.useDepthWrite((WoWMaterialFlags.DepthWrite & material.flags) == 0);
+        renderMaterial.useColorMask(ColorMask.Alpha | ColorMask.Blue | ColorMask.Green | ColorMask.Red);
+        renderMaterial.useUniforms({
+            "u_boneMatrices": this.bonePositionBuffer,
+            "u_modelMatrix": this.worldModelMatrix,
+            "u_textureTransformMatrix1": texUnitData.textureMatrices[0],
+            "u_textureTransformMatrix2": texUnitData.textureMatrices[1],
+            "u_color": texUnitData.color,
+            "u_vertexShader": getM2VertexShaderId(texUnit.shaderId, texUnit.textureCount),
+            "u_blendMode": blendMode,
+            "u_pixelShader": getM2PixelShaderId(texUnit.shaderId, texUnit.textureCount),
+            "u_unlit": 0 != (WoWMaterialFlags.Unlit & material.flags),
+            "u_texture1": texUnitData.textures[0],
+            "u_texture2": texUnitData.textures[1],
+            "u_texture3": texUnitData.textures[2],
+            "u_texture4": texUnitData.textures[3],
+            "u_textureWeights": texUnitData.textureWeights
+        })
+
+        this.engine.addEngineMaterialParams(renderMaterial);
+        this.textureUnitData[i] = texUnitData;
+    }
+
     private applyAsyncAction(action: AsyncAction) {
-        if(action.type == AsyncActionType.ReplaceTexture) {
+        if (action.type == AsyncActionType.ReplaceTexture) {
             this.modelData.textures[action.params[0]].textureId = action.params[1];
         }
     }
