@@ -36,21 +36,12 @@ interface BoneData {
     positionMatrix: Float44;
 }
 
-enum AsyncActionType {
-    Unknown,
-    ReplaceTexture,
-}
-
-interface AsyncAction {
-    type: AsyncActionType,
-    params: any[];
-}
-
-export type M2ModelCallbackTypes = "modelDataLoaded" | "textureVariationsLoaded"
-
-export type M2ModelModelDataLoadedCallback = (data: WoWModelData) => void;
-export type M2ModelModelTextureVariationsLoadedCallback = (data: TextureVariationsMetadata) => void;
-export type M2ModelCallbackFns = M2ModelModelDataLoadedCallback | M2ModelModelTextureVariationsLoadedCallback;
+export type M2ModelCallbackType = "modelDataLoaded" | "textureVariationsLoaded" | "texturesLoaded" | "texturesLoadStart"
+export type M2ModelCallbackFn = (model: M2Model) => void;
+export interface M2ModelCallbackData {
+    persistent: boolean;
+    fn: M2ModelCallbackFn
+};
 
 const MAX_NUM_GEOSETS = 52;
 
@@ -75,6 +66,7 @@ export class M2Model extends WorldPositionedObject {
 
     animationState: AnimationState;
     loadedTextures: { [key: number]: ITexture };
+
     textureUnitData: TextureUnitData[]
     boneData: BoneData[];
 
@@ -82,11 +74,7 @@ export class M2Model extends WorldPositionedObject {
     invModelViewMatrix: Float44;
     isMirrored: boolean;
 
-
-    // Callbacks
-    onModelLoadedQueue: AsyncAction[];
-    dataLoadedCallbacks: M2ModelModelDataLoadedCallback[];
-    textureVariationsLoadedCallbacks: M2ModelModelTextureVariationsLoadedCallback[];
+    callbacks: { [key: string]: M2ModelCallbackData[] }
 
     constructor(fileId: number) {
         super();
@@ -100,9 +88,7 @@ export class M2Model extends WorldPositionedObject {
         this.invModelViewMatrix = Float44.identity();
         this.bonePositionBuffer = new Float32Array(16 * MAX_BONES);
 
-        this.onModelLoadedQueue = [];
-        this.dataLoadedCallbacks = [];
-        this.textureVariationsLoadedCallbacks = [];
+        this.callbacks = {};
 
         this.children = [];
     }
@@ -172,10 +158,9 @@ export class M2Model extends WorldPositionedObject {
 
     setTexture(index: number, fileId: number) {
         if (!this.isModelDataLoaded) {
-            this.onModelLoadedQueue.push({
-                type: AsyncActionType.ReplaceTexture,
-                params: [index, fileId]
-            })
+            this.on("texturesLoadStart", (model) => {
+                model.modelData.textures[index].textureId = fileId;
+            });
             return;
         }
         this.modelData.textures[index].textureId = fileId;
@@ -199,23 +184,22 @@ export class M2Model extends WorldPositionedObject {
         this.loadTextures();
     }
 
-    on(callbackType: "textureVariationsLoaded", fn: M2ModelModelTextureVariationsLoadedCallback): void
-    on(callbackType: "modelDataLoaded", fn: M2ModelModelDataLoadedCallback): void
-    on(callbackType: M2ModelCallbackTypes, fn: M2ModelCallbackFns): void {
-        if (callbackType === "textureVariationsLoaded") {
-            fn = fn as M2ModelModelTextureVariationsLoadedCallback;
-            this.textureVariationsLoadedCallbacks.push(fn);
-            if (this.textureVariations != null) {
-                fn(this.textureVariations);
-            }
+    on(type: M2ModelCallbackType, fn: M2ModelCallbackFn, persistent = false): void {
+        let dataNeeded: unknown;
+        switch(type) {
+            case "modelDataLoaded": dataNeeded = this.modelData; break;
+            case "textureVariationsLoaded": dataNeeded = this.textureVariations; break;
+            case "texturesLoadStart": dataNeeded = this.textureUnitData; break;
+            case "texturesLoaded": dataNeeded = this.textureUnitData; break;
+            default: dataNeeded = null; break;
         }
-        if (callbackType === "modelDataLoaded") {
-            fn = fn as M2ModelModelDataLoadedCallback;
-            this.dataLoadedCallbacks.push(fn);
-            if (this.modelData != null) {
-                fn(this.modelData);
+        if (dataNeeded != null) {
+            fn(this);
+            if (!persistent) {
+                return;
             }
-        }
+        } 
+        this.addCallback(type, fn, persistent);
     }
 
     getAnimations(): number[] {
@@ -585,12 +569,10 @@ export class M2Model extends WorldPositionedObject {
         this.invWorldModelMatrix = null;
         this.invModelViewMatrix = null;
         this.textureVariations = null;
-        this.onModelLoadedQueue = null;
-        this.dataLoadedCallbacks = null;
-        this.textureVariationsLoadedCallbacks = null;
+        this.callbacks = null;
     }
 
-    private onModelLoaded(data: WoWModelData | null) {
+    protected onModelLoaded(data: WoWModelData | null) {
         if (data === null) {
             this.dispose();
             return;
@@ -600,9 +582,6 @@ export class M2Model extends WorldPositionedObject {
         }
 
         this.modelData = data;
-        for (const action of this.onModelLoadedQueue) {
-            this.applyAsyncAction(action);
-        }
 
         this.localBoundingBox = AABB.fromVertices(this.modelData.vertices.map(x => x.position), 0);
         this.worldBoundingBox = AABB.transform(this.localBoundingBox, this.worldModelMatrix);
@@ -613,7 +592,6 @@ export class M2Model extends WorldPositionedObject {
             this.resizeForBounds();
         }
 
-        this.loadTextures();
         this.engine.getTextureVariationsMetadata(this.fileId).then(this.onTextureVariationsLoaded.bind(this));
 
         this.dataBuffers = this.engine.getM2DataBuffers(this.fileId, this.shaderProgram, this.modelData);
@@ -628,36 +606,28 @@ export class M2Model extends WorldPositionedObject {
         }
 
         this.isModelDataLoaded = true;
-        for (const callback of this.dataLoadedCallbacks) {
-            callback(this.modelData);
-        }
+        this.processCallbacks("modelDataLoaded");
     }
 
     private onTextureVariationsLoaded(data: TextureVariationsMetadata | null) {
-        if (!data) {
-            return;
-        }
         if (this.isDisposing) {
             return;
         }
 
+        if (!data) {
+            this.loadTextures();
+            return;
+        }
+
         this.textureVariations = data;
-        for (const textureInfo of this.modelData.textures) {
-            // Load first texture variation if any textures are undefined and have a usage type.
-            if (textureInfo.type !== WoWTextureType.None && textureInfo.textureId === 0) {
-                this.useTextureVariation(0);
-            }
-        }
-
-
-        for (const callback of this.textureVariationsLoadedCallbacks) {
-            callback(this.textureVariations);
-        }
+        this.processCallbacks("textureVariationsLoaded");
     }
 
     private loadTextures() {
         this.isTexturesLoaded = false;
         this.loadedTextures = {}
+
+        this.processCallbacks("texturesLoadStart");
         const loadingPromises: Promise<void>[] = []
         for (let i = 0; i < this.modelData.textures.length; i++) {
             const textureId = this.modelData.textures[i].textureId
@@ -668,8 +638,6 @@ export class M2Model extends WorldPositionedObject {
                     }
                 })
                 loadingPromises.push(promise);
-            } else {
-                this.loadedTextures[i] = this.engine.getUnknownTexture();
             }
         }
 
@@ -706,10 +674,7 @@ export class M2Model extends WorldPositionedObject {
             this.createTextureUnitData(i);
         }
 
-        this.toggleGeosets(1, MAX_NUM_GEOSETS * 100, false);
-        for(let i = 0; i < MAX_NUM_GEOSETS; i++) {
-            this.toggleGeoset(i * 100 + 1, true);
-        }
+        this.processCallbacks("texturesLoaded");
     }
 
     private createTextureUnitData(i: number) {
@@ -771,10 +736,24 @@ export class M2Model extends WorldPositionedObject {
         this.engine.addEngineMaterialParams(renderMaterial);
         this.textureUnitData[i] = texUnitData;
     }
+    
+    private addCallback(type: M2ModelCallbackType, fn: M2ModelCallbackFn, persistent: boolean) {
+        if (!this.callbacks[type]) {
+            this.callbacks[type] = [];
+        }
+        this.callbacks[type].push({ persistent, fn});
+    }
 
-    private applyAsyncAction(action: AsyncAction) {
-        if (action.type == AsyncActionType.ReplaceTexture) {
-            this.modelData.textures[action.params[0]].textureId = action.params[1];
+    private processCallbacks(type: M2ModelCallbackType) {
+        if (this.callbacks[type]) {
+            for(let i = 0; i < this.callbacks[type].length; i++) {
+                const data = this.callbacks[type][i];
+                data.fn(this);
+                if(!data.persistent) {
+                    this.callbacks[type].splice(i, 1);
+                    i--;
+                }
+            }
         }
     }
 }

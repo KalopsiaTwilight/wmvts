@@ -4,7 +4,9 @@ import { RenderObject, IDisposable, IM2DataBuffers, StaticM2DataBuffers } from "
 import { GxBlend, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest, RenderMaterial } from "./graphics";
 import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData, RequestFrameFunction } from "..";
 import { SimpleCache } from "./cache";
-import { TextureVariationsMetadata, LiquidTypeMetadata } from "@app/metadata";
+import { TextureVariationsMetadata, LiquidTypeMetadata, CharacterMetadata } from "@app/metadata";
+
+import { defaultTexturePickingStrategy, ITexturePickingStrategy } from "./strategies";
 
 const UNKNOWN_TEXTURE_ID = -123;
 
@@ -37,20 +39,34 @@ export interface RenderingEngineOptions {
 }
 
 export class RenderingEngine implements IDisposable {
+    // Options / Configurables
     graphics: IGraphics;
     dataLoader: IDataLoader;
     requestFrame: RequestFrameFunction;
-
     containerElement?: HTMLElement;
     progress?: IProgressReporter;
     errorHandler?: ErrorHandlerFn;
+    sceneCamera: Camera;
+    texturePickingStrategy: ITexturePickingStrategy
 
+    // Rendering settings
+    fov: number;
+    width: number;
+    height: number;
+    clearColor: Float4;
+    doodadRenderDistance: number;
+    debugPortals: boolean;
+
+    // Light settings
+    ambientColor: Float4;
+    lightColor: Float4;
+    lightDir: Float3;
+
+    // Working data
     isDisposing: boolean;
     lastTime: number;
 
-    sceneCamera: Camera;
-    sceneObjects: RenderObject[];
-
+    // Camera data
     projectionMatrix: Float44;
     viewMatrix: Float44;
     invViewMatrix: Float44;
@@ -58,14 +74,8 @@ export class RenderingEngine implements IDisposable {
     cameraFrustrum: Frustrum;
     cameraPosition: Float3;
 
-    fov: number;
-    width: number;
-    height: number;
-    clearColor: Float4;
-    ambientColor: Float4;
-    lightColor: Float4;
-    lightDir: Float3;
-
+    // Caching. TODO: Simplify into single united cache?
+    caches: SimpleCache<unknown>[];
     textureCache: SimpleCache<ITexture>;
     shaderCache: SimpleCache<IShaderProgram>;
     wmoCache: SimpleCache<WoWWorldModelData>;
@@ -74,10 +84,10 @@ export class RenderingEngine implements IDisposable {
     m2DataBufferCache: SimpleCache<IM2DataBuffers>;
     materialCache: SimpleCache<RenderMaterial>;
     textureVariationsCache: SimpleCache<TextureVariationsMetadata>;
+    characterMetadataCache: SimpleCache<CharacterMetadata>;
     runningRequests: { [key: string]: Promise<unknown> }
 
-    batchRequests: RenderingBatchRequest[];
-
+    // Some stats
     framesDrawn: number;
     timeElapsed: number;
 
@@ -85,13 +95,14 @@ export class RenderingEngine implements IDisposable {
     maxFpsCounterSize: number;
     fpsCounter: number[];
 
+    // DOM References
     debugContainer?: HTMLDivElement;
     fpsElement?: HTMLParagraphElement;
     batchesElement?: HTMLParagraphElement;
 
-    // various options
-    debugPortals: boolean;
-    doodadRenderDistance: number;
+    // Drawing data
+    batchRequests: RenderingBatchRequest[];
+    sceneObjects: RenderObject[];
 
     constructor(graphics: IGraphics, dataLoader: IDataLoader, requestFrame: RequestFrameFunction,
         options: RenderingEngineOptions) {
@@ -112,15 +123,26 @@ export class RenderingEngine implements IDisposable {
         this.cameraFrustrum = Frustrum.zero();
         this.cameraPosition = Float3.zero();
 
+        this.caches = [];
         const cacheTtl = options.cacheTtl ? options.cacheTtl : 1000 * 60 * 15;
         this.textureCache = new SimpleCache(cacheTtl);
+        this.caches.push(this.textureCache);
         this.shaderCache = new SimpleCache(cacheTtl);
+        this.caches.push(this.shaderCache);
         this.wmoCache = new SimpleCache(cacheTtl);
+        this.caches.push(this.wmoCache);
         this.m2Cache = new SimpleCache(cacheTtl);
+        this.caches.push(this.m2Cache);
         this.liquidCache = new SimpleCache(cacheTtl);
+        this.caches.push(this.liquidCache);
         this.m2DataBufferCache = new SimpleCache(cacheTtl);
-        this.materialCache = new SimpleCache(cacheTtl);
+        this.caches.push(this.m2DataBufferCache);
         this.textureVariationsCache = new SimpleCache(cacheTtl);
+        this.caches.push(this.textureVariationsCache);
+        this.characterMetadataCache = new SimpleCache(cacheTtl);
+        this.caches.push(this.characterMetadataCache);
+
+
         this.runningRequests = {};
         this.batchRequests = [];
 
@@ -138,6 +160,9 @@ export class RenderingEngine implements IDisposable {
         // Set opts to defaults
         this.debugPortals = false;
         this.doodadRenderDistance = 300;
+
+        // TODO: make this configurable?
+        this.texturePickingStrategy = defaultTexturePickingStrategy;
     }
 
     dispose(): void {
@@ -175,10 +200,9 @@ export class RenderingEngine implements IDisposable {
             Frustrum.fromViewMatrix(this.projViewMatrix, this.cameraFrustrum);
             Float44.getTranslation(this.invViewMatrix, this.cameraPosition);
 
-            this.textureCache.update(deltaTime);
-            this.wmoCache.update(deltaTime);
-            this.m2Cache.update(deltaTime);
-            this.liquidCache.update(deltaTime);
+            for(const cache of this.caches) {
+                cache.update(deltaTime);
+            }
             for (const obj of this.sceneObjects) {
                 obj.update(deltaTime);
             }
@@ -363,96 +387,50 @@ export class RenderingEngine implements IDisposable {
         return program;
     }
 
-    async getM2ModelFile(fileId: number): Promise<WoWModelData | null> {
-        if (this.runningRequests[fileId]) {
-            const data = await this.runningRequests[fileId];
-            return data as WoWModelData | null;
-        }
-        if (this.m2Cache.contains(fileId)) {
-            return this.m2Cache.get(fileId);
-        }
-
-        this.progress?.setOperation(LoadDataOperationText);
-        this.progress?.addFileToOperation(fileId);
-        const req = this.dataLoader.loadModelFile(fileId);
-        this.runningRequests[fileId] = req;
-        const data = await req;
-        if (data === null) {
-            this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve M2 data for file: " + fileId);
-        }
-        delete this.runningRequests[fileId];
-        this.m2Cache.store(fileId, data);
-        this.progress?.removeFileFromOperation(fileId);
-        return data;
+    getM2ModelFile(fileId: number): Promise<WoWModelData | null> {
+        const key = "M2-" + fileId;
+        return this.getDataFromLoaderOrCache(this.m2Cache, key, (dl) => dl.loadModelFile(fileId))
     }
 
-    async getWMOModelFile(fileId: number): Promise<WoWWorldModelData | null> {
-        if (this.runningRequests[fileId]) {
-            const data = await this.runningRequests[fileId];
-            return data as WoWWorldModelData | null;
-        }
-        if (this.wmoCache.contains(fileId)) {
-            return this.wmoCache.get(fileId);
-        }
-        this.progress?.setOperation(LoadDataOperationText);
-        this.progress?.addFileToOperation(fileId);
-        const req = this.dataLoader.loadWorldModelFile(fileId);
-        this.runningRequests[fileId] = req;
-        const data = await req;
-        if (data === null) {
-            this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve WMO data for file: " + fileId);
-        }
-        this.wmoCache.store(fileId, data);
-        delete this.runningRequests[fileId];
-        this.progress?.removeFileFromOperation(fileId);
-        return data;
+    getWMOModelFile(fileId: number): Promise<WoWWorldModelData | null> {
+        const key = "WMO-" + fileId;
+        return this.getDataFromLoaderOrCache(this.wmoCache, key, (dl) => dl.loadWorldModelFile(fileId))
     }
 
-    async getLiquidTypeMetadata(liquidId: number): Promise<LiquidTypeMetadata | null> {
-        const key = liquidId;
+    getLiquidTypeMetadata(liquidId: number): Promise<LiquidTypeMetadata | null> {
+        const key = "LIQUID-" + liquidId;
+        return this.getDataFromLoaderOrCache(this.liquidCache, key, (dl) => dl.loadLiquidTypeMetadata(liquidId))
+    }
 
-        if (this.runningRequests[key]) {
-            const data = await this.runningRequests[key];
-            return data as LiquidTypeMetadata | null;
-        }
-
-        if (this.liquidCache.contains(liquidId)) {
-            return this.liquidCache.get(liquidId);
-        }
-
-        this.progress?.setOperation(LoadDataOperationText);
-        // TODO: Make this key based LIQUID - ID, FILE - ID etc.
-        this.progress?.addFileToOperation(key);
-        const req = this.dataLoader.loadLiquidTypeMetadata(liquidId);
-        this.runningRequests[key] = req;
-        const data = await req;
-        if (data === null) {
-            this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve Liquid data for liquid: " + liquidId);
-        }
-        this.liquidCache.store(liquidId, data);
-        delete this.runningRequests[key];
-        this.progress?.removeFileFromOperation(key);
-        return data;
+    getCharacterMetadata(modelId: number): Promise<CharacterMetadata | null> {
+        const key = "CHARACTER-" + modelId;
+        return this.getDataFromLoaderOrCache(this.characterMetadataCache, key, (dl) => dl.loadCharacterMetadata(modelId));
     }
 
     async getTextureVariationsMetadata(fileId: number): Promise<TextureVariationsMetadata | null> {
         const key = "TextureVariations-" + fileId;
+        return this.getDataFromLoaderOrCache(this.textureVariationsCache, key, (dl) => dl.loadTextureVariationsMetadata(fileId));
+    }
 
+    private async getDataFromLoaderOrCache<T>(cache: SimpleCache<T>, key: string, loadFn: (x: IDataLoader) => Promise<T>): Promise<T|null> {
         if (this.runningRequests[key]) {
             const data = await this.runningRequests[key];
-            return data as TextureVariationsMetadata | null;
+            return data as T;
         }
 
-        if (this.textureVariationsCache.contains(key)) {
-            return this.textureVariationsCache.get(key);
+        if (cache.contains(key)) {
+            return cache.get(key);
         }
 
         this.progress?.setOperation(LoadDataOperationText);
         this.progress?.addFileToOperation(key);
-        const req = this.dataLoader.loadTextureVariationsMetadata(fileId);
+        const req = loadFn(this.dataLoader);
         this.runningRequests[key] = req;
         const data = await req;
-        this.textureVariationsCache.store(key, data);
+        if (data === null) {
+            this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve data from dataloader for key: " + key);
+        }
+        cache.store(key, data);
         delete this.runningRequests[key];
         this.progress?.removeFileFromOperation(key);
         return data;

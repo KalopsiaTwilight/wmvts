@@ -6,7 +6,6 @@ export interface IDataLoader {
     loadBoneFile(fileId: number): Promise<WoWBoneFileData|null>
     loadTexture(fileId: number): Promise<string|null> 
     loadItemvisualMetadata(visualId: number): Promise<ItemVisualMetadata|null>
-    loadCharacterCustomizationMetadata(modelId: number): Promise<CharacterCustomizationMetadata|null>;
     loadCharacterMetadata(modelId: number): Promise<CharacterMetadata|null>;
     loadItemMetadata(displayId: number): Promise<ItemMetadata|null>;
     loadLiquidTypeMetadata(liquidId: number): Promise<LiquidTypeMetadata>;

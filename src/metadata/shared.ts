@@ -1,17 +1,17 @@
 export interface TextureFileData
 {
-    FileDataId: number;
-    ClassId: number;
-    GenderId: number;
-    RaceId: number;
-    UsageType: number;
+    fileDataId: number;
+    classId: number;
+    genderId: number;
+    raceId: number;
+    usageType: number;
 }
 
 export interface ModelFileData
 {
-    FileDataId: number;
-    ClassId: number;
-    GenderId: number;
-    RaceId: number;
-    PositionIndex: number;
+    fileDataId: number;
+    classId: number;
+    genderId: number;
+    raceId: number;
+    positionIndex: number;
 }
