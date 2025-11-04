@@ -2,7 +2,8 @@ import { createProgramInfo, createTexture, ProgramInfo, setUniforms } from "twgl
 import { IGraphics, IVertexDataBuffer, IVertexIndexBuffer, IShaderProgram, 
     IUniformsData, IVertexAttributePointer, ITexture, IVertexArrayObject,
     GxBlend, ColorMask, BufferDataType,
-    ITextureOptions
+    ITextureOptions,
+    IFrameBuffer
 } from "./abstractions";
 import { CachedGraphics } from "./cachedGraphics";
 import { Float4 } from "../math";
@@ -30,8 +31,10 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
         this.gl.depthFunc(this.gl.LEQUAL);
     }
 
-    clearFrame(color: Float4): void {
-        this.gl.clearColor(color[0], color[1], color[2], color[3]);
+    clearFrame(color?: Float4): void {
+        if (color) {
+            this.gl.clearColor(color[0], color[1], color[2], color[3]);
+        }
         this.gl.depthMask(true);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
     }
@@ -117,6 +120,11 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
             (mask & ColorMask.Alpha) > 0
         );
     }
+
+    setColorBufferToTexture(texture?: ITexture) {
+        const glTexture = (texture as WebGLTextureAbstraction).texture 
+        this.gl.framebufferTexture2D(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.gl.TEXTURE_2D, glTexture, 0);
+    }
     
     drawTriangles(offset: number, count: number): void {
         this.gl.drawArrays(this.gl.TRIANGLES, offset, count);
@@ -128,6 +136,12 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
     
     drawIndexedTriangleStrip(offset: number, count: number): void {
         this.gl.drawElements(this.gl.TRIANGLE_STRIP, count, this.gl.UNSIGNED_SHORT, offset);
+    }
+    
+    copyFrameToTexture(texture: ITexture, x: number, y: number, width: number, height: number) {
+        texture.bind();
+        this.gl.copyTexImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, x, y, width, height, 0);
+        texture.unbind();
     }
 
     private useGlFeature(feature: GLenum, val: boolean) {
@@ -144,21 +158,43 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
         gl.bindTexture(gl.TEXTURE_2D, glTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(Float4.scale(color, 255)));
         gl.bindTexture(gl.TEXTURE_2D, null);
-        return new WebGLTextureAbstraction(this.gl, glTexture);
+        const result = new WebGLTextureAbstraction(this.gl, glTexture);
+        result.width = 1;
+        result.height = 1;
+        return result;
+    }
+
+    createEmptyTexture(width: number, height: number) {
+        const gl = this.gl;
+        const glTexture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, glTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        // TODO: Make this call part of texture abstraction?           
+        gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        const result = new WebGLTextureAbstraction(this.gl, glTexture);
+        result.width = width;
+        result.height = height;
+        return result;
     }
 
     createTextureFromImg(img: HTMLImageElement, opts: ITextureOptions): ITexture {
-        return new WebGLTextureAbstraction(this.gl, createTexture(this.gl, {
+        const result = new WebGLTextureAbstraction(this.gl, createTexture(this.gl, {
             premultiplyAlpha: 0,
             src: img,
             auto: true,
             wrapS: opts?.clampS ? this.gl.CLAMP_TO_EDGE : this.gl.REPEAT,
             wrapT: opts?.clampT ? this.gl.CLAMP_TO_EDGE : this.gl.REPEAT
         }));
+        result.width = img.width;
+        result.height = img.height;
+        return result;
     }
+
     createVertexIndexBuffer(dynamic: boolean): IVertexIndexBuffer {
         return new WebGLVertexIndexBuffer(this.gl, dynamic);
     }
+
     createVertexDataBuffer(pointers: IVertexAttributePointer[], dynamic: boolean): IVertexDataBuffer {
         return new WebGlVertexDataBuffer(this.gl, pointers.map(
             (x) => new WebGlVertexAttribPointer(this.gl, x.index, x.size, 
@@ -169,11 +205,17 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
             )
         ), dynamic);
     }
+
     createShaderProgram(vertexShader: string, fragmentShader: string): IShaderProgram {
         return new WebGLShaderProgram(this.gl, vertexShader, fragmentShader);
     }
+
     createVertexArrayObject(): IVertexArrayObject {
         return new WebGlNativeVertexArrayObject(this.gl, this.glVaoExt);
+    }
+
+    createFrameBuffer(width: number, height: number): IFrameBuffer {
+        return new WebGlFrameBuffer(this.gl, width, height);
     }
 }
 
@@ -181,9 +223,17 @@ export class WebGLTextureAbstraction implements ITexture {
     gl: WebGLRenderingContext;
     texture: WebGLTexture
 
+    fileId: number;
+    width: number;
+    height: number;
+
     constructor(gl: WebGLRenderingContext, texture: WebGLTexture) {
         this.gl = gl;
         this.texture = texture;
+
+        this.fileId = 0;
+        this.width = 0;
+        this.height = 0;
     }
 
     bind(): void {
@@ -191,6 +241,14 @@ export class WebGLTextureAbstraction implements ITexture {
     }
     unbind(): void {
         this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+    }
+
+    swapFor(other?: ITexture): void {
+        const otherGlTexture = other as WebGLTextureAbstraction;
+        this.height = otherGlTexture.height;
+        this.width = otherGlTexture.width;
+        this.texture = otherGlTexture.texture;
+        this.fileId = otherGlTexture.fileId;
     }
 }
 
@@ -300,7 +358,6 @@ export class WebGlVertexDataBuffer implements IVertexIndexBuffer
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
     }
 }
-
 export class WebGLShaderProgram implements IShaderProgram
 {
     gl: WebGLRenderingContext;
@@ -340,7 +397,6 @@ export class WebGLShaderProgram implements IShaderProgram
         this.gl.useProgram(null);
     }
 }
-
 export class WebGlNativeVertexArrayObject implements IVertexArrayObject {
     gl: WebGLRenderingContext;
 
@@ -372,5 +428,31 @@ export class WebGlNativeVertexArrayObject implements IVertexArrayObject {
 
     unbind(): void {
         this.glVaoExt.bindVertexArrayOES(null);
+    }
+}
+
+export class WebGlFrameBuffer implements IFrameBuffer {    
+    gl: WebGLRenderingContext;
+    glFrameBuffer: WebGLFramebuffer;
+
+    width: number;
+    height: number;
+
+    colorBufferTexture?: ITexture;
+    
+    constructor(gl: WebGLRenderingContext, width: number, height: number) {
+        this.gl = gl;
+        this.width = width;
+        this.height = height;
+        this.glFrameBuffer = gl.createFramebuffer();
+    }
+
+    bind(): void {
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.glFrameBuffer);
+        this.gl.viewport(0, 0, this.width, this.height);
+    }
+    
+    unbind(): void {
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
     }
 }

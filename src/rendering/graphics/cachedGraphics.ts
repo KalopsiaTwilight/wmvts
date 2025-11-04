@@ -1,11 +1,12 @@
 import { Float4 } from "../math";
-import { IGraphics, IShaderProgram, ITexture, IVertexArrayObject, IVertexAttributePointer, IVertexDataBuffer, IVertexIndexBuffer, ColorMask, GxBlend, ITextureOptions } from "./abstractions";
+import { IGraphics, IShaderProgram, ITexture, IVertexArrayObject, IVertexAttributePointer, IVertexDataBuffer, IVertexIndexBuffer, ColorMask, GxBlend, ITextureOptions, IFrameBuffer } from "./abstractions";
 
 export abstract class CachedGraphics implements IGraphics {
     lastUsedVertexDataBuffer?: IVertexDataBuffer;
     lastUsedVertexIndexBuffer?: IVertexIndexBuffer;
     lastUsedShaderProgram?: IShaderProgram;
     lastUsedVertexArrayObject?: IVertexArrayObject;
+    lastUsedFrameBuffer?: IFrameBuffer;
 
     lastUsedBlendMode?: GxBlend;
     lastUsedDepthWrite?: boolean;
@@ -135,15 +136,34 @@ export abstract class CachedGraphics implements IGraphics {
         this.lastUsedVertexArrayObject = vao;
     }
 
+    useFrameBuffer(frameBuffer?: IFrameBuffer): void {
+        if (frameBuffer == this.lastUsedFrameBuffer) {
+            return;
+        }
+
+        if (frameBuffer) {
+            frameBuffer.bind();
+        } else {
+            this.lastUsedFrameBuffer.unbind();
+        }
+
+        this.lastUsedFrameBuffer = frameBuffer;
+    }
+
     abstract drawTriangles(offset: number, count: number): void;
     abstract drawIndexedTriangles(offset: number, count: number): void;
     abstract drawIndexedTriangleStrip(offset: number, count: number): void;
 
     abstract createTextureFromImg(img: HTMLImageElement, opts?: ITextureOptions): ITexture;
     abstract createSolidColorTexture(color: Float4): ITexture;
+    abstract createEmptyTexture(width: number, height: number): ITexture;
+    abstract setColorBufferToTexture(texture: ITexture): void;
 
     abstract createVertexArrayObject(): IVertexArrayObject;
     abstract createVertexIndexBuffer(dynamic: boolean): IVertexIndexBuffer
     abstract createVertexDataBuffer(pointers: IVertexAttributePointer[], dynamic: boolean): IVertexDataBuffer
     abstract createShaderProgram(vertexShader: string, fragmentShader: string): IShaderProgram
+    abstract createFrameBuffer(width: number, height: number): IFrameBuffer;
+
+    abstract copyFrameToTexture(texture: ITexture, x: number, y: number, width: number, height: number): void;
 }

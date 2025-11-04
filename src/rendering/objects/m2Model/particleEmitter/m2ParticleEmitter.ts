@@ -1,6 +1,9 @@
 import { WoWExtendedParticleData, WoWParticleEmitterData } from "@app/modeldata";
-import { BufferDataType, ColorMask, Float2, Float3, Float33, Float4, Float44, GxBlend, IDisposable, IPseudoRandomNumberGenerator, IShaderProgram, ITexture, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, RenderingBatchRequest, RenderingEngine, MaterialKey, RenderMaterial, MaterialType } from "@app/rendering";
-import { M2Model } from "../m2Model";
+import { 
+    BufferDataType, ColorMask, Float2, Float3, Float33, Float4, Float44, GxBlend, IDisposable, 
+    IPseudoRandomNumberGenerator, IShaderProgram, ITexture, IVertexArrayObject, IVertexDataBuffer, 
+    IVertexIndexBuffer, RenderingBatchRequest, RenderingEngine, RenderMaterial } from "@app/rendering";
+import { M2Model, M2ModelOwnerTypes } from "../m2Model";
 
 import fragmentShaderProgramText from "./m2ParticleEmitter.frag"; 
 import vertexShaderProgramText from "./m2ParticleEmitter.vert";
@@ -12,6 +15,9 @@ import { LocalAnimatedFloat3, LocalAnimatedValueNumber as LocalAnimatedNumber, L
 function intToColor(val: number) {
     return Float4.create(((val >> 16) & 255) / 255, ((val >> 8) & 255) / 255, ((val >> 0) & 255) / 255, ((val >> 24) & 255) / 255);
 }
+
+
+const BATCH_IDENTIFIER = "M2-PARTICLE"
 
 const MAX_QUADS_PER_EMITTER = 1000;
 
@@ -75,6 +81,7 @@ const M2ParticleEmitterRandomTable = [];
 
 export class M2ParticleEmitter implements IDisposable {
     // References
+    index: number;
     parent: M2Model;
     engine: RenderingEngine;
     m2data: WoWParticleEmitterData;
@@ -134,12 +141,13 @@ export class M2ParticleEmitter implements IDisposable {
     // Functional
     show: boolean;
 
-    constructor(engine: RenderingEngine, parent: M2Model, emitterData: WoWParticleEmitterData, exp2Data?: WoWExtendedParticleData) {
-        this.engine = engine;
+    constructor(index: number, parent: M2Model, emitterData: WoWParticleEmitterData, exp2Data?: WoWExtendedParticleData) {
+        this.index = index;
+        this.engine = parent.engine;
         this.parent = parent;
         this.m2data = emitterData;
         this.exp2Data = exp2Data;
-        this.rng = engine.getRandomNumberGenerator();
+        this.rng = this.engine.getRandomNumberGenerator();
         this.emitterModelMatrix = Float44.identity();
         this.previousPosition = Float3.zero();
         this.zOrder = 0;
@@ -326,10 +334,11 @@ export class M2ParticleEmitter implements IDisposable {
         this.vertexBuffer.setData(new Float32Array(this.vertexData));
 
 
-        const batchRequest = new RenderingBatchRequest(this.material);
+        const batchRequest = new RenderingBatchRequest(BATCH_IDENTIFIER, this.parent.fileId, this.index);
+        batchRequest.useMaterial(this.material);
         batchRequest.useVertexArrayObject(this.vao);
         batchRequest.drawIndexedTriangles(0, (6 * this.nrQuads) >> 0);
-        this.engine.submitBatchRequest(batchRequest);
+        this.engine.submitDrawRequest(batchRequest);
     }
 
     updateParticles(deltaTime: number, currentModelMatrix: Float44) {
@@ -923,22 +932,21 @@ export class M2ParticleEmitter implements IDisposable {
                 const textureId = multiTextureIds[i];
                 const textureData = this.parent.modelData.textures[textureId];
                 if (textureData.textureId > -1) {
-                    textures[i] = this.parent.loadedTextures[textureData.textureId]
+                    textures[i] = this.parent.textureObjects[textureId]
                 }
+                textures[i]
             }
         }
         else {
             if (textureId > -1) {
                 const textureData = this.parent.modelData.textures[textureId];
                 if (textureData.textureId > -1) {
-                    textures[0] = this.parent.loadedTextures[textureData.textureId]
+                    textures[0] = this.parent.textureObjects[textureId]
                 }
             }
         }
         
         // TODO: Is this always unique?
-        const materialKey = new MaterialKey(this.parent.fileId, MaterialType.M2ParticleMaterial, textureId);
-        this.material = new RenderMaterial(materialKey);
         this.material.useShaderProgram(this.shaderProgram);
         let blendMode = this.m2data.blendingType;
         let alphaTreshold;

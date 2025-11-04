@@ -1,10 +1,7 @@
 import { WoWBoneData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureType, WoWTextureUnitData } from "@app/modeldata";
 import {
-    RenderingEngine, ColorMask,
-    Float4, Float3, ITexture, Float44, IShaderProgram, M2BlendModeToEGxBlend,
-    RenderingBatchRequest, AABB, MaterialKey,
-    RenderMaterial,
-    MaterialType,
+    RenderingEngine, ColorMask,Float4, Float3, ITexture, Float44, IShaderProgram, M2BlendModeToEGxBlend,
+    RenderingBatchRequest, AABB, RenderMaterial,
 } from "@app/rendering";
 import { TextureVariationsMetadata } from "@app/metadata";
 import { distinct } from "@app/utils";
@@ -43,7 +40,15 @@ export interface M2ModelCallbackData {
     fn: M2ModelCallbackFn
 };
 
+
+export enum M2ModelOwnerTypes {
+    TextureUnit,
+    ParticleEmitter,
+    RibbonEmitter
+}
+
 const MAX_NUM_GEOSETS = 52;
+const BATCH_IDENTIFIER = "M2";
 
 export class M2Model extends WorldPositionedObject {
     fileId: number;
@@ -65,7 +70,7 @@ export class M2Model extends WorldPositionedObject {
     worldBoundingBox: AABB;
 
     animationState: AnimationState;
-    loadedTextures: { [key: number]: ITexture };
+    textureObjects: { [key: number]: ITexture };
 
     textureUnitData: TextureUnitData[]
     boneData: BoneData[];
@@ -531,11 +536,12 @@ export class M2Model extends WorldPositionedObject {
 
     private drawTextureUnit(texUnit: WoWTextureUnitData, index: number) {
         const texUnitData = this.textureUnitData[index];
-        const batchRequest = new RenderingBatchRequest(texUnitData.material);
+        const batchRequest = new RenderingBatchRequest(BATCH_IDENTIFIER, this.fileId, index);
+        batchRequest.useMaterial(texUnitData.material);
         const subMesh = this.modelData.submeshes[texUnit.skinSectionIndex];
         batchRequest.useVertexArrayObject(this.dataBuffers.vao);
         batchRequest.drawIndexedTriangles(2 * (subMesh.triangleStart + 65536 * subMesh.level), subMesh.triangleCount);
-        this.engine.submitBatchRequest(batchRequest);
+        this.engine.submitDrawRequest(batchRequest);
     }
 
     private resizeForBounds() {
@@ -561,7 +567,7 @@ export class M2Model extends WorldPositionedObject {
         this.dataBuffers = null;
         this.bonePositionBuffer = null;
         this.animationState = null;
-        this.loadedTextures = null;
+        this.textureObjects = null;
         this.textureUnitData = null;
         this.boneData = null;
         this.worldModelMatrix = null;
@@ -614,18 +620,14 @@ export class M2Model extends WorldPositionedObject {
             return;
         }
 
-        if (!data) {
-            this.loadTextures();
-            return;
-        }
-
         this.textureVariations = data;
         this.processCallbacks("textureVariationsLoaded");
+        this.loadTextures();
     }
 
     private loadTextures() {
         this.isTexturesLoaded = false;
-        this.loadedTextures = {}
+        this.textureObjects = {}
 
         this.processCallbacks("texturesLoadStart");
         const loadingPromises: Promise<void>[] = []
@@ -634,10 +636,13 @@ export class M2Model extends WorldPositionedObject {
             if (textureId > 0) {
                 const promise = this.engine.getTexture(textureId).then((texture) => {
                     if (!this.isDisposing) {
-                        this.loadedTextures[textureId] = texture
+                        this.textureObjects[i] = texture
                     }
                 })
                 loadingPromises.push(promise);
+            } else {
+                this.textureObjects[i] = this.engine.getSolidColorTexture([0,1,0,1]);
+                this.textureObjects[i].fileId = i;
             }
         }
 
@@ -657,14 +662,13 @@ export class M2Model extends WorldPositionedObject {
         for (let i = 0; i < this.modelData.particleEmitters.length; i++) {
             const exp2Data = this.modelData.particles[i];
             const emitterData = this.modelData.particleEmitters[i];
-            // TODO: Refactor ctor to use parent.engine
-            const emitter = new M2ParticleEmitter(this.engine, this, emitterData, exp2Data);
+            const emitter = new M2ParticleEmitter(i, this, emitterData, exp2Data);
             this.particleEmitters[i] = emitter;
         }
 
         for (let i = 0; i < this.modelData.ribbonEmitters.length; i++) {
             const emitterData = this.modelData.ribbonEmitters[i];
-            const emitter = new M2RibbonEmitter(this, emitterData);
+            const emitter = new M2RibbonEmitter(i, this, emitterData);
             this.ribbonEmitters[i] = emitter;
         }
 
@@ -680,8 +684,7 @@ export class M2Model extends WorldPositionedObject {
     private createTextureUnitData(i: number) {
         const texUnit = this.modelData.textureUnits[i];
 
-        const materialKey = new MaterialKey(this.fileId, MaterialType.M2Material, i);
-        let renderMaterial = new RenderMaterial(materialKey);
+        let renderMaterial = new RenderMaterial();
 
         const unkTexture = this.engine.getUnknownTexture();
         const texUnitData: TextureUnitData = {
@@ -698,10 +701,7 @@ export class M2Model extends WorldPositionedObject {
             for (let j = 0; j < texUnit.textureCount; j++) {
                 const textureIndex = this.modelData.textureCombos[texUnit.textureComboIndex + j];
                 if (textureIndex > -1 && textureIndex < this.modelData.textures.length) {
-                    const textureData = this.modelData.textures[textureIndex];
-                    if (this.loadedTextures[textureData.textureId]) {
-                        texUnitData.textures[j] = this.loadedTextures[textureData.textureId];
-                    }
+                    texUnitData.textures[j] = this.textureObjects[textureIndex]
                 }
             }
         }

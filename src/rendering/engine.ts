@@ -101,7 +101,8 @@ export class RenderingEngine implements IDisposable {
     batchesElement?: HTMLParagraphElement;
 
     // Drawing data
-    batchRequests: RenderingBatchRequest[];
+    drawRequests: RenderingBatchRequest[];
+    otherGraphicsRequests: RenderingBatchRequest[];
     sceneObjects: RenderObject[];
 
     constructor(graphics: IGraphics, dataLoader: IDataLoader, requestFrame: RequestFrameFunction,
@@ -144,7 +145,8 @@ export class RenderingEngine implements IDisposable {
 
 
         this.runningRequests = {};
-        this.batchRequests = [];
+        this.drawRequests = [];
+        this.otherGraphicsRequests = [];
 
         this.clearColor = options.clearColor ? options.clearColor : Float4.create(0.1, 0.1, 0.1, 1);
         this.fov = options.cameraFov ? options.cameraFov : 60;
@@ -190,8 +192,6 @@ export class RenderingEngine implements IDisposable {
                 }
             }
 
-            this.graphics.startFrame(this.width, this.height);
-            this.graphics.clearFrame(this.clearColor);
 
             this.sceneCamera.update(deltaTime);
             Float44.copy(this.sceneCamera.getViewMatrix(), this.viewMatrix);
@@ -206,29 +206,45 @@ export class RenderingEngine implements IDisposable {
             for (const obj of this.sceneObjects) {
                 obj.update(deltaTime);
             }
+
+            const otherGraphicsWork = this.otherGraphicsRequests.sort((a,b) => a.key.compare(b.key));
+            for(const batch of otherGraphicsWork) {
+                batch.submit(this.graphics);
+            }
+            this.otherGraphicsRequests = [];
+            
+
             for (const obj of this.sceneObjects) {
                 obj.draw();
             }
 
             // Sort batches in draw order.
-            const requests = this.batchRequests
+            const drawOrderRequests = this.drawRequests
                 .sort((r1, r2) => {
-                    const layer1 = r1.material.blendMode > GxBlend.GxBlend_Opaque ?
-                        r1.material.blendMode == GxBlend.GxBlend_AlphaKey ? 1 : 2 : 0
-                    const layer2 = r2.material.blendMode > GxBlend.GxBlend_Opaque ?
-                        r2.material.blendMode == GxBlend.GxBlend_AlphaKey ? 1 : 2 : 0
+                    if (r1.material && r2.material) {
+                        // Ensure Opaque batches are drawn before alpha blend batches.
+                        const layer1 = r1.material.blendMode > GxBlend.GxBlend_Opaque ?
+                            r1.material.blendMode == GxBlend.GxBlend_AlphaKey ? 1 : 2 : 0
+                        const layer2 = r2.material.blendMode > GxBlend.GxBlend_Opaque ?
+                            r2.material.blendMode == GxBlend.GxBlend_AlphaKey ? 1 : 2 : 0
 
-                    const layerDiff = layer1 - layer2;
-                    if (layerDiff != 0) {
-                        return layerDiff;
+                        const layerDiff = layer1 - layer2;
+                        if (layerDiff != 0) {
+                            return layerDiff;
+                        }
                     }
 
-                    return r1.material.key.compare(r2.material.key);
+                    return r1.key.compare(r2.key);
                 });
-            for (const batch of requests) {
+                
+            // Draw new frame
+            this.graphics.startFrame(this.width, this.height);
+            this.graphics.clearFrame(this.clearColor);
+            for (const batch of drawOrderRequests) {
                 batch.submit(this.graphics);
             }
             this.graphics.useVertexArrayObject(undefined);
+
             if (this.fpsElement) {
                 this.fpsCounter.push(1 / (deltaTime / 1000));
                 if (this.fpsCounter.length > this.maxFpsCounterSize) {
@@ -238,11 +254,12 @@ export class RenderingEngine implements IDisposable {
                 this.fpsElement.textContent = "FPS: " + Math.floor(avgFps);
             }
             if (this.batchesElement) {
-                this.batchesElement.textContent = "Batches: " + requests.length;
+                this.batchesElement.textContent = "Batches: " + drawOrderRequests.length;
             }
-            this.batchRequests = [];
 
-            if (requests.length > 0) {
+            this.drawRequests = [];
+
+            if (drawOrderRequests.length > 0) {
                 this.framesDrawn++;
             }
             this.timeElapsed += deltaTime;
@@ -314,7 +331,7 @@ export class RenderingEngine implements IDisposable {
         object.dispose();
     }
 
-    private async processTexture(fileId: number | string, imgData: string | null, opts?: ITextureOptions) {
+    private async processTexture(fileId: number, imgData: string | null, opts?: ITextureOptions) {
         return new Promise<ITexture>((res, rej) => {
             if (imgData === null) {
                 this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve image data for file: " + fileId);
@@ -326,6 +343,7 @@ export class RenderingEngine implements IDisposable {
             const img = new Image();
             img.onload = () => {
                 const texture = this.graphics.createTextureFromImg(img, opts);
+                texture.fileId = fileId;
                 this.textureCache.store(fileId, texture);
                 this.progress?.removeFileFromOperation(fileId);
                 delete this.runningRequests[fileId];
@@ -363,6 +381,10 @@ export class RenderingEngine implements IDisposable {
         return texture;
     }
 
+    getSolidColorTexture(color: Float4) {
+        return this.graphics.createSolidColorTexture(color);
+    }
+
     getUnknownTexture(): ITexture {
         if (this.textureCache.contains(UNKNOWN_TEXTURE_ID)) {
             return this.textureCache.get(UNKNOWN_TEXTURE_ID);
@@ -373,8 +395,12 @@ export class RenderingEngine implements IDisposable {
         return unknownTexture;
     }
 
-    submitBatchRequest(request: RenderingBatchRequest) {
-        this.batchRequests.push(request);
+    submitDrawRequest(request: RenderingBatchRequest) {
+        this.drawRequests.push(request);
+    }
+
+    submitOtherGraphicsRequest(request: RenderingBatchRequest) {
+        this.otherGraphicsRequests.push(request);
     }
 
     getShaderProgram(key: string, vertexShader: string, fragmentShader: string): IShaderProgram {

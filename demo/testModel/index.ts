@@ -1,11 +1,13 @@
 import { WorldPositionedObject, BufferDataType, Float44, GxBlend, IShaderProgram, IVertexArrayObject, 
-    IVertexDataBuffer, IVertexIndexBuffer, RenderingBatchRequest, RenderingEngine, MaterialKey, 
-    RenderMaterial, MaterialType 
+    IVertexDataBuffer, IVertexIndexBuffer, RenderingBatchRequest, RenderingEngine, BatchRequestKey, 
+    RenderMaterial
 } from "@app/index";
 
 import fs from "./testModel.frag";
 import vs from "./testModel.vert";
 
+
+const BATCH_IDENTIFIER = "TEST";
 
 export class TestModel extends WorldPositionedObject {
     isLoaded: boolean;
@@ -67,7 +69,7 @@ export class TestModel extends WorldPositionedObject {
     }
 
     draw() {
-        const material = new RenderMaterial(new MaterialKey(-1, MaterialType.Unknown))
+        const material = new RenderMaterial()
 
         material.useBlendMode(GxBlend.GxBlend_Opaque);
         material.useBackFaceCulling(true);
@@ -75,12 +77,13 @@ export class TestModel extends WorldPositionedObject {
         material.useShaderProgram(this.program);
         material.useUniforms(this.uniforms);
 
-        const batchRequest = new RenderingBatchRequest(material);
+        const batchRequest = new RenderingBatchRequest(BATCH_IDENTIFIER, -1, 0);
+        batchRequest.useMaterial(material);
         batchRequest.useVertexArrayObject(this.vao);
         batchRequest.drawIndexedTriangles(0, 16 * 6);
         batchRequest.useVertexArrayObject();
 
-        this.engine.submitBatchRequest(batchRequest);
+        this.engine.submitDrawRequest(batchRequest);
     }
 
     

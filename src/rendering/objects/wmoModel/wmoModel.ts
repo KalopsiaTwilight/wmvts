@@ -1,8 +1,7 @@
 import {
     AABB, Axis, BspTree, BufferDataType, ColorMask, Float2, Float3, Float4, Float44, Frustrum, GxBlend, IShaderProgram, 
-    ITexture,IVertexArrayObject, M2BlendModeToEGxBlend, M2Model, Plane, RenderingBatchRequest, RenderingEngine, MaterialKey,
+    ITexture,IVertexArrayObject, M2BlendModeToEGxBlend, M2Model, Plane, RenderingBatchRequest, RenderingEngine,
     RenderMaterial,
-    MaterialType
 } from "@app/rendering";
 import { BinaryWriter } from "@app/utils";
 import { WoWWorldModelBspNode, WoWWorldModelData, WowWorldModelGroupFlags, WoWWorldModelMaterialMaterialFlags, WoWWorldModelPortalRef } from "@app/modeldata";
@@ -25,6 +24,15 @@ export interface PortalMapData {
     plane: Plane;
 }
 
+export enum WMOOwnerTypes {
+    WMOGroup,
+    WMOLiquid,
+    WMOPortal
+}
+
+const BATCH_IDENTIFIER = "WMO";
+const PORTAL_BATCH_IDENTIFIER = "WMO-PORTAL";
+
 export class WMOModel extends WorldPositionedObject {
     isModelDataLoaded: boolean;
     isTexturesLoaded: boolean;
@@ -37,6 +45,7 @@ export class WMOModel extends WorldPositionedObject {
     groupDoodads: { [key: number]: M2Model[] }
     groupLiquids: { [key: number]: WMOLiquid[] }
     groupMaterials: { [key: number]: RenderMaterial }
+    
     activeGroups: number[];
     activeDoodads: M2Model[];
     lodGroupMap: number[];
@@ -51,6 +60,7 @@ export class WMOModel extends WorldPositionedObject {
     portalVao: IVertexArrayObject;
     portalCount: number;
     portalData: PortalMapData[];
+    portalMaterial: RenderMaterial;
 
     localCamera: Float3;
     localCameraFrustrum: Frustrum;
@@ -635,10 +645,12 @@ export class WMOModel extends WorldPositionedObject {
         const groupData = this.modelData.groups[i];
         for (let j = 0; j < groupData.batches.length; j++) {
             const batchData = groupData.batches[j];
-            const batchRequest = new RenderingBatchRequest(this.groupMaterials[batchData.materialId]);
+            
+            const batchRequest = new RenderingBatchRequest(BATCH_IDENTIFIER, this.fileId, batchData.materialId);
+            batchRequest.useMaterial(this.groupMaterials[batchData.materialId]);
             batchRequest.useVertexArrayObject(this.groupVaos[i]);
             batchRequest.drawIndexedTriangles(batchData.startIndex * 2, batchData.indexCount);
-            this.engine.submitBatchRequest(batchRequest);
+            this.engine.submitDrawRequest(batchRequest);
         }
     }
 
@@ -649,10 +661,11 @@ export class WMOModel extends WorldPositionedObject {
                 continue;
             }
 
-            const batchRequest = new RenderingBatchRequest(this.groupMaterials[-1]);
+            const batchRequest = new RenderingBatchRequest(PORTAL_BATCH_IDENTIFIER, this.fileId, i);
+            batchRequest.useMaterial(this.portalMaterial);
             batchRequest.useVertexArrayObject(this.portalVao);
             batchRequest.drawIndexedTriangles(portalData.startVertex * 1.5 * 2, portalData.vertexCount * 1.5);
-            this.engine.submitBatchRequest(batchRequest);
+            this.engine.submitDrawRequest(batchRequest);
         }
     }
 
@@ -718,8 +731,7 @@ export class WMOModel extends WorldPositionedObject {
             const unlit = (material.flags & WoWWorldModelMaterialMaterialFlags.Unlit) ? true : false
             const doubleSided = (material.flags & WoWWorldModelMaterialMaterialFlags.Unculled) != 0;
 
-            const materialKey = new MaterialKey(this.fileId, MaterialType.WMOMaterial, i);
-            const renderMaterial = new RenderMaterial(materialKey);
+            const renderMaterial = new RenderMaterial();
             renderMaterial.useCounterClockWiseFrontFaces(true);
             renderMaterial.useBackFaceCulling(!doubleSided);
             renderMaterial.useBlendMode(blendMode)
@@ -743,8 +755,7 @@ export class WMOModel extends WorldPositionedObject {
         }
 
         // Portal material
-        const materialKey = new MaterialKey(this.fileId, MaterialType.WMOPortal);
-        const renderMaterial = new RenderMaterial(materialKey);
+        const renderMaterial = new RenderMaterial();
         renderMaterial.useCounterClockWiseFrontFaces(false);
         renderMaterial.useBackFaceCulling(false);
         renderMaterial.useBlendMode(GxBlend.GxBlend_Alpha)
@@ -757,7 +768,7 @@ export class WMOModel extends WorldPositionedObject {
             "u_color": Float4.create(0.8, 0.1, 0.1, 0.25)
         });
         this.engine.addEngineMaterialParams(renderMaterial);
-        this.groupMaterials[-1] = renderMaterial;
+        this.portalMaterial = renderMaterial;
     }
 
     override setModelMatrix(position: Float3 | null, rotation: Float4 | null, scale: Float3 | null): void {

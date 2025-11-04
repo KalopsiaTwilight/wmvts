@@ -1,10 +1,7 @@
 import { 
     WoWWorldModelLiquid, RenderingEngine, ITexture, WowWorldModelGroupFlags, Float3, AABB, WorldModelRootFlags, 
     WoWWorldModelGroup, RenderingBatchRequest, Float2, Float4, GxBlend, ColorMask, IShaderProgram, IVertexArrayObject, 
-    BufferDataType, 
-    MaterialKey,
-    MaterialType,
-    RenderMaterial,
+    BufferDataType, RenderMaterial, WMOOwnerTypes,
 } from "@app/index";
 import { BinaryWriter } from "@app/utils";
 import { LiquidTypeMetadata } from "@app/metadata";
@@ -17,6 +14,8 @@ import vertexShaderProgramText from "./wmoLiquid.vert";
 const TILE_SIZE = 1600 / 3;
 const CHUNK_SIZE = TILE_SIZE / 16;
 const UNIT_SIZE = CHUNK_SIZE / 8;
+
+const BATCH_IDENTIFIER = "WMO-LIQUID"
 
 export interface WMOLiquidVertexData {
     position: Float3;
@@ -186,10 +185,11 @@ export class WMOLiquid extends WorldPositionedObject {
         const materialIndex = Math.floor((this.engine.timeElapsed / timePerTexture) % this.animatingTextureCount);
         const material = this.materials[materialIndex];
 
-        const batchRequest = new RenderingBatchRequest(material);
+        const batchRequest = new RenderingBatchRequest(BATCH_IDENTIFIER, this.liquidTypeMetadata.id, materialIndex);
+        batchRequest.useMaterial(material);
         batchRequest.useVertexArrayObject(this.vao);
         batchRequest.drawIndexedTriangles(0, this.indices.length);
-        this.engine.submitBatchRequest(batchRequest);
+        this.engine.submitDrawRequest(batchRequest);
     }
 
     override dispose() {
@@ -303,7 +303,7 @@ export class WMOLiquid extends WorldPositionedObject {
         this.materials = new Array(this.textures.length);
         for (let i = 0; i < this.textures.length; i++) {
             const texture = this.textures[i];
-            const material = new RenderMaterial(new MaterialKey(this.liquidTypeMetadata.id, MaterialType.WMOLiquid));
+            const material = new RenderMaterial();
             material.useCounterClockWiseFrontFaces(true);
             material.useBackFaceCulling(false);
             material.useBlendMode(GxBlend.GxBlend_Alpha)
@@ -314,6 +314,7 @@ export class WMOLiquid extends WorldPositionedObject {
                 "u_texture": texture,
                 "u_modelMatrix": this.worldModelMatrix,
                 "u_waterParams": Float2.create(this.liquidCategory, 0),
+                // TODO: Make this configurable
                 "u_oceanCloseColor": Float4.create(17 / 255, 75 / 255, 89 / 255, 1),
                 "u_oceanFarColor": Float4.create(0, 29 / 255, 41 / 255, 1),
                 "u_riverCloseColor": Float4.create(41 / 255, 76 / 255, 81 / 255, 1),

@@ -1,4 +1,4 @@
-import { ColorMask, GxBlend, IGraphics, IShaderProgram, IUniformsData, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer } from "./abstractions";
+import { ColorMask, GxBlend, IFrameBuffer, IGraphics, IShaderProgram, ITexture, IUniformsData, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer } from "./abstractions";
 
 export enum DrawInstructionType {
     Triangle,
@@ -12,47 +12,45 @@ export interface DrawInstruction {
     type: DrawInstructionType
 }
 
-export enum MaterialType {
-    Unknown,
-    WMOMaterial,
-    WMOPortal,
-    WMOLiquid,
-    M2Material,
-    M2ParticleMaterial,
-    M2RibbonMaterial
-}
-
-export class MaterialKey {
+export type BatchRequestGraphicsFn = (graphics: IGraphics) => void;
+export class BatchRequestKey {
+    ownerIdentifier: string;
     ownerId: number;
-    type: MaterialType;
     materialId: number;
+    batchIdentifier: number;
 
-    constructor(fileId: number, type: MaterialType, materialId: number = -1) {
-        this.ownerId = fileId;
-        this.type = type;
+    constructor(ownerIdentifier: string, ownerId: number, materialId: number, batchIdentifier: number = 0) {
+        this.ownerIdentifier = ownerIdentifier;
+        this.ownerId = ownerId;
         this.materialId = materialId;
+        this.batchIdentifier = batchIdentifier;
     }
 
-    compare(other: MaterialKey | null) {
+    compare(other: BatchRequestKey | null) {
+        const ownerIdentDiff = this.ownerIdentifier.localeCompare(other.ownerIdentifier);
+        if (ownerIdentDiff != 0) {
+            return ownerIdentDiff;
+        }
+
         const ownerDiff = this.ownerId - other.ownerId;
         if (ownerDiff != 0) {
             return ownerDiff;
         }
 
-        const typeDiff = this.type - other.type;
-        if (typeDiff != 0) {
-            return typeDiff;
+        const ownerTypeDiff = this.materialId - other.materialId;
+        if (ownerTypeDiff != 0) {
+            return ownerTypeDiff;
         }
-        return this.materialId - other.materialId;
+
+        return this.batchIdentifier - other.batchIdentifier;
     }
 
     toString() {
-        return this.ownerId + "-" + this.materialId;
+        return this.ownerIdentifier + "-" + this.ownerId + "-" + this.materialId + "-" + this.batchIdentifier;
     }
 }
 
 export class RenderMaterial {
-    key: MaterialKey;
     blendMode: GxBlend;
     depthWrite: boolean;
     depthTest: boolean;
@@ -62,10 +60,6 @@ export class RenderMaterial {
     uniforms: IUniformsData;
 
     shaderProgram?: IShaderProgram;
-
-    constructor(key: MaterialKey) {
-        this.key = key;
-    }
 
     useBlendMode(blendMode: GxBlend) {
         this.blendMode = blendMode;
@@ -108,19 +102,33 @@ export class RenderMaterial {
 }
 
 export class RenderingBatchRequest {
-    material: RenderMaterial;
-    drawInstruction: DrawInstruction;
+    key: BatchRequestKey
+    beforeDraw?: BatchRequestGraphicsFn;
+    afterDraw?: BatchRequestGraphicsFn;
 
     vertexIndexBuffer?: IVertexIndexBuffer;
     vertexDataBuffer?: IVertexDataBuffer;
     vao?: IVertexArrayObject;
+    frameBuffer?: IFrameBuffer;
+    colorOutputTexture?: ITexture;
+    material?: RenderMaterial;
+    drawInstruction?: DrawInstruction;
 
-    constructor(material: RenderMaterial) {
-        this.material = material;
+
+    constructor(ownerIdentifier: string, ownerId: number, ownerType: number, batchIdentifier: number = 0) {
+        this.key = new BatchRequestKey(ownerIdentifier, ownerId, ownerType, batchIdentifier);
     }
 
     useMaterial(material: RenderMaterial) {
         this.material = material
+    }
+
+    useFrameBuffer(frameBuffer: IFrameBuffer) {
+        this.frameBuffer = frameBuffer;
+    }
+
+    writeColorOutputToTexture(texture: ITexture) {
+        this.colorOutputTexture = texture;
     }
 
     drawTriangles(offset: number, count: number) {
@@ -155,8 +163,25 @@ export class RenderingBatchRequest {
         this.vao = vao;
     }
 
+    doBeforeDraw(fn: BatchRequestGraphicsFn) {
+        this.beforeDraw = fn;
+    }
+    doAfterDraw(fn: BatchRequestGraphicsFn) {
+        this.afterDraw = fn;
+    }
+
     submit(graphics: IGraphics) {
-        this.material.bind(graphics);
+        if (this.frameBuffer) {
+            graphics.useFrameBuffer(this.frameBuffer);
+        }
+
+        if (this.material) {
+            this.material.bind(graphics);
+        }
+
+        if (this.colorOutputTexture) {
+            graphics.setColorBufferToTexture(this.colorOutputTexture);
+        }
         
         if (this.vertexDataBuffer) {
             graphics.useVertexDataBuffer(this.vertexDataBuffer);
@@ -166,6 +191,10 @@ export class RenderingBatchRequest {
         }
         if (this.vao) {
             graphics.useVertexArrayObject(this.vao);
+        }
+
+        if (this.beforeDraw) {
+            this.beforeDraw(graphics);
         }
 
         if (this.drawInstruction) {
@@ -179,6 +208,10 @@ export class RenderingBatchRequest {
             if (this.drawInstruction.type === DrawInstructionType.TriangleStrip) {
                 graphics.drawIndexedTriangleStrip(this.drawInstruction.offset, this.drawInstruction.count)
             }
+        }
+
+        if (this.afterDraw) {
+            this.afterDraw(graphics);
         }
     }
 }

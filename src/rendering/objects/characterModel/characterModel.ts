@@ -1,16 +1,15 @@
-import { WoWModelData } from "@app/modeldata";
-import { CharacterCustomizationOptionChoiceData, CharacterCustomizationOptionChoiceElementData, CharacterMetadata } from "@app/metadata";
+import { 
+    CharacterCustomizationOptionChoiceData, CharacterCustomizationOptionChoiceElementData,
+    CharacterMetadata 
+} from "@app/metadata";
 
 
 import { M2Model } from "../m2Model";
 import { WorldPositionedObject } from "../worldPositionedObject";
 import { RenderingEngine } from "@app/rendering/engine";
+import { SkinLayerTextureCombiner } from "./skinLayerTextureCombiner";
 import { ITexture } from "@app/rendering/graphics";
 
-interface TextureLayerData {
-    textureType: number,
-    textureIds: [number, number, number]
-}
 
 const DEFAULT_GEOSET_IDS = [1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 2, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 
@@ -25,8 +24,13 @@ export class CharacterModel extends WorldPositionedObject {
     private characterMetadata: CharacterMetadata;
     private m2Model: M2Model;
     private customizationChoices: CharacterCustomizationOptionChoiceData[];
-    private textureLayers: { [key: string]: [number, number, number] }
     private customizationGeosets: { [key: number]: number};
+
+
+    private textureLayerBaseFileIds: { [key: string]: [number, number, number] }
+    private textureLayerBaseTextures: { [key: string]: [ITexture, ITexture, ITexture] }
+    private textureLayerCombiners: { [key: string]: SkinLayerTextureCombiner }
+    private skinLayerTexturesLoaded: boolean;
 
     constructor(modelId: number) {
         super();
@@ -35,7 +39,10 @@ export class CharacterModel extends WorldPositionedObject {
         this.race = Math.ceil(modelId / 2);
         this.class = -1;
 
-        this.textureLayers = {};
+        this.textureLayerBaseFileIds = {};
+        this.textureLayerBaseTextures = {};
+        this.textureLayerCombiners = {};
+        this.skinLayerTexturesLoaded = false;
     }
 
     override update(deltaTime: number): void {
@@ -60,7 +67,9 @@ export class CharacterModel extends WorldPositionedObject {
         }
         this.characterMetadata = null;
         this.customizationChoices = null;
-        this.textureLayers = null;
+        this.textureLayerBaseFileIds = null;
+        this.textureLayerBaseTextures = null;
+        this.textureLayerCombiners = null;
     }
 
     draw(): void {
@@ -95,8 +104,24 @@ export class CharacterModel extends WorldPositionedObject {
         this.m2Model.toggleGeosets(start, end, show);
     }
 
+    setCustomizationChoice(optionId: number, choiceId: number) {
+        const optionIndex = this.characterMetadata.characterCustomizationData.options.findIndex(x => x.id === optionId);
+        if (!optionIndex) {
+            return;
+        }
+
+        const opt = this.characterMetadata.characterCustomizationData.options[optionIndex];
+        const choice = opt.choices.find(x => x.id === choiceId);
+        if (!choice) {
+            return;
+        }
+        this.customizationChoices[optionIndex] = choice;
+        
+        this.applyCustomizations();
+    }
+
     get isLoaded(): boolean {
-        return this.m2Model && this.m2Model.isLoaded;
+        return this.m2Model && this.m2Model.isLoaded && this.skinLayerTexturesLoaded;
     }
 
     private onCharacterMetadataLoaded(data: CharacterMetadata | null) {
@@ -136,6 +161,7 @@ export class CharacterModel extends WorldPositionedObject {
             (elem.relationChoiceID == 0 || this.customizationChoices.some((choice) => choice.id == elem.relationChoiceID))
         
         this.customizationGeosets = {};
+        const newSkinLayerTextures: { [key: string]: [number, number, number] } = { };
         for(const choice of this.customizationChoices) {
             const applicableElements = choice.elements.filter(elemApplicable);
             const boneSetElements = applicableElements.filter(elem => elem.boneSet);
@@ -160,7 +186,8 @@ export class CharacterModel extends WorldPositionedObject {
                 }
                 
                 // Load textures 
-                this.textureLayers[textureLayer.layer] = textureIds
+
+                newSkinLayerTextures[textureLayer.layer] = textureIds
             }
             
             
@@ -174,29 +201,88 @@ export class CharacterModel extends WorldPositionedObject {
             // TODO: Process CustItemGeoModifyId && set ids;
         }
 
-        this.loadSkinTextures();
+        this.loadSkinTextures(newSkinLayerTextures);
         this.updateGeosets();
     }
 
-    private loadSkinTextures() {
-        for(const key in this.textureLayers) {
+    private loadSkinTextures(newSkinLayers: { [key: string]: [number, number, number] }) {
+        const toLoad: string[] = [];
+        for(const key in newSkinLayers) {
+            const currentIds = this.textureLayerBaseFileIds[key];
+            const newIds = newSkinLayers[key];
+            
+            const layer = this.characterMetadata.characterCustomizationData.textureLayers[parseInt(key, 10)];
+            const material = this.characterMetadata.characterCustomizationData.modelMaterials.find(x => x.textureType === layer.textureType)
+            this.textureLayerCombiners[layer.textureType] = new SkinLayerTextureCombiner(this, layer.textureType, material.width, material.height)
+        
+
+            if (!currentIds || currentIds[0] !== newIds[0] || currentIds[1] !== newIds[1] || currentIds[2] !== newIds[2]) {
+                this.textureLayerBaseFileIds[key] = newSkinLayers[key];
+                this.textureLayerBaseTextures[key] = [null, null, null];
+                toLoad.push(key);
+            }
+        }
+        const promises = [];
+        for(const key of toLoad) {
+            for(let j = 0; j < 3; j++) {
+                const fileId = newSkinLayers[key][j];
+                if (fileId) {
+                    promises.push(this.engine.getTexture(fileId).then((texture) => {
+                        this.textureLayerBaseTextures[key][j] = texture;
+                    }))
+                }
+            } 
+        }
+        Promise.all(promises).then(this.onSkinTexturesLoaded.bind(this));
+    }
+
+    private onSkinTexturesLoaded() {
+        for(const key in this.textureLayerCombiners) {
+            this.textureLayerCombiners[key].clear();
+        }
+        for(const key in this.textureLayerBaseFileIds) {
             const layer = this.characterMetadata.characterCustomizationData.textureLayers[parseInt(key, 10)];
             if (!layer) {
                 continue;
             }
-            if (layer.textureSection !== -1) {
+
+            const combiner = this.textureLayerCombiners[layer.textureType];
+            if (!combiner) {
                 continue;
-                // TODO: Overlay
             }
-            
-            this.m2Model.on("modelDataLoaded", () => {
-                const textureIndex = this.m2Model.modelData.textures.findIndex(x => x.type === layer.textureType);
+
+            let x,y, width,height;
+            if (layer.textureSection === -1) {
+                x = y= 0;
+                width = combiner.width;
+                height = combiner.height;
+            }
+            else {
+                const section = this.characterMetadata.characterCustomizationData.textureSections.find(x => x.sectionType === layer.textureSection)
+                if (!section) {
+                    continue;
+                }
+
+                x = section.x;
+                y = section.y;
+                width = section.width;
+                height = section.height;
+            }
+
+            combiner.drawTextureSection(this.textureLayerBaseTextures[key], x, y, width, height, layer.blendMode);
+        }
+
+        
+        this.m2Model.on("texturesLoaded", () => {
+            for(const key in (this.textureLayerCombiners)) {
+                const textureIndex = this.m2Model.modelData.textures.findIndex(x => x.type === parseInt(key, 10));
                 if (textureIndex < 0) {
                     return;
                 }
-                this.m2Model.setTexture(textureIndex, this.textureLayers[key][0]);
-            })
-        }
+                this.m2Model.textureObjects[textureIndex].swapFor(this.textureLayerCombiners[key].diffuseTexture)
+            }
+        })
+        this.skinLayerTexturesLoaded = true;
     }
 
     private updateGeosets() {

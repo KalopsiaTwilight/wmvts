@@ -1,4 +1,5 @@
 import { Float4 } from "../math";
+import { RenderingBatchRequest } from "./batchRequest";
 
 export enum BufferDataType {
     Float,
@@ -16,6 +17,7 @@ export enum ColorMask {
     Green = 2,
     Blue = 4,
     Alpha = 8,
+    All = 15,
 }
 
 export enum GxBlend {
@@ -58,8 +60,18 @@ export interface IBindable {
 }
 
 export interface ITexture extends IBindable {
+    width: number;
+    height: number;
+    fileId: number;
 
+    swapFor(other?: ITexture): void;
 }
+
+export interface IFrameBuffer extends IBindable {
+    width: number;
+    height: number;
+}
+
 
 export interface IVertexIndexBuffer extends IBindable {
     setData(data: Uint16Array): void;
@@ -101,7 +113,7 @@ export interface ITextureOptions {
 
 export interface IGraphics {
     startFrame(width: number, height: number): void;
-    clearFrame(color: Float4): void;
+    clearFrame(color?: Float4): void;
 
     useBlendMode(blendMode: GxBlend): void 
     useDepthWrite(val: boolean): void;
@@ -114,6 +126,8 @@ export interface IGraphics {
     useVertexDataBuffer(buffer?: IVertexDataBuffer): void;
     useShaderProgram(program?: IShaderProgram): void;
     useVertexArrayObject(vao?: IVertexArrayObject): void;
+    useFrameBuffer(frameBuffer?: IFrameBuffer): void;
+    setColorBufferToTexture(texture?: ITexture): void;
 
     drawTriangles(offset: number, count: number): void;
     drawIndexedTriangles(offset: number, count: number): void;
@@ -121,9 +135,13 @@ export interface IGraphics {
 
     createTextureFromImg(img: HTMLImageElement, opts?: ITextureOptions): ITexture;
     createSolidColorTexture(color: Float4): ITexture;
+    createEmptyTexture(width: number, height: number): ITexture;
 
     createVertexArrayObject(): IVertexArrayObject;
     createVertexIndexBuffer(dynamic: boolean): IVertexIndexBuffer;
     createVertexDataBuffer(pointers: IVertexAttributePointer[], dynamic: boolean): IVertexDataBuffer;
     createShaderProgram(vertexShader: string, fragmentShader: string): IShaderProgram;
+    createFrameBuffer(width: number, height: number): IFrameBuffer;
+
+    copyFrameToTexture(texture: ITexture, x: number, y: number, width: number, height: number): void;
 }

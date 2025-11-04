@@ -1,13 +1,15 @@
 import { WoWRibbonEmiterData } from "@app/modeldata";
 import { 
-    BufferDataType, ColorMask, Float2, Float3, Float4, Float44, GxBlend, IDisposable, IShaderProgram, IVertexArrayObject, IVertexDataBuffer, 
-    IVertexIndexBuffer, M2BlendModeToEGxBlend, M2Model, RenderingBatchRequest, RenderingEngine, MaterialKey, RenderMaterial,
-    MaterialType
+    BufferDataType, ColorMask, Float2, Float3, Float4, Float44, GxBlend, IDisposable, IShaderProgram, IVertexArrayObject, 
+    IVertexDataBuffer, IVertexIndexBuffer, M2BlendModeToEGxBlend, M2Model, M2ModelOwnerTypes, RenderingBatchRequest, RenderingEngine,
+    RenderMaterial
 } from "@app/rendering";
 
 
 import fragmentShaderProgramText from "./m2RibbonEmitter.frag";
 import vertexShaderProgramText from "./m2RibbonEmitter.vert";
+
+const BATCH_IDENTIFIER = "M2-RIBBON"
 
 interface Rect {
     minX: number;
@@ -30,6 +32,7 @@ class RibbonVertex {
 
 
 export class M2RibbonEmitter implements IDisposable {
+    index: number;
     isDisposing: boolean;
     parent: M2Model;
     m2data: WoWRibbonEmiterData;
@@ -82,7 +85,8 @@ export class M2RibbonEmitter implements IDisposable {
     minWorldBounds: Float3;
     maxWorldBounds: Float3;
 
-    constructor(parent: M2Model, emitterData: WoWRibbonEmiterData) {
+    constructor(index: number, parent: M2Model, emitterData: WoWRibbonEmiterData) {
+        this.index = index;
         this.isDisposing = false;
         this.parent = parent;
         this.m2data = emitterData;
@@ -283,14 +287,15 @@ export class M2RibbonEmitter implements IDisposable {
             return;
         }
 
-        for (const material of this.materials) {
-            const batchRequest = new RenderingBatchRequest(material);
+        for (let i = 0; i < this.materials.length; i++) {
+            const batchRequest = new RenderingBatchRequest(BATCH_IDENTIFIER, this.parent.fileId, this.index, i);
+            batchRequest.useMaterial(this.materials[i]);
             batchRequest.useVertexArrayObject(this.vao);
             const count = this.edgeEnd > this.edgeStart 
                 ? 2 * (this.edgeEnd - this.edgeStart) + 2 
                 : 2 * (this.edgeLifetimes.length + this.edgeEnd - this.edgeStart) + 2;
             batchRequest.drawIndexedTriangleStrip(2 * this.edgeStart * 2, count);
-            this.engine.submitBatchRequest(batchRequest);
+            this.engine.submitDrawRequest(batchRequest);
         }
     }
 
@@ -473,7 +478,7 @@ export class M2RibbonEmitter implements IDisposable {
             if (textureData.textureId <= -1) {
                 continue;
             }
-            const texture = this.parent.loadedTextures[textureData.textureId]
+            const texture = this.parent.textureObjects[textureId]
 
             let materialIndex = i;
             if (materialIndex >= this.m2data.materialIndices.length) {
@@ -487,8 +492,7 @@ export class M2RibbonEmitter implements IDisposable {
                 blendMode = GxBlend.GxBlend_Alpha;
             }
 
-            const materialKey = new MaterialKey(this.parent.fileId, MaterialType.M2RibbonMaterial, materialIndex);
-            let renderMaterial = new RenderMaterial(materialKey);
+            let renderMaterial = new RenderMaterial();
             renderMaterial.useShaderProgram(this.shaderProgram);
             renderMaterial.useBackFaceCulling(false);
             renderMaterial.useCounterClockWiseFrontFaces(!this.parent.isMirrored);
