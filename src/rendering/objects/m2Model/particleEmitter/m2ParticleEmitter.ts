@@ -947,6 +947,7 @@ export class M2ParticleEmitter implements IDisposable {
         }
         
         // TODO: Is this always unique?
+        this.material = new RenderMaterial();
         this.material.useShaderProgram(this.shaderProgram);
         let blendMode = this.m2data.blendingType;
         let alphaTreshold;
