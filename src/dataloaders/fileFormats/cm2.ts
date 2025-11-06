@@ -77,7 +77,7 @@ export function parseCM2File(data: ArrayBuffer) {
     reader.seek(colorsPos);
     const colors = readArray(reader, readColor);
     reader.seek(globalLoopsPos);
-    const globalLoops =  readArray(reader, (r) => r.readUInt16LE());
+    const globalLoops =  readArray(reader, (r) => r.readUInt32LE());
     reader.seek(materialsPos);
     const materials = readArray(reader, readMaterial);
     reader.seek(particleEmitterGeosetsPos);
