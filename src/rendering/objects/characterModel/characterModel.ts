@@ -2,13 +2,11 @@ import {
     CharacterCustomizationOptionChoiceData, CharacterCustomizationOptionChoiceElementData,
     CharacterMetadata 
 } from "@app/metadata";
-
+import { RenderingEngine, ITexture } from "@app/rendering";
 
 import { M2Model } from "../m2Model";
 import { WorldPositionedObject } from "../worldPositionedObject";
-import { RenderingEngine } from "@app/rendering/engine";
 import { SkinLayerTextureCombiner } from "./skinLayerTextureCombiner";
-import { ITexture } from "@app/rendering/graphics";
 
 
 const DEFAULT_GEOSET_IDS = [1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 2, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
@@ -37,7 +35,7 @@ export class CharacterModel extends WorldPositionedObject {
         this.modelId = modelId;
         this.gender = (modelId-1) % 2;
         this.race = Math.ceil(modelId / 2);
-        this.class = -1;
+        this.class = 6;
 
         this.textureLayerBaseFileIds = {};
         this.textureLayerBaseTextures = {};
@@ -106,7 +104,7 @@ export class CharacterModel extends WorldPositionedObject {
 
     setCustomizationChoice(optionId: number, choiceId: number) {
         const optionIndex = this.characterMetadata.characterCustomizationData.options.findIndex(x => x.id === optionId);
-        if (!optionIndex) {
+        if (optionIndex < 0) {
             return;
         }
 
@@ -211,10 +209,12 @@ export class CharacterModel extends WorldPositionedObject {
             const currentIds = this.textureLayerBaseFileIds[key];
             const newIds = newSkinLayers[key];
             
+            // TODO: Should this be inited somewhere else?
             const layer = this.characterMetadata.characterCustomizationData.textureLayers[parseInt(key, 10)];
             const material = this.characterMetadata.characterCustomizationData.modelMaterials.find(x => x.textureType === layer.textureType)
-            this.textureLayerCombiners[layer.textureType] = new SkinLayerTextureCombiner(this, layer.textureType, material.width, material.height)
-        
+            if (!this.textureLayerCombiners[layer.textureType]) {
+                this.textureLayerCombiners[layer.textureType] = new SkinLayerTextureCombiner(this, layer.textureType, material.width, material.height)
+            }
 
             if (!currentIds || currentIds[0] !== newIds[0] || currentIds[1] !== newIds[1] || currentIds[2] !== newIds[2]) {
                 this.textureLayerBaseFileIds[key] = newSkinLayers[key];
@@ -240,9 +240,10 @@ export class CharacterModel extends WorldPositionedObject {
         for(const key in this.textureLayerCombiners) {
             this.textureLayerCombiners[key].clear();
         }
-        for(const key in this.textureLayerBaseFileIds) {
-            const layer = this.characterMetadata.characterCustomizationData.textureLayers[parseInt(key, 10)];
-            if (!layer) {
+
+        const layers = this.characterMetadata.characterCustomizationData.textureLayers.sort((a,b) => a.chrModelTextureTargetId - b.chrModelTextureTargetId);
+        for(const layer of layers) {
+            if (!this.textureLayerBaseFileIds[layer.layer]) {
                 continue;
             }
 
@@ -269,7 +270,7 @@ export class CharacterModel extends WorldPositionedObject {
                 height = section.height;
             }
 
-            combiner.drawTextureSection(this.textureLayerBaseTextures[key], x, y, width, height, layer.blendMode);
+            combiner.drawTextureSection(this.textureLayerBaseTextures[layer.layer], x, y, width, height, layer.blendMode);
         }
 
         

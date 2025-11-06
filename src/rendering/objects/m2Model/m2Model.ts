@@ -127,7 +127,9 @@ export class M2Model extends WorldPositionedObject {
             this.updateBone(this.modelData.bones[i], i);
         }
         for (let i = 0; i < this.textureUnitData.length; i++) {
+            if (this.textureUnitData[i].show) {
             this.updateTextureUnit(this.modelData.textureUnits[i], i);
+            }
         }
         for (let i = 0; i < this.modelData.particleEmitters.length; i++) {
             this.particleEmitters[i].update(deltaTime);

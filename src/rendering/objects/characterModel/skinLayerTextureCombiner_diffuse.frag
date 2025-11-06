@@ -7,60 +7,55 @@ uniform sampler2D u_backgroundTexture;
 uniform int u_blendMode;
 uniform vec2 u_backgroundResolution;
 
-vec3 overlay(vec3 baseColor, vec3 blendColor) {
+vec3 overlay(vec3 a, vec3 b) {
     vec3 outputColor = vec3(1.0);
     for(int i = 0; i < 3; i++) {
-        if (baseColor[i] < 0.5) {
-            outputColor[i] = 2.0 * baseColor[i] * blendColor[i];
+        if (a[i] < 0.5) {
+            outputColor[i] = 2.0 * a[i] * b[i];
         } else {
-            outputColor[i] = 1.0 - (2.0 * (1.0 - baseColor[i]) * (1.0 - blendColor[i]));
+            outputColor[i] = 1.0 - (2.0 * (1.0 - a[i]) * (1.0 - b[i]));
         }
     }
     return outputColor;
 }
 
-const float MIN_ALPHA_FOR_BLEND = 0.001;
+vec3 screen(vec3 a, vec3 b) {
+    vec3 outputColor = vec3(1.0);
+    for(int i = 0; i < 3; i++) {
+        outputColor[i] = 1.0 - (1.0 - a[i]) * (1.0 - a[i]);
+    }
+    return outputColor;
+}
 
 void main() {
     vec4 diffuse = texture2D(u_diffuseTexture, v_texCoord);
     vec4 backGround = texture2D(u_backgroundTexture, gl_FragCoord.xy / u_backgroundResolution);
-
-    // Default: Sample texture
-    vec3 materialColor = diffuse.rgb;
-    float opacity = diffuse.a;
     
+    // Default: Overlay diffuse on background   
+    vec3 materialColor = diffuse.rgb;
+    float opacity = 1.0;
+    // Blit
+    if (u_blendMode == 1) {
+        opacity = diffuse.a;
+    }
     // Multiply
-    if(u_blendMode == 4) {
-        if(diffuse.a < MIN_ALPHA_FOR_BLEND) 
-            discard;
-            
-        materialColor = backGround.rgb * diffuse.rgb;
-        opacity = 1.0;
+    else if (u_blendMode == 4) {
+        vec3 blendColor = backGround.rgb * diffuse.rgb;
+        materialColor = mix(backGround.rgb, blendColor.rgb, diffuse.a);
     }
     // Overlay
     else if(u_blendMode == 6) {
-        if(diffuse.a < MIN_ALPHA_FOR_BLEND) 
-            discard;
-
-        materialColor = mix(backGround.rgb, overlay(diffuse.rgb, backGround.rgb), diffuse.a);
-        opacity = backGround.a;
+        vec3 blendColor = overlay(diffuse.rgb, backGround.rgb);
+        materialColor = mix(backGround.rgb, blendColor.rgb, diffuse.a);
     } 
     // Screen
     else if (u_blendMode == 7) {
-        if(diffuse.a < MIN_ALPHA_FOR_BLEND) 
-            discard;
-
-        materialColor = vec3(1) - ((vec3(1)-diffuse.rgb) * (vec3(1)-backGround.rgb));
-        opacity = 1.0;
-    } 
-    // None, InferAlphaBlend, Unknown
-    else if(u_blendMode == 0 || u_blendMode == 9 || u_blendMode == 15 || u_blendMode == 16) {
-        if(diffuse.a < MIN_ALPHA_FOR_BLEND) 
-            discard;
-
-        materialColor = mix(backGround.rgb, diffuse.rgb, diffuse.a);
-        opacity = 1.0;
+        vec3 blendColor = screen(diffuse.rgb, backGround.rgb);
+        materialColor = mix(backGround.rgb, blendColor.rgb, diffuse.a);
     }
-
+    // Default: Blend layers 
+    else {
+        materialColor = mix(backGround.rgb, diffuse.rgb, diffuse.a);
+    }
     gl_FragColor = vec4(materialColor, opacity);
 }

@@ -175,12 +175,16 @@ export class RenderingBatchRequest {
             graphics.useFrameBuffer(this.frameBuffer);
         }
 
-        if (this.material) {
-            this.material.bind(graphics);
-        }
-
         if (this.colorOutputTexture) {
             graphics.setColorBufferToTexture(this.colorOutputTexture);
+        }
+
+        if (this.beforeDraw) {
+            this.beforeDraw(graphics);
+        }
+
+        if (this.material) {
+            this.material.bind(graphics);
         }
         
         if (this.vertexDataBuffer) {
@@ -191,10 +195,6 @@ export class RenderingBatchRequest {
         }
         if (this.vao) {
             graphics.useVertexArrayObject(this.vao);
-        }
-
-        if (this.beforeDraw) {
-            this.beforeDraw(graphics);
         }
 
         if (this.drawInstruction) {
