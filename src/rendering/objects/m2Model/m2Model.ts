@@ -1,10 +1,10 @@
-import { WoWBoneData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureType, WoWTextureUnitData } from "@app/modeldata";
+import { WoWBoneData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureUnitData } from "@app/modeldata";
 import {
     RenderingEngine, ColorMask,Float4, Float3, ITexture, Float44, IShaderProgram, M2BlendModeToEGxBlend,
-    RenderingBatchRequest, AABB, RenderMaterial,
-    DrawingBatchRequest,
+    AABB, RenderMaterial, DrawingBatchRequest, IDataBuffers,
+    BufferDataType,
 } from "@app/rendering";
-import { CallbackFn, distinct, ICallbackManager, IImmediateCallbackable } from "@app/utils";
+import { BinaryWriter, CallbackFn, distinct, ICallbackManager, IImmediateCallbackable } from "@app/utils";
 
 import fragmentShaderProgramText from "./m2Model.frag";
 import vertexShaderProgramText from "./m2Model.vert";
@@ -12,7 +12,6 @@ import { getM2PixelShaderId, getM2VertexShaderId } from "./m2Shaders";
 import { WorldPositionedObject } from "../worldPositionedObject";
 import { M2ParticleEmitter } from "./particleEmitter/m2ParticleEmitter";
 import { M2RibbonEmitter } from "./ribbonEmitter/m2RibbonEmitter";
-import { IM2DataBuffers } from "./m2DataBuffers";
 import { AnimationState } from "./animatedValue";
 
 const MAX_BONES = 256;
@@ -50,7 +49,7 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
     // graphics data
     shaderProgram: IShaderProgram;
     bonePositionBuffer: Float32Array;
-    dataBuffers: IM2DataBuffers
+    dataBuffers: IDataBuffers;
 
     localBoundingBox: AABB;
     worldBoundingBox: AABB;
@@ -512,7 +511,7 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
         const subMesh = this.modelData.submeshes[texUnit.skinSectionIndex];
         const batchRequest = new DrawingBatchRequest(BATCH_IDENTIFIER, this.fileId, index);
         batchRequest.useMaterial(texUnitData.material)
-            .useVertexArrayObject(this.dataBuffers.vao)
+            .useDataBuffers(this.dataBuffers)
             .drawIndexedTriangles(2 * (subMesh.triangleStart + 65536 * subMesh.level), subMesh.triangleCount);
         this.engine.submitDrawRequest(batchRequest);
     }
@@ -570,7 +569,8 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
             this.resizeForBounds();
         }
 
-        this.dataBuffers = this.engine.getM2DataBuffers(this.fileId, this.shaderProgram, this.modelData);
+
+        this.setupDataBuffers();
 
         this.boneData = new Array(this.modelData.bones.length);
         for (let i = 0; i < this.modelData.bones.length; i++) {
@@ -585,6 +585,58 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
         this.callbackMgr.processCallbacks("modelDataLoaded");
 
         this.loadTextures();
+    }
+
+    private setupDataBuffers() {
+        this.dataBuffers = this.engine.getDataBuffers("M2-" + this.fileId, (graphics) => {
+            const vao = graphics.createVertexArrayObject();
+            const vertexIndexBuffer = graphics.createVertexIndexBuffer(true);
+            const vertexDataBuffer = graphics.createVertexDataBuffer([
+                { index: this.shaderProgram.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: 48, offset: 0 },
+                { index: this.shaderProgram.getAttribLocation('a_normal'), size: 3, type: BufferDataType.Float, normalized: false, stride: 48, offset: 12 },
+                { index: this.shaderProgram.getAttribLocation('a_bones'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: 48, offset: 24},
+                { index: this.shaderProgram.getAttribLocation('a_boneWeights'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: 48, offset: 28 },
+                { index: this.shaderProgram.getAttribLocation('a_texcoord1'), size: 2, type: BufferDataType.Float, normalized: false, stride: 48, offset: 32 },
+                { index: this.shaderProgram.getAttribLocation('a_texcoord2'), size: 2, type: BufferDataType.Float, normalized: false, stride: 48, offset: 40 },
+            ], true);
+            
+
+            const vertices = this.modelData.vertices;
+            const bufferSize = 48 * vertices.length;
+            const buffer = new Uint8Array(bufferSize);
+
+            const writer = new BinaryWriter(buffer.buffer);
+            for (let i = 0; i < vertices.length; ++i) {
+                writer.writeFloatLE(vertices[i].position[0]);
+                writer.writeFloatLE(vertices[i].position[1]);
+                writer.writeFloatLE(vertices[i].position[2]);
+                writer.writeFloatLE(vertices[i].normal[0]);
+                writer.writeFloatLE(vertices[i].normal[1]);
+                writer.writeFloatLE(vertices[i].normal[2]);
+                writer.writeUInt8(vertices[i].boneIndices[0]);
+                writer.writeUInt8(vertices[i].boneIndices[1]);
+                writer.writeUInt8(vertices[i].boneIndices[2]);
+                writer.writeUInt8(vertices[i].boneIndices[3]);
+                writer.writeUInt8(vertices[i].boneWeights[0]);
+                writer.writeUInt8(vertices[i].boneWeights[1]);
+                writer.writeUInt8(vertices[i].boneWeights[2]);
+                writer.writeUInt8(vertices[i].boneWeights[3]);
+                writer.writeFloatLE(vertices[i].texCoords1[0]);
+                writer.writeFloatLE(vertices[i].texCoords1[1]);
+                writer.writeFloatLE(vertices[i].texCoords2[0]);
+                writer.writeFloatLE(vertices[i].texCoords2[1]);
+            }
+            vertexDataBuffer.setData(buffer);
+            vertexIndexBuffer.setData(new Uint16Array(this.modelData.skinTriangles));
+            vao.setIndexBuffer(vertexIndexBuffer);
+            vao.addVertexDataBuffer(vertexDataBuffer);
+
+            return {
+                vao,
+                vertexDataBuffer,
+                vertexIndexBuffer
+            }
+        });
     }
 
     private loadTextures() {

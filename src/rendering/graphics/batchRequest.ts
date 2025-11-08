@@ -1,5 +1,4 @@
-import { ColorMask, GxBlend, IFrameBuffer, IGraphics, IShaderProgram, ITexture, IUniformsData, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer } from "./abstractions";
-import { WebGlGraphics } from "./webGlGraphics";
+import { ColorMask, GxBlend, IDataBuffers, IFrameBuffer, IGraphics, IShaderProgram, ITexture, IUniformsData, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer } from "./abstractions";
 
 export enum DrawInstructionType {
     Triangle,
@@ -195,6 +194,16 @@ export class DrawingBatchRequest extends RenderingBatchRequest {
         return this;
     }
 
+    useDataBuffers(dataBuffers: IDataBuffers) {
+        if (dataBuffers.vao) {
+            this.vao = dataBuffers.vao;
+        } else {
+            this.vertexDataBuffer = dataBuffers.vertexDataBuffer;
+            this.vertexIndexBuffer = dataBuffers.vertexIndexBuffer;
+        }
+        return this;
+    }
+
     override compareTo(other?: DrawingBatchRequest) {
         if (!other) {
             return 0;
@@ -307,6 +316,16 @@ export class OffMainDrawingRequest extends RenderingBatchRequest {
 
     useVertexArrayObject(vao?: IVertexArrayObject) {
         this.vao = vao;
+        return this;
+    }
+    
+    useDataBuffers(dataBuffers: IDataBuffers) {
+        if (dataBuffers.vao) {
+            this.vao = dataBuffers.vao;
+        } else {
+            this.vertexDataBuffer = dataBuffers.vertexDataBuffer;
+            this.vertexIndexBuffer = dataBuffers.vertexIndexBuffer;
+        }
         return this;
     }
 }

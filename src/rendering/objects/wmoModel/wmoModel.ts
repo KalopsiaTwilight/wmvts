@@ -1,6 +1,7 @@
 import {
     AABB, Axis, BspTree, BufferDataType, ColorMask, DrawingBatchRequest, Float2, Float3, Float4, Float44, Frustrum, GxBlend, 
-    IShaderProgram, ITexture, IVertexArrayObject, M2BlendModeToEGxBlend, M2Model, Plane, RenderingEngine, RenderMaterial,
+    IDataBuffers, IShaderProgram, ITexture, IVertexArrayObject, M2BlendModeToEGxBlend, M2Model, Plane, RenderingEngine, 
+    RenderMaterial,
 } from "@app/rendering";
 import { BinaryWriter } from "@app/utils";
 import { WoWWorldModelBspNode, WoWWorldModelData, WowWorldModelGroupFlags, WoWWorldModelMaterialMaterialFlags, WoWWorldModelPortalRef } from "@app/modeldata";
@@ -50,7 +51,7 @@ export class WMOModel extends WorldPositionedObject {
     lodGroupMap: number[];
 
     shaderProgram: IShaderProgram;
-    groupVaos: IVertexArrayObject[]
+    groupDatabuffers: IDataBuffers[]
 
     portalsByGroup: { [key: number]: WoWWorldModelPortalRef[] }
     groupViews: { [key: number]: Frustrum[] }
@@ -152,13 +153,13 @@ export class WMOModel extends WorldPositionedObject {
         }
         this.groupDoodads = null;
         this.modelData = null;
-        if (this.groupVaos) {
-            for (let i = 0; i < this.groupVaos.length; i++) {
+        if (this.groupDatabuffers) {
+            for (let i = 0; i < this.groupDatabuffers.length; i++) {
                 // TODO: Implement dispose
-                this.groupVaos[i] = null;
+                this.groupDatabuffers[i] = null;
             }
         }
-        this.groupVaos = null;
+        this.groupDatabuffers = null;
         this.shaderProgram = null;
 
         this.groupDoodads = null;
@@ -196,68 +197,12 @@ export class WMOModel extends WorldPositionedObject {
         this.loadDoodads();
         this.loadLiquids();
 
-        this.setupGraphics();
+        this.setupDataBuffers();
         this.setupPortalGraphics();
 
         this.isModelDataLoaded = true;
     }
 
-    private uploadVertexDataForGroup(index: number) {
-        const group = this.modelData.groups[index];
-
-        const vertexDataSize = 56;
-
-        const vb = this.engine.graphics.createVertexDataBuffer([
-            { index: this.shaderProgram.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 0 },
-            { index: this.shaderProgram.getAttribLocation('a_normal'), size: 3, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 12 },
-            { index: this.shaderProgram.getAttribLocation('a_color1'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: vertexDataSize, offset: 24 },
-            { index: this.shaderProgram.getAttribLocation('a_color2'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: vertexDataSize, offset: 28 },
-            { index: this.shaderProgram.getAttribLocation('a_texCoord1'), size: 2, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 32 },
-            { index: this.shaderProgram.getAttribLocation('a_texCoord2'), size: 2, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 40 },
-            { index: this.shaderProgram.getAttribLocation('a_texCoord3'), size: 2, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 48 },
-        ], true)
-
-        const numVertices = group.vertices.length;
-        const bufferSize = vertexDataSize * numVertices;
-        const buffer = new Uint8Array(bufferSize);
-        const writer = new BinaryWriter(buffer.buffer);
-
-        const numColors = group.vertexColors.length / group.vertices.length;
-        if (numColors != Math.floor(numColors)) {
-            throw new Error("Unexpected situation. Number of Vertex Colors is not cleanly divisible by number of vertices.")
-        }
-
-        const numUv = group.uvList.length / group.vertices.length;
-        if (numUv != Math.floor(numUv)) {
-            throw new Error("Unexpected situation. Number of UV coordinates is not cleanly divisible by number of vertices.");
-        }
-
-        for (let j = 0; j < group.vertices.length; j++) {
-            writer.writeFloatLE(group.vertices[j][0]);
-            writer.writeFloatLE(group.vertices[j][1]);
-            writer.writeFloatLE(group.vertices[j][2]);
-            writer.writeFloatLE(group.normals[j][0]);
-            writer.writeFloatLE(group.normals[j][1]);
-            writer.writeFloatLE(group.normals[j][2]);
-            writer.writeUInt8(numColors > 0 ? group.vertexColors[j][0] : 0);
-            writer.writeUInt8(numColors > 0 ? group.vertexColors[j][1] : 0);
-            writer.writeUInt8(numColors > 0 ? group.vertexColors[j][2] : 0);
-            writer.writeUInt8(numColors > 0 ? group.vertexColors[j][3] : 255);
-            writer.writeUInt8(numColors > 1 ? group.vertexColors[j + group.vertices.length][0] : 0);
-            writer.writeUInt8(numColors > 1 ? group.vertexColors[j + group.vertices.length][1] : 0);
-            writer.writeUInt8(numColors > 1 ? group.vertexColors[j + group.vertices.length][2] : 0);
-            writer.writeUInt8(numColors > 1 ? group.vertexColors[j + group.vertices.length][3] : 255);
-            writer.writeFloatLE(numUv > 0 ? group.uvList[j][0] : 0);
-            writer.writeFloatLE(numUv > 0 ? group.uvList[j][1] : 0);
-            writer.writeFloatLE(numUv > 1 ? group.uvList[j + group.vertices.length][0] : 0);
-            writer.writeFloatLE(numUv > 1 ? group.uvList[j + group.vertices.length][1] : 0);
-            writer.writeFloatLE(numUv > 2 ? group.uvList[j + 2 * group.vertices.length][0] : 0);
-            writer.writeFloatLE(numUv > 2 ? group.uvList[j + 2 * group.vertices.length][1] : 0);
-        }
-        vb.setData(buffer);
-        return vb;
-    }
-    
     private resizeForBounds() {
         this.engine.sceneCamera.resizeForBoundingBox(this.modelData.boundingBox);
     }
@@ -647,7 +592,7 @@ export class WMOModel extends WorldPositionedObject {
             
             const batchRequest = new DrawingBatchRequest(BATCH_IDENTIFIER, this.fileId, batchData.materialId);
             batchRequest.useMaterial(this.groupMaterials[batchData.materialId])
-                .useVertexArrayObject(this.groupVaos[i])
+                .useDataBuffers(this.groupDatabuffers[i])
                 .drawIndexedTriangles(batchData.startIndex * 2, batchData.indexCount);
             this.engine.submitDrawRequest(batchRequest);
         }
@@ -668,21 +613,79 @@ export class WMOModel extends WorldPositionedObject {
         }
     }
 
-    private setupGraphics() {
-        this.groupVaos = new Array(this.modelData.groups.length);
+    private setupDataBuffers() {
+        this.groupDatabuffers = new Array(this.modelData.groups.length);
         for (let i = 0; i < this.modelData.groups.length; i++) {
-            const vao = this.engine.graphics.createVertexArrayObject();
+            this.groupDatabuffers[i] = this.engine.getDataBuffers("WMO-" + this.fileId + "-" + i, (graphics) => {
+                const group = this.modelData.groups[i];
 
-            const vb = this.uploadVertexDataForGroup(i);
-            const ib = this.engine.graphics.createVertexIndexBuffer(true);
-            ib.setData(new Uint16Array(this.modelData.groups[i].indices));
+                const numColors = group.vertexColors.length / group.vertices.length;
+                if (numColors != Math.floor(numColors)) {
+                    throw new Error("Unexpected situation. Number of Vertex Colors is not cleanly divisible by number of vertices.")
+                }
 
-            vao.setIndexBuffer(ib);
-            vao.addVertexDataBuffer(vb);
+                const numUv = group.uvList.length / group.vertices.length;
+                if (numUv != Math.floor(numUv)) {
+                    throw new Error("Unexpected situation. Number of UV coordinates is not cleanly divisible by number of vertices.");
+                }
 
-            this.groupVaos[i] = vao;
+                const vertexDataSize = 56;
+                const vertexDataBuffer = this.engine.graphics.createVertexDataBuffer([
+                    { index: this.shaderProgram.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 0 },
+                    { index: this.shaderProgram.getAttribLocation('a_normal'), size: 3, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 12 },
+                    { index: this.shaderProgram.getAttribLocation('a_color1'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: vertexDataSize, offset: 24 },
+                    { index: this.shaderProgram.getAttribLocation('a_color2'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: vertexDataSize, offset: 28 },
+                    { index: this.shaderProgram.getAttribLocation('a_texCoord1'), size: 2, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 32 },
+                    { index: this.shaderProgram.getAttribLocation('a_texCoord2'), size: 2, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 40 },
+                    { index: this.shaderProgram.getAttribLocation('a_texCoord3'), size: 2, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 48 },
+                ], true);
+
+                const numVertices = group.vertices.length;
+                const bufferSize = vertexDataSize * numVertices;
+                const buffer = new Uint8Array(bufferSize);
+                const writer = new BinaryWriter(buffer.buffer);
+
+                // TODO: Use seperate programs for various parameters so less data can be written
+                for (let j = 0; j < group.vertices.length; j++) {
+                    writer.writeFloatLE(group.vertices[j][0]);
+                    writer.writeFloatLE(group.vertices[j][1]);
+                    writer.writeFloatLE(group.vertices[j][2]);
+                    writer.writeFloatLE(group.normals[j][0]);
+                    writer.writeFloatLE(group.normals[j][1]);
+                    writer.writeFloatLE(group.normals[j][2]);
+                    writer.writeUInt8(numColors > 0 ? group.vertexColors[j][0] : 0);
+                    writer.writeUInt8(numColors > 0 ? group.vertexColors[j][1] : 0);
+                    writer.writeUInt8(numColors > 0 ? group.vertexColors[j][2] : 0);
+                    writer.writeUInt8(numColors > 0 ? group.vertexColors[j][3] : 255);
+                    writer.writeUInt8(numColors > 1 ? group.vertexColors[j + group.vertices.length][0] : 0);
+                    writer.writeUInt8(numColors > 1 ? group.vertexColors[j + group.vertices.length][1] : 0);
+                    writer.writeUInt8(numColors > 1 ? group.vertexColors[j + group.vertices.length][2] : 0);
+                    writer.writeUInt8(numColors > 1 ? group.vertexColors[j + group.vertices.length][3] : 255);
+                    writer.writeFloatLE(numUv > 0 ? group.uvList[j][0] : 0);
+                    writer.writeFloatLE(numUv > 0 ? group.uvList[j][1] : 0);
+                    writer.writeFloatLE(numUv > 1 ? group.uvList[j + group.vertices.length][0] : 0);
+                    writer.writeFloatLE(numUv > 1 ? group.uvList[j + group.vertices.length][1] : 0);
+                    writer.writeFloatLE(numUv > 2 ? group.uvList[j + 2 * group.vertices.length][0] : 0);
+                    writer.writeFloatLE(numUv > 2 ? group.uvList[j + 2 * group.vertices.length][1] : 0);
+                }
+                vertexDataBuffer.setData(buffer);
+
+                const vertexIndexBuffer = this.engine.graphics.createVertexIndexBuffer(true);
+                vertexIndexBuffer.setData(new Uint16Array(group.indices));
+
+                const vao = this.engine.graphics.createVertexArrayObject();
+                vao.setIndexBuffer(vertexIndexBuffer);
+                vao.addVertexDataBuffer(vertexDataBuffer);
+
+                return { 
+                    vao,
+                    vertexDataBuffer,
+                    vertexIndexBuffer
+                }
+            });
         }
     }
+    
 
     private setupPortalGraphics() {
         const portalVB = this.engine.graphics.createVertexDataBuffer([

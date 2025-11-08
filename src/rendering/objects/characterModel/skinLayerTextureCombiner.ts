@@ -1,7 +1,7 @@
 import { 
-    BufferDataType, ColorMask, GxBlend, IFrameBuffer, IShaderProgram, ITexture, IVertexDataBuffer, IVertexIndexBuffer,
-    RenderMaterial, CharacterModel, Float4, RenderingEngine, OffMainDrawingRequest, DrawingBatchRequest,
-    GenericBatchRequest
+    BufferDataType, ColorMask, GxBlend, IFrameBuffer, IShaderProgram, ITexture, RenderMaterial, 
+    CharacterModel, Float4, RenderingEngine, OffMainDrawingRequest, DrawingBatchRequest,
+    GenericBatchRequest, IDataBuffers
 } from "@app/rendering";
 
 import vsProgramText from "./skinLayerTextureCombiner.vert";
@@ -24,8 +24,7 @@ export class SkinLayerTextureCombiner {
     specularProgram: IShaderProgram;
     emissiveProgram: IShaderProgram;
 
-    vertexDataBuffer: IVertexDataBuffer;
-    vertexIndexBuffer: IVertexIndexBuffer;
+    dataBuffers: IDataBuffers;
 
     frameBuffer: IFrameBuffer;
 
@@ -53,13 +52,21 @@ export class SkinLayerTextureCombiner {
         this.specularProgram = this.engine.getShaderProgram("SKIN_SPECULAR", vsProgramText, specularFsProgramText);
         this.emissiveProgram = this.engine.getShaderProgram("SKIN_EMISSIVE", vsProgramText, emmisiveFsProgramText);
 
-        this.vertexDataBuffer = this.engine.graphics.createVertexDataBuffer([
-            { index: this.diffuseProgram.getAttribLocation('a_texCoord'), size: 2, type: BufferDataType.Float, normalized: false, stride: 8, offset: 0 },
-        ], true);
-        this.vertexDataBuffer.setData(new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]));
+        this.dataBuffers = this.engine.getDataBuffers("SKIN-RECT", (graphics) => {
+            const vertexDataBuffer = graphics.createVertexDataBuffer([
+                { index: this.diffuseProgram.getAttribLocation('a_texCoord'), size: 2, type: BufferDataType.Float, normalized: false, stride: 8, offset: 0 },
+            ], true);
+            vertexDataBuffer.setData(new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]));
 
-        this.vertexIndexBuffer = this.engine.graphics.createVertexIndexBuffer(true);
-        this.vertexIndexBuffer.setData(new Uint16Array([0, 1, 2, 1, 3, 2]))
+            const vertexIndexBuffer = graphics.createVertexIndexBuffer(true);
+            vertexIndexBuffer.setData(new Uint16Array([0, 1, 2, 1, 3, 2]));
+
+            return {
+                vertexDataBuffer,
+                vertexIndexBuffer
+            }
+        })
+
 
         this.frameBuffer = this.engine.graphics.createFrameBuffer(this.width, this.height);
 
@@ -115,10 +122,9 @@ export class SkinLayerTextureCombiner {
         debugMaterial.useUniforms(uniforms)
 
         const batchRequest = new DrawingBatchRequest(BATCH_IDENTIFIER, this.parentId, this.textureType, this.currentBatchId++)
-        batchRequest.useMaterial(debugMaterial);
-        batchRequest.useVertexDataBuffer(this.vertexDataBuffer);
-        batchRequest.useVertexIndexBuffer(this.vertexIndexBuffer);
-        batchRequest.drawIndexedTriangles(0, 6);
+        batchRequest.useMaterial(debugMaterial)
+            .useDataBuffers(this.dataBuffers)
+            .drawIndexedTriangles(0, 6);
 
         this.engine.submitDrawRequest(batchRequest);
     }
@@ -165,8 +171,7 @@ export class SkinLayerTextureCombiner {
             }
             const batchRequest = new OffMainDrawingRequest(BATCH_IDENTIFIER, this.parentId, this.textureType, this.currentBatchId++);
             batchRequest.useMaterial(materials[i])
-                .useVertexDataBuffer(this.vertexDataBuffer)
-                .useVertexIndexBuffer(this.vertexIndexBuffer)
+                .useDataBuffers(this.dataBuffers)
                 .useFrameBuffer(this.frameBuffer)
                 .writeColorOutputToTexture(outputTextures[i])
                 .captureCurrentFrameToTexture(this.backgroundTexture)

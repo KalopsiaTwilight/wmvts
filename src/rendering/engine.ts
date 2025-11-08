@@ -1,7 +1,10 @@
 import { AleaPrngGenerator, Float3, Float4, Float44, Frustrum } from "./math";
 import { Camera } from "../cameras";
-import { RenderObject, IDisposable, IM2DataBuffers, StaticM2DataBuffers } from "./objects";
-import { DrawingBatchRequest, GxBlend, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest, RenderMaterial } from "./graphics";
+import { RenderObject, IDisposable } from "./objects";
+import { 
+    DrawingBatchRequest, IDataBuffers, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest, 
+    RenderMaterial 
+} from "./graphics";
 import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData, RequestFrameFunction } from "..";
 import { SimpleCache } from "./cache";
 import { TextureVariationsMetadata, LiquidTypeMetadata, CharacterMetadata } from "@app/metadata";
@@ -82,7 +85,7 @@ export class RenderingEngine implements IDisposable {
     wmoCache: SimpleCache<WoWWorldModelData>;
     m2Cache: SimpleCache<WoWModelData>;
     liquidCache: SimpleCache<LiquidTypeMetadata>;
-    m2DataBufferCache: SimpleCache<IM2DataBuffers>;
+    dataBuffersCache: SimpleCache<IDataBuffers>;
     materialCache: SimpleCache<RenderMaterial>;
     textureVariationsCache: SimpleCache<TextureVariationsMetadata>;
     characterMetadataCache: SimpleCache<CharacterMetadata>;
@@ -137,8 +140,8 @@ export class RenderingEngine implements IDisposable {
         this.caches.push(this.m2Cache);
         this.liquidCache = new SimpleCache(cacheTtl);
         this.caches.push(this.liquidCache);
-        this.m2DataBufferCache = new SimpleCache(cacheTtl);
-        this.caches.push(this.m2DataBufferCache);
+        this.dataBuffersCache = new SimpleCache(cacheTtl);
+        this.caches.push(this.dataBuffersCache);
         this.textureVariationsCache = new SimpleCache(cacheTtl);
         this.caches.push(this.textureVariationsCache);
         this.characterMetadataCache = new SimpleCache(cacheTtl);
@@ -186,14 +189,6 @@ export class RenderingEngine implements IDisposable {
             const deltaTime = (currentTime - this.lastTime);
             this.lastTime = currentTime;
 
-            // Only start drawing if all objects in the scene are loaded:
-            for (const obj of this.sceneObjects) {
-                if (!obj.isLoaded) {
-                    return;
-                }
-            }
-
-
             this.sceneCamera.update(deltaTime);
             Float44.copy(this.sceneCamera.getViewMatrix(), this.viewMatrix);
             Float44.invert(this.viewMatrix, this.invViewMatrix);
@@ -214,7 +209,6 @@ export class RenderingEngine implements IDisposable {
             }
             this.otherGraphicsRequests = [];
             
-
             for (const obj of this.sceneObjects) {
                 obj.draw();
             }
@@ -447,15 +441,14 @@ export class RenderingEngine implements IDisposable {
         return data;
     }
 
-    getM2DataBuffers(fileId: number, shaderProgram: IShaderProgram, modelData: WoWModelData): IM2DataBuffers {
-        if (this.m2DataBufferCache.contains(fileId)) {
-            return this.m2DataBufferCache.get(fileId);
+    getDataBuffers(key: string, createFn: (graphics: IGraphics) => IDataBuffers): IDataBuffers {
+        if (this.dataBuffersCache.contains(key)) {
+            return this.dataBuffersCache.get(key);
         }
 
-        var buffers = new StaticM2DataBuffers();
-        buffers.createFromModelData(this.graphics, shaderProgram, modelData);
-        this.m2DataBufferCache.store(fileId, buffers);
-        return buffers;
+        const dataBuffers = createFn(this.graphics);
+        this.dataBuffersCache.store(key, dataBuffers);
+        return dataBuffers;
     }
 
     addEngineMaterialParams(material: RenderMaterial) {

@@ -145,3 +145,10 @@ export interface IGraphics {
 
     copyFrameToTexture(texture: ITexture, x: number, y: number, width: number, height: number): void;
 }
+
+
+export interface IDataBuffers {
+    vertexDataBuffer: IVertexDataBuffer;
+    vertexIndexBuffer: IVertexIndexBuffer;
+    vao?: IVertexArrayObject;
+}
