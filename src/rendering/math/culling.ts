@@ -210,17 +210,27 @@ export namespace AABB {
         }
     }
 
+    const bbPoints = [
+        Float4.create(0,0,0,1), 
+        Float4.create(0,0,0,1),
+        Float4.create(0,0,0,1),
+        Float4.create(0,0,0,1),
+        Float4.create(0,0,0,1),
+        Float4.create(0,0,0,1),
+        Float4.create(0,0,0,1),
+        Float4.create(0,0,0,1),
+    ]
+
     export function visibleInFrustrum(aabb: AABB, frustrum: Frustrum) {
-        const bbPoints = [
-            Float4.create(aabb.min[0], aabb.min[1], aabb.min[2], 1),
-            Float4.create(aabb.max[0], aabb.min[1], aabb.min[2], 1),
-            Float4.create(aabb.min[0], aabb.max[1], aabb.min[2], 1),
-            Float4.create(aabb.max[0], aabb.max[1], aabb.min[2], 1),
-            Float4.create(aabb.min[0], aabb.min[1], aabb.max[2], 1),
-            Float4.create(aabb.max[0], aabb.min[1], aabb.max[2], 1),
-            Float4.create(aabb.min[0], aabb.max[1], aabb.max[2], 1),
-            Float4.create(aabb.max[0], aabb.max[1], aabb.max[2], 1),
-        ]
+        Float4.set(bbPoints[0], aabb.min[0], aabb.min[1], aabb.min[2], 1);
+        Float4.set(bbPoints[1], aabb.max[0], aabb.min[1], aabb.min[2], 1);
+        Float4.set(bbPoints[2], aabb.min[0], aabb.max[1], aabb.min[2], 1);
+        Float4.set(bbPoints[3], aabb.max[0], aabb.max[1], aabb.min[2], 1);
+        Float4.set(bbPoints[4], aabb.min[0], aabb.min[1], aabb.max[2], 1);
+        Float4.set(bbPoints[5], aabb.max[0], aabb.min[1], aabb.max[2], 1);
+        Float4.set(bbPoints[6], aabb.min[0], aabb.max[1], aabb.max[2], 1);
+        Float4.set(bbPoints[7], aabb.max[0], aabb.max[1], aabb.max[2], 1);
+        
         for(const plane of frustrum) {
             let fallsInPlane = false;
             for(const point of bbPoints) {
