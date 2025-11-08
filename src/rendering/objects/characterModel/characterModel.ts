@@ -4,25 +4,22 @@ import {
 } from "@app/metadata";
 import { RenderingEngine, ITexture } from "@app/rendering";
 
-import { M2Model } from "../m2Model";
-import { WorldPositionedObject } from "../worldPositionedObject";
 import { SkinLayerTextureCombiner } from "./skinLayerTextureCombiner";
+import { M2Proxy } from "./m2Proxy";
 
 
 const DEFAULT_GEOSET_IDS = [1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 2, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 
-export class CharacterModel extends WorldPositionedObject {
+export class CharacterModel extends M2Proxy {
     fileId: number;
     modelId: number;
     race: number;
     gender: number;
     class: number;
 
-
-    private characterMetadata: CharacterMetadata;
-    private m2Model: M2Model;
-    private customizationChoices: CharacterCustomizationOptionChoiceData[];
-    private customizationGeosets: { [key: number]: number};
+    characterMetadata: CharacterMetadata;
+    customizationChoices: CharacterCustomizationOptionChoiceData[];
+    customizationGeosets: { [key: number]: number};
 
 
     private textureLayerBaseFileIds: { [key: string]: [number, number, number] }
@@ -35,21 +32,12 @@ export class CharacterModel extends WorldPositionedObject {
         this.modelId = modelId;
         this.gender = (modelId-1) % 2;
         this.race = Math.ceil(modelId / 2);
-        this.class = 6;
+        this.class = 0;
 
         this.textureLayerBaseFileIds = {};
         this.textureLayerBaseTextures = {};
         this.textureLayerCombiners = {};
         this.skinLayerTexturesLoaded = false;
-    }
-
-    override update(deltaTime: number): void {
-        super.update(deltaTime);
-        if (!this.isLoaded || this.isDisposing) {
-            return;
-        }
-
-        this.m2Model.update(deltaTime);
     }
     
     override initialize(engine: RenderingEngine): void {
@@ -60,9 +48,6 @@ export class CharacterModel extends WorldPositionedObject {
 
     override dispose(): void {
         super.dispose();
-        if (this.m2Model) {
-            this.m2Model.dispose();
-        }
         this.characterMetadata = null;
         this.customizationChoices = null;
         this.textureLayerBaseFileIds = null;
@@ -70,37 +55,14 @@ export class CharacterModel extends WorldPositionedObject {
         this.textureLayerCombiners = null;
     }
 
-    draw(): void {
-        this.m2Model.draw();
+    override get isLoaded(): boolean {
+        return super.isLoaded && this.skinLayerTexturesLoaded;
     }
 
-    getAnimations(): number[] {
-        return this.m2Model.getAnimations();
+    get customizationData() {
+        return this.characterMetadata.characterCustomizationData;
     }
-
-    useAnimation(id: number) {
-        this.m2Model.useAnimation(id);
-    }
-
-    pauseAnimation() {
-        this.m2Model.pauseAnimation();
-    }
-
-    resumeAnimation() {
-        this.m2Model.resumeAnimation();
-    }
-
-    setAnimationSpeed(speed: number) {
-        this.m2Model.setAnimationSpeed(speed);
-    }
-
-    toggleGeoset(geosetId: number, show: boolean) {
-        this.m2Model.toggleGeoset(geosetId, show);
-    }
-
-    toggleGeosets(start: number, end: number, show: boolean) {
-        this.m2Model.toggleGeosets(start, end, show);
-    }
+    
 
     setCustomizationChoice(optionId: number, choiceId: number) {
         const optionIndex = this.characterMetadata.characterCustomizationData.options.findIndex(x => x.id === optionId);
@@ -118,10 +80,6 @@ export class CharacterModel extends WorldPositionedObject {
         this.applyCustomizations();
     }
 
-    get isLoaded(): boolean {
-        return this.m2Model && this.m2Model.isLoaded && this.skinLayerTexturesLoaded;
-    }
-
     private onCharacterMetadataLoaded(data: CharacterMetadata | null) {
         if (!data) {
             this.dispose();
@@ -132,23 +90,15 @@ export class CharacterModel extends WorldPositionedObject {
         }
 
         this.characterMetadata = data;
-        this.m2Model = new M2Model(data.fileDataId);
-        this.m2Model.parent = this;
-        this.m2Model.initialize(this.engine);
 
-        if (!this.parent) {
-            this.m2Model.on("modelDataLoaded", () => {
-                this.engine.sceneCamera.resizeForBoundingBox(this.m2Model.worldBoundingBox);
-            })
-        }
-
+        this.createM2Model(data.fileDataId);
         this.setDefaultCustomizations();
         this.applyCustomizations();
     }
 
     private setDefaultCustomizations() {
         this.customizationChoices = [];
-        for (const opt of this.characterMetadata.characterCustomizationData.options) {
+        for (const opt of this.customizationData.options) {
             this.customizationChoices.push(opt.choices[0]);
         }
     }
@@ -176,7 +126,7 @@ export class CharacterModel extends WorldPositionedObject {
                     continue;
                 }
 
-                const textureLayer = this.characterMetadata.characterCustomizationData.textureLayers.find(
+                const textureLayer = this.customizationData.textureLayers.find(
                     (layer) => layer.chrModelTextureTargetId === elem.material.chrModelTextureTargetId
                 );
                 if (!textureLayer) {
@@ -210,8 +160,8 @@ export class CharacterModel extends WorldPositionedObject {
             const newIds = newSkinLayers[key];
             
             // TODO: Should this be inited somewhere else?
-            const layer = this.characterMetadata.characterCustomizationData.textureLayers[parseInt(key, 10)];
-            const material = this.characterMetadata.characterCustomizationData.modelMaterials.find(x => x.textureType === layer.textureType)
+            const layer = this.customizationData.textureLayers[parseInt(key, 10)];
+            const material = this.customizationData.modelMaterials.find(x => x.textureType === layer.textureType)
             if (!this.textureLayerCombiners[layer.textureType]) {
                 this.textureLayerCombiners[layer.textureType] = new SkinLayerTextureCombiner(this, layer.textureType, material.width, material.height)
             }
@@ -241,7 +191,7 @@ export class CharacterModel extends WorldPositionedObject {
             this.textureLayerCombiners[key].clear();
         }
 
-        const layers = this.characterMetadata.characterCustomizationData.textureLayers.sort((a,b) => a.chrModelTextureTargetId - b.chrModelTextureTargetId);
+        const layers = this.customizationData.textureLayers.sort((a,b) => a.chrModelTextureTargetId - b.chrModelTextureTargetId);
         for(const layer of layers) {
             if (!this.textureLayerBaseFileIds[layer.layer]) {
                 continue;
@@ -259,7 +209,7 @@ export class CharacterModel extends WorldPositionedObject {
                 height = combiner.height;
             }
             else {
-                const section = this.characterMetadata.characterCustomizationData.textureSections.find(x => x.sectionType === layer.textureSection)
+                const section = this.customizationData.textureSections.find(x => x.sectionType === layer.textureSection)
                 if (!section) {
                     continue;
                 }
@@ -273,21 +223,21 @@ export class CharacterModel extends WorldPositionedObject {
             combiner.drawTextureSection(this.textureLayerBaseTextures[layer.layer], x, y, width, height, layer.blendMode);
         }
 
-        
-        this.m2Model.on("texturesLoaded", () => {
+        this.on("texturesLoaded", () => {
             for(const key in (this.textureLayerCombiners)) {
-                const textureIndex = this.m2Model.modelData.textures.findIndex(x => x.type === parseInt(key, 10));
+                const textureIndex = this.modelData.textures.findIndex(x => x.type === parseInt(key, 10));
                 if (textureIndex < 0) {
                     return;
                 }
-                this.m2Model.textureObjects[textureIndex].swapFor(this.textureLayerCombiners[key].diffuseTexture)
+
+                this.swapTexture(textureIndex, this.textureLayerCombiners[key].diffuseTexture);
             }
         })
         this.skinLayerTexturesLoaded = true;
     }
 
     private updateGeosets() {
-        this.m2Model.on("texturesLoaded", (model) => {
+        this.on("texturesLoaded", (model) => {
             model.toggleGeosets(0, 5300, false);
             model.toggleGeoset(0, true);
             const geosetIds = [...DEFAULT_GEOSET_IDS];

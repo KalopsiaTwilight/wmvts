@@ -167,6 +167,10 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
         this.loadTextures();
     }
 
+    swapTexture(index: number, texture: ITexture) {
+        this.textureObjects[index].swapFor(texture);
+    }
+
     on(type: M2ModelCallbackType, fn: CallbackFn<M2Model>, persistent = false): void {
         this.callbackMgr.addCallback(type, fn, persistent);
     }
