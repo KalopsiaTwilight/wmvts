@@ -49,6 +49,10 @@ export class M2Proxy extends WorldPositionedObject implements IImmediateCallback
     }
 
     draw(): void {
+        if (!this.isLoaded || this.isDisposing) {
+            return;
+        }
+        
         this.m2Model.draw();
     }
 
