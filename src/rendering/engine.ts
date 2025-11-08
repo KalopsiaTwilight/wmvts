@@ -7,6 +7,7 @@ import { SimpleCache } from "./cache";
 import { TextureVariationsMetadata, LiquidTypeMetadata, CharacterMetadata } from "@app/metadata";
 
 import { defaultTexturePickingStrategy, ITexturePickingStrategy } from "./strategies";
+import { CallbackManager, IImmediateCallbackable } from "@app/utils";
 
 const UNKNOWN_TEXTURE_ID = -123;
 
@@ -485,6 +486,10 @@ export class RenderingEngine implements IDisposable {
 
     getRandomNumberGenerator(seed?: number | string) {
         return new AleaPrngGenerator(seed ? seed : 0xb00b1e5);
+    }
+
+    getCallbackManager<T extends IImmediateCallbackable>() {
+        return new CallbackManager<T>();
     }
 
     private setupDebugElements() {
