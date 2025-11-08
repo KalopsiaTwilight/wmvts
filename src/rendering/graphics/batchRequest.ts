@@ -1,4 +1,5 @@
 import { ColorMask, GxBlend, IFrameBuffer, IGraphics, IShaderProgram, ITexture, IUniformsData, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer } from "./abstractions";
+import { WebGlGraphics } from "./webGlGraphics";
 
 export enum DrawInstructionType {
     Triangle,
@@ -26,7 +27,7 @@ export class BatchRequestKey {
         this.batchIdentifier = batchIdentifier;
     }
 
-    compare(other: BatchRequestKey | null) {
+    compareTo(other: BatchRequestKey | null) {
         const ownerIdentDiff = this.ownerIdentifier.localeCompare(other.ownerIdentifier);
         if (ownerIdentDiff != 0) {
             return ownerIdentDiff;
@@ -101,88 +102,49 @@ export class RenderMaterial {
     }
 }
 
-export class RenderingBatchRequest {
+export type BatchRequestType = "draw" | "offMainDraw" | "generic";
+
+
+export abstract class RenderingBatchRequest {
     key: BatchRequestKey
-    beforeDraw?: BatchRequestGraphicsFn;
-    afterDraw?: BatchRequestGraphicsFn;
-
-    vertexIndexBuffer?: IVertexIndexBuffer;
-    vertexDataBuffer?: IVertexDataBuffer;
-    vao?: IVertexArrayObject;
-    frameBuffer?: IFrameBuffer;
-    colorOutputTexture?: ITexture;
-    material?: RenderMaterial;
-    drawInstruction?: DrawInstruction;
-
+    abstract type: BatchRequestType;
 
     constructor(ownerIdentifier: string, ownerId: number, ownerType: number, batchIdentifier: number = 0) {
         this.key = new BatchRequestKey(ownerIdentifier, ownerId, ownerType, batchIdentifier);
     }
 
-    useMaterial(material: RenderMaterial) {
-        this.material = material
-    }
-
-    useFrameBuffer(frameBuffer: IFrameBuffer) {
-        this.frameBuffer = frameBuffer;
-    }
-
-    writeColorOutputToTexture(texture: ITexture) {
-        this.colorOutputTexture = texture;
-    }
-
-    drawTriangles(offset: number, count: number) {
-        this.drawInstruction = {
-            indexed: false,
-            offset, count,
-            type: DrawInstructionType.Triangle
-        };
-    }
-    drawIndexedTriangles(offset: number, count: number) {
-        this.drawInstruction = {
-            indexed: true,
-            offset, count,
-            type: DrawInstructionType.Triangle
-        };
-    }
-    drawIndexedTriangleStrip(offset: number, count: number) {
-        this.drawInstruction = {
-            indexed: true,
-            offset, count,
-            type: DrawInstructionType.TriangleStrip
-        };
-    }
-
-    useVertexIndexBuffer(buffer?: IVertexIndexBuffer) {
-        this.vertexIndexBuffer = buffer;
-    }
-    useVertexDataBuffer(buffer?: IVertexDataBuffer) {
-        this.vertexDataBuffer = buffer;
-    }
-    useVertexArrayObject(vao?: IVertexArrayObject) {
-        this.vao = vao;
-    }
-
-    doBeforeDraw(fn: BatchRequestGraphicsFn) {
-        this.beforeDraw = fn;
-    }
-    doAfterDraw(fn: BatchRequestGraphicsFn) {
-        this.afterDraw = fn;
-    }
-
     submit(graphics: IGraphics) {
-        if (this.frameBuffer) {
-            graphics.useFrameBuffer(this.frameBuffer);
-        }
+        this.beforeMain(graphics);
+        this.main(graphics);
+        this.afterMain(graphics);
+    }
 
-        if (this.colorOutputTexture) {
-            graphics.setColorBufferToTexture(this.colorOutputTexture);
-        }
+    protected beforeMain(graphics: IGraphics) {
 
-        if (this.beforeDraw) {
-            this.beforeDraw(graphics);
-        }
+    }
+    protected main(graphics: IGraphics) {
 
+    }
+
+    protected afterMain(graphics: IGraphics) {
+
+    }
+
+    compareTo(other: RenderingBatchRequest) {
+        return this.key.compareTo(other.key);
+    }
+}
+
+export class DrawingBatchRequest extends RenderingBatchRequest {
+    type: "draw";
+
+    private drawInstruction?: DrawInstruction;
+    private material?: RenderMaterial;
+    private vertexIndexBuffer?: IVertexIndexBuffer;
+    private vertexDataBuffer?: IVertexDataBuffer;
+    private vao?: IVertexArrayObject;
+
+    protected override beforeMain(graphics: IGraphics): void {
         if (this.material) {
             this.material.bind(graphics);
         }
@@ -196,22 +158,171 @@ export class RenderingBatchRequest {
         if (this.vao) {
             graphics.useVertexArrayObject(this.vao);
         }
+    }
+    
+    useMaterial(material: RenderMaterial) {
+        this.material = material
+        return this;
+    }
 
-        if (this.drawInstruction) {
-            if (this.drawInstruction.type === DrawInstructionType.Triangle) {
-                if (this.drawInstruction.indexed) {
-                    graphics.drawIndexedTriangles(this.drawInstruction.offset, this.drawInstruction.count);
-                } else {
-                    graphics.drawTriangles(this.drawInstruction.offset, this.drawInstruction.count);
-                }
-            }
-            if (this.drawInstruction.type === DrawInstructionType.TriangleStrip) {
-                graphics.drawIndexedTriangleStrip(this.drawInstruction.offset, this.drawInstruction.count)
+    drawTriangles(offset: number, count: number) {
+        this.main = (graphics) => graphics.drawTriangles(offset, count);
+        return this;
+    }
+
+    drawIndexedTriangles(offset: number, count: number) {
+        this.main = (graphics) => graphics.drawIndexedTriangles(offset, count);
+        return this;
+    }
+
+    drawIndexedTriangleStrip(offset: number, count: number) {
+        this.main = (graphics) => graphics.drawIndexedTriangleStrip(offset, count);
+        return this;
+    }
+
+    useVertexIndexBuffer(buffer?: IVertexIndexBuffer) {
+        this.vertexIndexBuffer = buffer;
+        return this;
+    }
+
+    useVertexDataBuffer(buffer?: IVertexDataBuffer) {
+        this.vertexDataBuffer = buffer;
+        return this;
+    }
+
+    useVertexArrayObject(vao?: IVertexArrayObject) {
+        this.vao = vao;
+        return this;
+    }
+
+    override compareTo(other?: DrawingBatchRequest) {
+        if (!other) {
+            return 0;
+        }
+        
+        if (this.material && other.material) {
+            // Ensure Opaque batches are drawn before alpha blend batches.
+            const layer1 = this.material.blendMode > GxBlend.GxBlend_Opaque ?
+                this.material.blendMode == GxBlend.GxBlend_AlphaKey ? 1 : 2 : 0
+            const layer2 = other.material.blendMode > GxBlend.GxBlend_Opaque ?
+                other.material.blendMode == GxBlend.GxBlend_AlphaKey ? 1 : 2 : 0
+
+            const layerDiff = layer1 - layer2;
+            if (layerDiff != 0) {
+                return layerDiff;
             }
         }
 
-        if (this.afterDraw) {
-            this.afterDraw(graphics);
+        return this.key.compareTo(other.key);
+    }
+}
+
+export function isDrawingRequest(request: RenderingBatchRequest): request is RenderingBatchRequest {
+    return request.type === "draw";
+}
+
+export class OffMainDrawingRequest extends RenderingBatchRequest {
+    type: "offMainDraw";
+
+    private material?: RenderMaterial;
+    private frameBuffer?: IFrameBuffer;
+    private colorOutputTexture?: ITexture;
+    private copyToTexture?: ITexture;
+    private vertexIndexBuffer?: IVertexIndexBuffer;
+    private vertexDataBuffer?: IVertexDataBuffer;
+    private vao?: IVertexArrayObject;
+
+    protected override beforeMain(graphics: IGraphics) {
+        if (this.frameBuffer) {
+            graphics.useFrameBuffer(this.frameBuffer);
+        }
+
+        if (this.colorOutputTexture) {
+            graphics.setColorBufferToTexture(this.colorOutputTexture);
+        }
+
+        if (this.copyToTexture) {
+            graphics.copyFrameToTexture(this.copyToTexture, 0, 0, this.copyToTexture.width, this.copyToTexture.height)
+        }
+        
+        if (this.material) {
+            this.material.bind(graphics);
+        }
+        
+        if (this.vertexDataBuffer) {
+            graphics.useVertexDataBuffer(this.vertexDataBuffer);
+        }
+        if (this.vertexIndexBuffer) {
+            graphics.useVertexIndexBuffer(this.vertexIndexBuffer);
+        }
+        if (this.vao) {
+            graphics.useVertexArrayObject(this.vao);
         }
     }
+
+    useMaterial(material: RenderMaterial) {
+        this.material = material;
+        return this;
+    }
+
+    useFrameBuffer(frameBuffer: IFrameBuffer) {
+        this.frameBuffer = frameBuffer;
+        return this;
+    }
+
+    writeColorOutputToTexture(texture: ITexture) {
+        this.colorOutputTexture = texture;
+        return this;
+    }
+
+    captureCurrentFrameToTexture(texture: ITexture) {
+        this.copyToTexture = texture;
+        return this;
+    }
+
+    drawTriangles(offset: number, count: number) {
+        this.main = (graphics) => graphics.drawTriangles(offset, count);
+        return this;
+    }
+
+    drawIndexedTriangles(offset: number, count: number) {
+        this.main = (graphics) => graphics.drawIndexedTriangles(offset, count);
+        return this;
+    }
+
+    drawIndexedTriangleStrip(offset: number, count: number) {
+        this.main = (graphics) => graphics.drawIndexedTriangleStrip(offset, count);
+        return this;
+    }
+
+    useVertexIndexBuffer(buffer?: IVertexIndexBuffer) {
+        this.vertexIndexBuffer = buffer;
+        return this;
+    }
+
+    useVertexDataBuffer(buffer?: IVertexDataBuffer) {
+        this.vertexDataBuffer = buffer;
+        return this;
+    }
+
+    useVertexArrayObject(vao?: IVertexArrayObject) {
+        this.vao = vao;
+        return this;
+    }
+}
+
+export function isOffMainDrawingRequest(request: RenderingBatchRequest): request is RenderingBatchRequest {
+    return request.type === "offMainDraw";
+}
+
+export class GenericBatchRequest extends RenderingBatchRequest {
+    type: "generic";
+
+    do(fn: (graphics: IGraphics) => void) {
+        this.main = fn;
+    }
+}
+
+export function isGenericRequest(request: RenderingBatchRequest): request is RenderingBatchRequest {
+    return request.type === "generic";
 }

@@ -1,9 +1,9 @@
 import { WoWExtendedParticleData, WoWParticleEmitterData } from "@app/modeldata";
 import { 
-    BufferDataType, ColorMask, Float2, Float3, Float33, Float4, Float44, GxBlend, IDisposable, 
+    BufferDataType, ColorMask, DrawingBatchRequest, Float2, Float3, Float33, Float4, Float44, GxBlend, IDisposable, 
     IPseudoRandomNumberGenerator, IShaderProgram, ITexture, IVertexArrayObject, IVertexDataBuffer, 
-    IVertexIndexBuffer, RenderingBatchRequest, RenderingEngine, RenderMaterial } from "@app/rendering";
-import { M2Model, M2ModelOwnerTypes } from "../m2Model";
+    IVertexIndexBuffer, RenderingEngine, RenderMaterial } from "@app/rendering";
+import { M2Model } from "../m2Model";
 
 import fragmentShaderProgramText from "./m2ParticleEmitter.frag"; 
 import vertexShaderProgramText from "./m2ParticleEmitter.vert";
@@ -334,10 +334,10 @@ export class M2ParticleEmitter implements IDisposable {
         this.vertexBuffer.setData(new Float32Array(this.vertexData));
 
 
-        const batchRequest = new RenderingBatchRequest(BATCH_IDENTIFIER, this.parent.fileId, this.index);
-        batchRequest.useMaterial(this.material);
-        batchRequest.useVertexArrayObject(this.vao);
-        batchRequest.drawIndexedTriangles(0, (6 * this.nrQuads) >> 0);
+        const batchRequest = new DrawingBatchRequest(BATCH_IDENTIFIER, this.parent.fileId, this.index);
+        batchRequest.useMaterial(this.material)
+            .useVertexArrayObject(this.vao)
+            .drawIndexedTriangles(0, (6 * this.nrQuads) >> 0);
         this.engine.submitDrawRequest(batchRequest);
     }
 

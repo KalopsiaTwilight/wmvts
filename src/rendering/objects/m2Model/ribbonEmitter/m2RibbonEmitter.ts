@@ -1,8 +1,7 @@
 import { WoWRibbonEmiterData } from "@app/modeldata";
 import { 
-    BufferDataType, ColorMask, Float2, Float3, Float4, Float44, GxBlend, IDisposable, IShaderProgram, IVertexArrayObject, 
-    IVertexDataBuffer, IVertexIndexBuffer, M2BlendModeToEGxBlend, M2Model, M2ModelOwnerTypes, RenderingBatchRequest, RenderingEngine,
-    RenderMaterial
+    BufferDataType, ColorMask, DrawingBatchRequest, Float2, Float3, Float4, Float44, GxBlend, IDisposable, IShaderProgram, 
+    IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, M2BlendModeToEGxBlend, M2Model, RenderingEngine, RenderMaterial
 } from "@app/rendering";
 
 
@@ -288,13 +287,14 @@ export class M2RibbonEmitter implements IDisposable {
         }
 
         for (let i = 0; i < this.materials.length; i++) {
-            const batchRequest = new RenderingBatchRequest(BATCH_IDENTIFIER, this.parent.fileId, this.index, i);
-            batchRequest.useMaterial(this.materials[i]);
-            batchRequest.useVertexArrayObject(this.vao);
             const count = this.edgeEnd > this.edgeStart 
                 ? 2 * (this.edgeEnd - this.edgeStart) + 2 
                 : 2 * (this.edgeLifetimes.length + this.edgeEnd - this.edgeStart) + 2;
-            batchRequest.drawIndexedTriangleStrip(2 * this.edgeStart * 2, count);
+
+            const batchRequest = new DrawingBatchRequest(BATCH_IDENTIFIER, this.parent.fileId, this.index, i);
+            batchRequest.useMaterial(this.materials[i])
+                .useVertexArrayObject(this.vao)
+                .drawIndexedTriangleStrip(2 * this.edgeStart * 2, count);
             this.engine.submitDrawRequest(batchRequest);
         }
     }

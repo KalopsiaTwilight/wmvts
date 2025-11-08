@@ -2,6 +2,7 @@ import { WoWBoneData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureTy
 import {
     RenderingEngine, ColorMask,Float4, Float3, ITexture, Float44, IShaderProgram, M2BlendModeToEGxBlend,
     RenderingBatchRequest, AABB, RenderMaterial,
+    DrawingBatchRequest,
 } from "@app/rendering";
 import { CallbackFn, distinct, ICallbackManager, IImmediateCallbackable } from "@app/utils";
 
@@ -34,13 +35,6 @@ interface BoneData {
 
 export type M2ModelCallbackType = "modelDataLoaded" | "texturesLoaded" | "texturesLoadStart"
 
-export enum M2ModelOwnerTypes {
-    TextureUnit,
-    ParticleEmitter,
-    RibbonEmitter
-}
-
-const MAX_NUM_GEOSETS = 52;
 const BATCH_IDENTIFIER = "M2";
 
 export class M2Model extends WorldPositionedObject implements IImmediateCallbackable {
@@ -515,11 +509,11 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
 
     private drawTextureUnit(texUnit: WoWTextureUnitData, index: number) {
         const texUnitData = this.textureUnitData[index];
-        const batchRequest = new RenderingBatchRequest(BATCH_IDENTIFIER, this.fileId, index);
-        batchRequest.useMaterial(texUnitData.material);
         const subMesh = this.modelData.submeshes[texUnit.skinSectionIndex];
-        batchRequest.useVertexArrayObject(this.dataBuffers.vao);
-        batchRequest.drawIndexedTriangles(2 * (subMesh.triangleStart + 65536 * subMesh.level), subMesh.triangleCount);
+        const batchRequest = new DrawingBatchRequest(BATCH_IDENTIFIER, this.fileId, index);
+        batchRequest.useMaterial(texUnitData.material)
+            .useVertexArrayObject(this.dataBuffers.vao)
+            .drawIndexedTriangles(2 * (subMesh.triangleStart + 65536 * subMesh.level), subMesh.triangleCount);
         this.engine.submitDrawRequest(batchRequest);
     }
 

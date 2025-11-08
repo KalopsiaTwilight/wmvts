@@ -1,7 +1,6 @@
 import {
-    AABB, Axis, BspTree, BufferDataType, ColorMask, Float2, Float3, Float4, Float44, Frustrum, GxBlend, IShaderProgram, 
-    ITexture,IVertexArrayObject, M2BlendModeToEGxBlend, M2Model, Plane, RenderingBatchRequest, RenderingEngine,
-    RenderMaterial,
+    AABB, Axis, BspTree, BufferDataType, ColorMask, DrawingBatchRequest, Float2, Float3, Float4, Float44, Frustrum, GxBlend, 
+    IShaderProgram, ITexture, IVertexArrayObject, M2BlendModeToEGxBlend, M2Model, Plane, RenderingEngine, RenderMaterial,
 } from "@app/rendering";
 import { BinaryWriter } from "@app/utils";
 import { WoWWorldModelBspNode, WoWWorldModelData, WowWorldModelGroupFlags, WoWWorldModelMaterialMaterialFlags, WoWWorldModelPortalRef } from "@app/modeldata";
@@ -646,10 +645,10 @@ export class WMOModel extends WorldPositionedObject {
         for (let j = 0; j < groupData.batches.length; j++) {
             const batchData = groupData.batches[j];
             
-            const batchRequest = new RenderingBatchRequest(BATCH_IDENTIFIER, this.fileId, batchData.materialId);
-            batchRequest.useMaterial(this.groupMaterials[batchData.materialId]);
-            batchRequest.useVertexArrayObject(this.groupVaos[i]);
-            batchRequest.drawIndexedTriangles(batchData.startIndex * 2, batchData.indexCount);
+            const batchRequest = new DrawingBatchRequest(BATCH_IDENTIFIER, this.fileId, batchData.materialId);
+            batchRequest.useMaterial(this.groupMaterials[batchData.materialId])
+                .useVertexArrayObject(this.groupVaos[i])
+                .drawIndexedTriangles(batchData.startIndex * 2, batchData.indexCount);
             this.engine.submitDrawRequest(batchRequest);
         }
     }
@@ -661,10 +660,10 @@ export class WMOModel extends WorldPositionedObject {
                 continue;
             }
 
-            const batchRequest = new RenderingBatchRequest(PORTAL_BATCH_IDENTIFIER, this.fileId, i);
-            batchRequest.useMaterial(this.portalMaterial);
-            batchRequest.useVertexArrayObject(this.portalVao);
-            batchRequest.drawIndexedTriangles(portalData.startVertex * 1.5 * 2, portalData.vertexCount * 1.5);
+            const batchRequest = new DrawingBatchRequest(PORTAL_BATCH_IDENTIFIER, this.fileId, i);
+            batchRequest.useMaterial(this.portalMaterial)
+                .useVertexArrayObject(this.portalVao)
+                .drawIndexedTriangles(portalData.startVertex * 1.5 * 2, portalData.vertexCount * 1.5);
             this.engine.submitDrawRequest(batchRequest);
         }
     }

@@ -1,7 +1,7 @@
 import { AleaPrngGenerator, Float3, Float4, Float44, Frustrum } from "./math";
 import { Camera } from "../cameras";
 import { RenderObject, IDisposable, IM2DataBuffers, StaticM2DataBuffers } from "./objects";
-import { GxBlend, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest, RenderMaterial } from "./graphics";
+import { DrawingBatchRequest, GxBlend, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest, RenderMaterial } from "./graphics";
 import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData, RequestFrameFunction } from "..";
 import { SimpleCache } from "./cache";
 import { TextureVariationsMetadata, LiquidTypeMetadata, CharacterMetadata } from "@app/metadata";
@@ -102,7 +102,7 @@ export class RenderingEngine implements IDisposable {
     batchesElement?: HTMLParagraphElement;
 
     // Drawing data
-    drawRequests: RenderingBatchRequest[];
+    drawRequests: DrawingBatchRequest[];
     otherGraphicsRequests: RenderingBatchRequest[];
     sceneObjects: RenderObject[];
 
@@ -208,7 +208,7 @@ export class RenderingEngine implements IDisposable {
                 obj.update(deltaTime);
             }
 
-            const otherGraphicsWork = this.otherGraphicsRequests.sort((a,b) => a.key.compare(b.key));
+            const otherGraphicsWork = this.otherGraphicsRequests.sort((a,b) => a.key.compareTo(b.key));
             for(const batch of otherGraphicsWork) {
                 batch.submit(this.graphics);
             }
@@ -220,23 +220,7 @@ export class RenderingEngine implements IDisposable {
             }
 
             // Sort batches in draw order.
-            const drawOrderRequests = this.drawRequests
-                .sort((r1, r2) => {
-                    if (r1.material && r2.material) {
-                        // Ensure Opaque batches are drawn before alpha blend batches.
-                        const layer1 = r1.material.blendMode > GxBlend.GxBlend_Opaque ?
-                            r1.material.blendMode == GxBlend.GxBlend_AlphaKey ? 1 : 2 : 0
-                        const layer2 = r2.material.blendMode > GxBlend.GxBlend_Opaque ?
-                            r2.material.blendMode == GxBlend.GxBlend_AlphaKey ? 1 : 2 : 0
-
-                        const layerDiff = layer1 - layer2;
-                        if (layerDiff != 0) {
-                            return layerDiff;
-                        }
-                    }
-
-                    return r1.key.compare(r2.key);
-                });
+            const drawOrderRequests = this.drawRequests.sort((r1, r2) => r1.compareTo(r2))
                 
             // Draw new frame
             this.graphics.startFrame(this.width, this.height);
@@ -396,7 +380,7 @@ export class RenderingEngine implements IDisposable {
         return unknownTexture;
     }
 
-    submitDrawRequest(request: RenderingBatchRequest) {
+    submitDrawRequest(request: DrawingBatchRequest) {
         this.drawRequests.push(request);
     }
 

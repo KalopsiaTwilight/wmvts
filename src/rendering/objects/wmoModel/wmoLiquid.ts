@@ -1,7 +1,7 @@
 import { 
     WoWWorldModelLiquid, RenderingEngine, ITexture, WowWorldModelGroupFlags, Float3, AABB, WorldModelRootFlags, 
-    WoWWorldModelGroup, RenderingBatchRequest, Float2, Float4, GxBlend, ColorMask, IShaderProgram, IVertexArrayObject, 
-    BufferDataType, RenderMaterial, WMOOwnerTypes,
+    WoWWorldModelGroup, Float2, Float4, GxBlend, ColorMask, IShaderProgram, IVertexArrayObject, 
+    BufferDataType, RenderMaterial, DrawingBatchRequest,
 } from "@app/index";
 import { BinaryWriter } from "@app/utils";
 import { LiquidTypeMetadata } from "@app/metadata";
@@ -185,7 +185,7 @@ export class WMOLiquid extends WorldPositionedObject {
         const materialIndex = Math.floor((this.engine.timeElapsed / timePerTexture) % this.animatingTextureCount);
         const material = this.materials[materialIndex];
 
-        const batchRequest = new RenderingBatchRequest(BATCH_IDENTIFIER, this.liquidTypeMetadata.id, materialIndex);
+        const batchRequest = new DrawingBatchRequest(BATCH_IDENTIFIER, this.liquidTypeMetadata.id, materialIndex);
         batchRequest.useMaterial(material);
         batchRequest.useVertexArrayObject(this.vao);
         batchRequest.drawIndexedTriangles(0, this.indices.length);

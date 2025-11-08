@@ -1,6 +1,7 @@
 import { 
     BufferDataType, ColorMask, GxBlend, IFrameBuffer, IShaderProgram, ITexture, IVertexDataBuffer, IVertexIndexBuffer,
-     RenderingBatchRequest, RenderMaterial, CharacterModel, Float4, RenderingEngine
+    RenderMaterial, CharacterModel, Float4, RenderingEngine, OffMainDrawingRequest, DrawingBatchRequest,
+    GenericBatchRequest
 } from "@app/rendering";
 
 import vsProgramText from "./skinLayerTextureCombiner.vert";
@@ -72,8 +73,8 @@ export class SkinLayerTextureCombiner {
 
     clear() {
         this.currentBatchId = 0;
-        const clearRequest = new RenderingBatchRequest(BATCH_IDENTIFIER, this.parentId, this.textureType, this.currentBatchId++)
-        clearRequest.doBeforeDraw((graphics) => {
+        const clearRequest = new GenericBatchRequest(BATCH_IDENTIFIER, this.parentId, this.textureType, this.currentBatchId++)
+        clearRequest.do((graphics) => {
             graphics.useFrameBuffer(this.frameBuffer);
             const blackColor = Float4.create(0,0,0,1);
             graphics.setColorBufferToTexture(this.diffuseTexture);
@@ -113,7 +114,7 @@ export class SkinLayerTextureCombiner {
         debugMaterial.useColorMask(ColorMask.All);
         debugMaterial.useUniforms(uniforms)
 
-        const batchRequest = new RenderingBatchRequest(BATCH_IDENTIFIER, this.parentId, this.textureType, this.currentBatchId++)
+        const batchRequest = new DrawingBatchRequest(BATCH_IDENTIFIER, this.parentId, this.textureType, this.currentBatchId++)
         batchRequest.useMaterial(debugMaterial);
         batchRequest.useVertexDataBuffer(this.vertexDataBuffer);
         batchRequest.useVertexIndexBuffer(this.vertexIndexBuffer);
@@ -162,15 +163,14 @@ export class SkinLayerTextureCombiner {
             if (i > 0) {
                 continue;
             }
-            const batchRequest = new RenderingBatchRequest(BATCH_IDENTIFIER, this.parentId, this.textureType, this.currentBatchId++);
-            batchRequest.useMaterial(materials[i]);
-            batchRequest.useVertexDataBuffer(this.vertexDataBuffer);
-            batchRequest.useVertexIndexBuffer(this.vertexIndexBuffer);
-            batchRequest.useFrameBuffer(this.frameBuffer);
-            batchRequest.writeColorOutputToTexture(outputTextures[i]);
-            batchRequest.doBeforeDraw((graphics) => graphics.copyFrameToTexture(this.backgroundTexture, 0, 0, this.width, this.height));
-            batchRequest.drawIndexedTriangles(0, 6);
-
+            const batchRequest = new OffMainDrawingRequest(BATCH_IDENTIFIER, this.parentId, this.textureType, this.currentBatchId++);
+            batchRequest.useMaterial(materials[i])
+                .useVertexDataBuffer(this.vertexDataBuffer)
+                .useVertexIndexBuffer(this.vertexIndexBuffer)
+                .useFrameBuffer(this.frameBuffer)
+                .writeColorOutputToTexture(outputTextures[i])
+                .captureCurrentFrameToTexture(this.backgroundTexture)
+                .drawIndexedTriangles(0, 6);
             this.engine.submitOtherGraphicsRequest(batchRequest);
         }
     }

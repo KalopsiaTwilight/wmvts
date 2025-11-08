@@ -1,6 +1,5 @@
 import { WorldPositionedObject, BufferDataType, Float44, GxBlend, IShaderProgram, IVertexArrayObject, 
-    IVertexDataBuffer, IVertexIndexBuffer, RenderingBatchRequest, RenderingEngine, BatchRequestKey, 
-    RenderMaterial
+    IVertexDataBuffer, IVertexIndexBuffer, RenderingEngine, RenderMaterial, DrawingBatchRequest
 } from "@app/index";
 
 import fs from "./testModel.frag";
@@ -77,7 +76,7 @@ export class TestModel extends WorldPositionedObject {
         material.useShaderProgram(this.program);
         material.useUniforms(this.uniforms);
 
-        const batchRequest = new RenderingBatchRequest(BATCH_IDENTIFIER, -1, 0);
+        const batchRequest = new DrawingBatchRequest(BATCH_IDENTIFIER, -1, 0);
         batchRequest.useMaterial(material);
         batchRequest.useVertexArrayObject(this.vao);
         batchRequest.drawIndexedTriangles(0, 16 * 6);
