@@ -220,6 +220,10 @@ export namespace AABB {
         Float4.create(0,0,0,1),
         Float4.create(0,0,0,1),
     ]
+    
+    export function merge(a: AABB, b: AABB) {
+        return AABB.fromVertices([a.max, a.min, b.max, b.min]);
+    }
 
     export function visibleInFrustrum(aabb: AABB, frustrum: Frustrum) {
         Float4.set(bbPoints[0], aabb.min[0], aabb.min[1], aabb.min[2], 1);

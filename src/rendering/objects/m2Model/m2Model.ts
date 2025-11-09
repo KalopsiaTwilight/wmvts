@@ -36,6 +36,8 @@ export type M2ModelCallbackType = "modelDataLoaded" | "texturesLoaded" | "textur
 
 const BATCH_IDENTIFIER = "M2";
 
+export type ParticeColorOverride = [Float3, Float3, Float3] | null;
+export type ParticleColorOverrides = [ ParticeColorOverride, ParticeColorOverride, ParticeColorOverride];
 export class M2Model extends WorldPositionedObject implements IImmediateCallbackable {
     fileId: number;
     modelData: WoWModelData;
@@ -44,6 +46,8 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
     isTexturesLoaded: boolean;
 
     particleEmitters: M2ParticleEmitter[];
+
+    particleColorOverrides: ParticleColorOverrides;
     ribbonEmitters: M2RibbonEmitter[];
 
     // graphics data
@@ -79,6 +83,7 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
         this.bonePositionBuffer = new Float32Array(16 * MAX_BONES);
 
         this.children = [];
+        this.particleColorOverrides = [null, null, null];
     }
 
     get isLoaded() {
@@ -223,6 +228,36 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
             default: dataNeeded = null; break;
         }
         return !!dataNeeded;
+    }
+
+    override dispose(): void {
+        super.dispose();
+        if (this.particleEmitters) {
+            for (const emitter of this.particleEmitters) {
+                emitter.dispose();
+            }
+            this.particleEmitters = null;
+        }
+        if (this.ribbonEmitters) {
+            for (const emitter of this.ribbonEmitters) {
+                emitter.dispose();
+            }
+            this, this.ribbonEmitters = null;
+        }
+        this.modelData = null;
+        this.shaderProgram = null;
+        this.dataBuffers = null;
+        this.bonePositionBuffer = null;
+        this.animationState = null;
+        this.textureObjects = null;
+        this.textureUnitData = null;
+        this.boneData = null;
+        this.worldModelMatrix = null;
+        this.modelViewMatrix = null;
+        this.invWorldModelMatrix = null;
+        this.invModelViewMatrix = null;
+        this.callbackMgr = null;
+        this.particleColorOverrides = null;
     }
 
     // Referenced from https://github.com/Deamon87/WebWowViewerCpp/blob/master/wowViewerLib/src/engine/managers/animationManager.cpp#L398
@@ -518,35 +553,6 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
 
     private resizeForBounds() {
         this.engine.sceneCamera.resizeForBoundingBox(this.worldBoundingBox);
-    }
-
-    override dispose(): void {
-        super.dispose();
-        if (this.particleEmitters) {
-            for (const emitter of this.particleEmitters) {
-                emitter.dispose();
-            }
-            this.particleEmitters = null;
-        }
-        if (this.ribbonEmitters) {
-            for (const emitter of this.ribbonEmitters) {
-                emitter.dispose();
-            }
-            this, this.ribbonEmitters = null;
-        }
-        this.modelData = null;
-        this.shaderProgram = null;
-        this.dataBuffers = null;
-        this.bonePositionBuffer = null;
-        this.animationState = null;
-        this.textureObjects = null;
-        this.textureUnitData = null;
-        this.boneData = null;
-        this.worldModelMatrix = null;
-        this.modelViewMatrix = null;
-        this.invWorldModelMatrix = null;
-        this.invModelViewMatrix = null;
-        this.callbackMgr = null;
     }
 
     protected onModelLoaded(data: WoWModelData | null) {

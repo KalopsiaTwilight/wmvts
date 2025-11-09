@@ -12,11 +12,6 @@ import { PlaneParticleGenerator } from "./planeParticleGenerator";
 import { SphereParticleGenerator } from "./sphereParticleGenerator";
 import { LocalAnimatedFloat3, LocalAnimatedValueNumber as LocalAnimatedNumber, LocalAnimatedValueFloat2 as LocalAnimatedFloat2 } from "./localAnimatedValue";
 
-function intToColor(val: number) {
-    return Float4.create(((val >> 16) & 255) / 255, ((val >> 8) & 255) / 255, ((val >> 0) & 255) / 255, ((val >> 24) & 255) / 255);
-}
-
-
 const BATCH_IDENTIFIER = "M2-PARTICLE"
 
 const MAX_QUADS_PER_EMITTER = 1000;
@@ -220,6 +215,10 @@ export class M2ParticleEmitter implements IDisposable {
 
     initialize() {
         if (this.m2data.particleColorIndex >= 11 && this.m2data.particleColorIndex <= 13) {
+            const index = this.m2data.particleColorIndex - 11;
+            if (this.parent.particleColorOverrides[index]) {
+                this.particleColorOverride = this.parent.particleColorOverrides[index];
+            }
             // TODO: Load particle override if available in parent item / creature
         }
 
@@ -617,9 +616,7 @@ export class M2ParticleEmitter implements IDisposable {
         const ageValues = preRenderData.ageValues;
 
         this.colorTrack.getValueAtTimestamp(percentTime * 32767, defaultColor, ageValues.color, this.particleColorOverride);
-        if (!this.particleColorOverride) {
-            Float3.scale(ageValues.color, 1 / 255, ageValues.color)
-        }
+        Float3.scale(ageValues.color, 1 / 255, ageValues.color)
 
         this.scaleTrack.getValueAtTimestamp(percentTime * 32767, defaultScale, ageValues.scale);
         ageValues.alpha = this.alphaTrack.getValueAtTimestamp(percentTime * 32767, 32767) / 32767;

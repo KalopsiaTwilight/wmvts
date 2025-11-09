@@ -4,3 +4,4 @@ export * from "./wmoModel"
 export * from "./worldPositionedObject"
 export * from "./characterModel"
 export * from "./textureVariantModel"
+export * from "./itemModel";

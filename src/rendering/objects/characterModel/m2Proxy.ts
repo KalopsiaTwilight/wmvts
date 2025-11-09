@@ -22,8 +22,7 @@ export class M2Proxy extends WorldPositionedObject implements IImmediateCallback
 
     protected createM2Model(fileId: number) {
         this.m2Model = new M2Model(fileId);
-        this.m2Model.parent = this;
-        this.m2Model.initialize(this.engine);
+        this.addChild(this.m2Model);
 
         if (!this.parent) {
             this.m2Model.on("modelDataLoaded", () => {

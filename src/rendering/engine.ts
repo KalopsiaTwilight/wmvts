@@ -7,9 +7,9 @@ import {
 } from "./graphics";
 import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData, RequestFrameFunction } from "..";
 import { SimpleCache } from "./cache";
-import { TextureVariationsMetadata, LiquidTypeMetadata, CharacterMetadata } from "@app/metadata";
+import { TextureVariationsMetadata, LiquidTypeMetadata, CharacterMetadata, ItemMetadata } from "@app/metadata";
 
-import { defaultTexturePickingStrategy, ITexturePickingStrategy } from "./strategies";
+import { defaultModelPickingStrategy, defaultTexturePickingStrategy, IModelPickingStrategy, ITexturePickingStrategy } from "./strategies";
 import { CallbackManager, IImmediateCallbackable } from "@app/utils";
 
 const UNKNOWN_TEXTURE_ID = -123;
@@ -52,6 +52,7 @@ export class RenderingEngine implements IDisposable {
     errorHandler?: ErrorHandlerFn;
     sceneCamera: Camera;
     texturePickingStrategy: ITexturePickingStrategy
+    modelPickingStrategy: IModelPickingStrategy
 
     // Rendering settings
     fov: number;
@@ -89,6 +90,7 @@ export class RenderingEngine implements IDisposable {
     materialCache: SimpleCache<RenderMaterial>;
     textureVariationsCache: SimpleCache<TextureVariationsMetadata>;
     characterMetadataCache: SimpleCache<CharacterMetadata>;
+    itemMetadataCache: SimpleCache<ItemMetadata>;
     runningRequests: { [key: string]: Promise<unknown> }
 
     // Some stats
@@ -146,6 +148,8 @@ export class RenderingEngine implements IDisposable {
         this.caches.push(this.textureVariationsCache);
         this.characterMetadataCache = new SimpleCache(cacheTtl);
         this.caches.push(this.characterMetadataCache);
+        this.itemMetadataCache = new SimpleCache(cacheTtl);
+        this.caches.push(this.itemMetadataCache);
 
 
         this.runningRequests = {};
@@ -169,6 +173,7 @@ export class RenderingEngine implements IDisposable {
 
         // TODO: make this configurable?
         this.texturePickingStrategy = defaultTexturePickingStrategy;
+        this.modelPickingStrategy = defaultModelPickingStrategy;
     }
 
     dispose(): void {
@@ -412,7 +417,12 @@ export class RenderingEngine implements IDisposable {
         return this.getDataFromLoaderOrCache(this.characterMetadataCache, key, (dl) => dl.loadCharacterMetadata(modelId));
     }
 
-    async getTextureVariationsMetadata(fileId: number): Promise<TextureVariationsMetadata | null> {
+    getItemMetadata(displayInfoId: number): Promise<ItemMetadata | null> {
+        const key = "ITEM-" + displayInfoId;
+        return this.getDataFromLoaderOrCache(this.itemMetadataCache, key, (dl) => dl.loadItemMetadata(displayInfoId));
+    }
+
+    getTextureVariationsMetadata(fileId: number): Promise<TextureVariationsMetadata | null> {
         const key = "TextureVariations-" + fileId;
         return this.getDataFromLoaderOrCache(this.textureVariationsCache, key, (dl) => dl.loadTextureVariationsMetadata(fileId));
     }

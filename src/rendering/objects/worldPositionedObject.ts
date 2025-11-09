@@ -83,4 +83,10 @@ export abstract class WorldPositionedObject implements RenderObject {
             child.updateModelMatrixFromParent();
         }
     }
+
+    protected addChild(obj: WorldPositionedObject) {
+        obj.parent = this;
+        this.children.push(obj);
+        obj.initialize(this.engine);
+    }
 }

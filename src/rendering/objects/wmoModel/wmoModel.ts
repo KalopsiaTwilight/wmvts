@@ -223,13 +223,10 @@ export class WMOModel extends WorldPositionedObject {
                     }
 
                     const doodadModel = new M2Model(modelId);
-                    doodadModel.parent = this;
+                    this.addChild(doodadModel);
                     const scale = Float3.create(doodadDef.scale, doodadDef.scale, doodadDef.scale);
                     doodadModel.setModelMatrix(doodadDef.position, doodadDef.rotation, scale);
-                    doodadModel.initialize(this.engine);
-
                     this.groupDoodads[i].push(doodadModel);
-                    this.children.push(doodadModel);
                 }
             }
         }
