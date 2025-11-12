@@ -80,8 +80,7 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
     override initialize(engine: RenderingEngine): void {
         super.initialize(engine);
 
-        this.callbackMgr = engine.getCallbackManager();
-        this.callbackMgr.bind(this);
+        this.callbackMgr = engine.getCallbackManager(this);
         this.engine.getCharacterMetadata(this.modelId).then(this.onCharacterMetadataLoaded.bind(this));
     }
 

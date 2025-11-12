@@ -95,8 +95,7 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
         this.shaderProgram = this.engine.getShaderProgram("M2", vertexShaderProgramText, fragmentShaderProgramText);
 
 
-        this.callbackMgr = this.engine.getCallbackManager();
-        this.callbackMgr.bind(this);
+        this.callbackMgr = this.engine.getCallbackManager(this);
         this.engine.getM2ModelFile(this.fileId).then(this.onModelLoaded.bind(this));
     }
 

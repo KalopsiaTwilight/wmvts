@@ -43,8 +43,7 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
             super.initialize(engine);
             this.engine.getItemMetadata(this.displayInfoId).then(this.onItemMetadataLoaded.bind(this));
 
-            this.callbackMgr = this.engine.getCallbackManager();
-            this.callbackMgr.bind(this);
+            this.callbackMgr = this.engine.getCallbackManager(this);
         }
     }
 
