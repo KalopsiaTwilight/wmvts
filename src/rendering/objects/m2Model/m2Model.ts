@@ -26,8 +26,10 @@ interface TextureUnitData {
     textureMatrices: Float44[];
 }
 
-interface BoneData {
+export interface BoneData {
     hasUpdatedThisTick: boolean;
+    isOverriden: boolean;
+    crc: number;
     boneOffsetMatrix: Float44;
     positionMatrix: Float44;
 }
@@ -262,7 +264,7 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
     // Referenced from https://github.com/Deamon87/WebWowViewerCpp/blob/master/wowViewerLib/src/engine/managers/animationManager.cpp#L398
     private updateBone(bone: WoWBoneData, index: number) {
         const data = this.boneData[index];
-        if (data.hasUpdatedThisTick) {
+        if (data.hasUpdatedThisTick || data.isOverriden) {
             return;
         }
 
@@ -582,6 +584,8 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
             this.boneData[i] = {
                 boneOffsetMatrix: null,
                 hasUpdatedThisTick: false,
+                isOverriden: false,
+                crc: this.modelData.bones[i].boneNameCRC,
                 positionMatrix: Float44.identity()
             };
         }

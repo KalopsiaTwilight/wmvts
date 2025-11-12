@@ -1,4 +1,4 @@
-import { AABB, CharacterModel, Float3, ITexture, M2Model, RenderingEngine } from "@app/rendering";
+import { AABB, CharacterModel, Float3, Float44, ITexture, M2Model, RenderingEngine } from "@app/rendering";
 import { InventoryType, ItemMetadata } from "@app/metadata";
 import { CallbackFn, ICallbackManager, IImmediateCallbackable } from "@app/utils";
 
@@ -58,6 +58,7 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
             return;
         }
 
+        this.updateAttachedBones();
         
         if (this.component1) {
             this.component1.update(deltaTime);
@@ -65,6 +66,40 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
 
         if (this.component2) {
             this.component2.update(deltaTime);
+        }
+    }
+
+    private updateAttachedBones() {
+        if (!this.character || !this.character.isLoaded ||  (!this.component1 && !this.component2)) {
+            return;
+        }
+
+        const characterBones = this.character.boneData;
+        const parentBoneMap: { [key: number]: number} = {};
+        for(let i = 0; i < characterBones.length; i++) {
+            parentBoneMap[characterBones[i].crc] = i;
+        }
+        if (this.component1?.boneData?.length) {
+            for(let i = 0; i < this.component1.boneData.length; i++) {
+                const boneData = this.component1.boneData[i];
+                const parentBoneIndex = parentBoneMap[boneData.crc];
+                if (!parentBoneIndex) {
+                    continue;
+                }
+                boneData.isOverriden = true;
+                Float44.copy(characterBones[parentBoneIndex].positionMatrix, boneData.positionMatrix);
+            }
+        }
+        if (this.component2?.boneData?.length) {
+            for(let i = 0; i < this.component2.boneData.length; i++) {
+                const boneData = this.component2.boneData[i];
+                const parentBoneIndex = parentBoneMap[boneData.crc];
+                if (!parentBoneIndex) {
+                    continue;
+                }
+                boneData.isOverriden = true;
+                Float44.copy(characterBones[parentBoneIndex].positionMatrix, boneData.positionMatrix);
+            }
         }
     }
 
