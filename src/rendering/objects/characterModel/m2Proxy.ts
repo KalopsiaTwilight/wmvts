@@ -1,9 +1,8 @@
-import { CallbackFn, IImmediateCallbackable } from "@app/utils";
-import { RenderingEngine, M2Model, M2ModelCallbackType, ITexture } from "@app/rendering";
+import { RenderingEngine, M2Model, ITexture } from "@app/rendering";
 
 import { WorldPositionedObject } from "../worldPositionedObject";
 
-export class M2Proxy extends WorldPositionedObject implements IImmediateCallbackable {
+export class M2Proxy extends WorldPositionedObject  {
     fileId: number;
 
     get isLoaded(): boolean {
@@ -11,7 +10,15 @@ export class M2Proxy extends WorldPositionedObject implements IImmediateCallback
     }
 
     get modelData() {
-        return this.m2Model.modelData;
+        return this.m2Model?.modelData;
+    }
+
+    get boneData() {
+        return this.m2Model?.boneData;
+    }
+
+    get textureObjects() {
+        return this.m2Model?.textureObjects;
     }
     
     override initialize(engine: RenderingEngine): void {
@@ -20,7 +27,7 @@ export class M2Proxy extends WorldPositionedObject implements IImmediateCallback
 
     private m2Model: M2Model;
 
-    protected createM2Model(fileId: number) {
+    protected createM2Model(fileId: number, configureFn?: (model: M2Model) => void) {
         this.m2Model = new M2Model(fileId);
         this.addChild(this.m2Model);
 
@@ -28,6 +35,10 @@ export class M2Proxy extends WorldPositionedObject implements IImmediateCallback
             this.m2Model.on("modelDataLoaded", () => {
                 this.engine.sceneCamera.resizeForBoundingBox(this.m2Model.worldBoundingBox);
             })
+        }
+
+        if (configureFn) {
+            configureFn(this.m2Model);
         }
     }
 
@@ -89,13 +100,5 @@ export class M2Proxy extends WorldPositionedObject implements IImmediateCallback
 
     toggleGeosets(start: number, end: number, show: boolean) {
         this.m2Model.toggleGeosets(start, end, show);
-    }
-
-    on(type: M2ModelCallbackType, fn: CallbackFn<M2Model>, persistent = false): void {
-        this.m2Model.on(type, fn, persistent);
-    }
-
-    canExecuteCallback(type: M2ModelCallbackType): boolean {
-        return this.m2Model.canExecuteCallback(type);
     }
 }

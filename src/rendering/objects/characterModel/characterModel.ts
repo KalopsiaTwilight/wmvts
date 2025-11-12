@@ -6,11 +6,15 @@ import { RenderingEngine, ITexture } from "@app/rendering";
 
 import { SkinLayerTextureCombiner } from "./skinLayerTextureCombiner";
 import { M2Proxy } from "./m2Proxy";
+import { CharacterInventory, EquipmentSlot } from "./characterInventory";
+import { ICallbackManager, CallbackFn, IImmediateCallbackable } from "@app/utils";
 
 
 const DEFAULT_GEOSET_IDS = [1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 2, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 
-export class CharacterModel extends M2Proxy {
+export type CharacterModelCallbackType = "characterMetadataLoaded" | "modelDataLoaded" | "modelTexturesLoaded"
+
+export class CharacterModel extends M2Proxy implements IImmediateCallbackable {
     fileId: number;
     modelId: number;
     race: number;
@@ -26,6 +30,8 @@ export class CharacterModel extends M2Proxy {
     private textureLayerBaseTextures: { [key: string]: [ITexture, ITexture, ITexture] }
     private textureLayerCombiners: { [key: string]: SkinLayerTextureCombiner }
     private skinLayerTexturesLoaded: boolean;
+    private inventory: CharacterInventory
+    private callbackMgr: ICallbackManager<CharacterModel>;
 
     constructor(modelId: number) {
         super();
@@ -38,11 +44,14 @@ export class CharacterModel extends M2Proxy {
         this.textureLayerBaseTextures = {};
         this.textureLayerCombiners = {};
         this.skinLayerTexturesLoaded = false;
+        this.inventory = new CharacterInventory(this);
     }
     
     override initialize(engine: RenderingEngine): void {
         super.initialize(engine);
 
+        this.callbackMgr = engine.getCallbackManager();
+        this.callbackMgr.bind(this);
         this.engine.getCharacterMetadata(this.modelId).then(this.onCharacterMetadataLoaded.bind(this));
     }
 
@@ -62,22 +71,52 @@ export class CharacterModel extends M2Proxy {
     get customizationData() {
         return this.characterMetadata.characterCustomizationData;
     }
+
+    override update(deltaTime: number) {
+        super.update(deltaTime);
+
+        this.inventory.update(deltaTime);
+    }
+
+    override draw() {
+        super.draw();
+
+        this.inventory.draw();
+    }
     
+    on(type: CharacterModelCallbackType, fn: CallbackFn<CharacterModel>, persistent = false): void {
+        this.callbackMgr.addCallback(type, fn, persistent);
+    }
+
+    canExecuteCallback(type: CharacterModelCallbackType): boolean {
+        switch(type) {
+            case "characterMetadataLoaded": return this.characterMetadata != null;
+            case "modelDataLoaded": return this.modelData != null;
+            case "modelTexturesLoaded": return this.textureObjects != null;
+            default: return false;
+        }
+    }
 
     setCustomizationChoice(optionId: number, choiceId: number) {
-        const optionIndex = this.characterMetadata.characterCustomizationData.options.findIndex(x => x.id === optionId);
-        if (optionIndex < 0) {
-            return;
-        }
+        this.on("characterMetadataLoaded", () => {
+            const optionIndex = this.characterMetadata.characterCustomizationData.options.findIndex(x => x.id === optionId);
+            if (optionIndex < 0) {
+                return;
+            }
 
-        const opt = this.characterMetadata.characterCustomizationData.options[optionIndex];
-        const choice = opt.choices.find(x => x.id === choiceId);
-        if (!choice) {
-            return;
-        }
-        this.customizationChoices[optionIndex] = choice;
-        
-        this.applyCustomizations();
+            const opt = this.characterMetadata.characterCustomizationData.options[optionIndex];
+            const choice = opt.choices.find(x => x.id === choiceId);
+            if (!choice) {
+                return;
+            }
+            
+            this.customizationChoices[optionIndex] = choice;
+            this.applyCustomizations();
+        })
+    }
+
+    equipItem(slot: EquipmentSlot, displayId1: number, displayId2?: number) {
+        this.inventory.equipItem(slot, displayId1, displayId2);
     }
 
     private onCharacterMetadataLoaded(data: CharacterMetadata | null) {
@@ -91,9 +130,17 @@ export class CharacterModel extends M2Proxy {
 
         this.characterMetadata = data;
 
-        this.createM2Model(data.fileDataId);
+        this.createM2Model(data.fileDataId, (model) => {
+            model.on("modelDataLoaded", () => {
+                this.callbackMgr.processCallbacks("modelDataLoaded")
+            });
+            model.on("texturesLoaded", () => {
+                this.callbackMgr.processCallbacks("modelTexturesLoaded")
+            });
+        });
         this.setDefaultCustomizations();
         this.applyCustomizations();
+        this.callbackMgr.processCallbacks("characterMetadataLoaded")
     }
 
     private setDefaultCustomizations() {
@@ -223,7 +270,7 @@ export class CharacterModel extends M2Proxy {
             combiner.drawTextureSection(this.textureLayerBaseTextures[layer.layer], x, y, width, height, layer.blendMode);
         }
 
-        this.on("texturesLoaded", () => {
+        this.on("modelTexturesLoaded", () => {
             for(const key in (this.textureLayerCombiners)) {
                 const textureIndex = this.modelData.textures.findIndex(x => x.type === parseInt(key, 10));
                 if (textureIndex < 0) {
@@ -237,16 +284,16 @@ export class CharacterModel extends M2Proxy {
     }
 
     private updateGeosets() {
-        this.on("texturesLoaded", (model) => {
-            model.toggleGeosets(0, 5300, false);
-            model.toggleGeoset(0, true);
+        this.on("modelTexturesLoaded", () => {
+            this.toggleGeosets(0, 5300, false);
+            this.toggleGeoset(0, true);
             const geosetIds = [...DEFAULT_GEOSET_IDS];
             for(const geoSetType in this.customizationGeosets) {
                 geosetIds[parseInt(geoSetType, 10)] = this.customizationGeosets[geoSetType];
             }
             for(let i = 0; i < geosetIds.length; i++) {
-                model.toggleGeoset(i * 100 + geosetIds[i], true);
+                this.toggleGeoset(i * 100 + geosetIds[i], true);
             }
-        }, true)
+        });
     }
 }

@@ -27,16 +27,25 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
 
     callbackMgr: ICallbackManager<ItemModel>
 
+    private isInitialized: boolean;
+
     constructor(displayInfoId: number) {
         super();
         this.displayInfoId = displayInfoId;
         this.sectionTextures = { };
+        this.isInitialized = false;
     }
     
     override initialize(engine: RenderingEngine): void {
-        super.initialize(engine);
 
-        this.engine.getItemMetadata(this.displayInfoId).then(this.onItemMetadataLoaded.bind(this));
+        if (!this.isInitialized) {
+            this.isInitialized = true;
+            super.initialize(engine);
+            this.engine.getItemMetadata(this.displayInfoId).then(this.onItemMetadataLoaded.bind(this));
+
+            this.callbackMgr = this.engine.getCallbackManager();
+            this.callbackMgr.bind(this);
+        }
     }
 
     override get isLoaded(): boolean {
@@ -76,6 +85,10 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
 
     equipTo(character: CharacterModel) {
         this.character = character;
+        this.parent = character;
+        this.character.children.push(this);
+        this.updateModelMatrixFromParent();
+        this.initialize(character.engine);
     }
 
     override dispose(): void {
@@ -167,6 +180,8 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
             }
             Promise.all(loadingPromises).then(this.onTexturesLoaded.bind(this));
         }
+
+        this.callbackMgr.processCallbacks("metadataLoaded")
     }
 
     private onComponentLoaded() {
@@ -189,9 +204,12 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
                 this.engine.sceneCamera.resizeForBoundingBox(bb);
             }
         }
+
+        this.callbackMgr.processCallbacks("componentsLoaded");
     }
 
     private onTexturesLoaded() {
         this.texturesLoaded = true;
+        this.callbackMgr.processCallbacks("texturesLoaded");
     }
 }

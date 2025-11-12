@@ -84,6 +84,16 @@ export abstract class WorldPositionedObject implements RenderObject {
         }
     }
 
+    setModelMatrixFromMatrix(matrix: Float44) {
+        Float44.copy(matrix, this.localModelMatrix);
+        
+        this.updateModelMatrixFromParent();
+
+        for(const child of this.children) {
+            child.updateModelMatrixFromParent();
+        }
+    }
+
     protected addChild(obj: WorldPositionedObject) {
         obj.parent = this;
         this.children.push(obj);
