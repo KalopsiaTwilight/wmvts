@@ -11,7 +11,7 @@ function parseIntToColor(val: number, dest: Float3) {
 
 export type ItemModelCallbackType = "metadataLoaded" | "sectionTexturesLoaded" | "componentsLoaded" 
 
-export class ItemModel extends WorldPositionedObject implements IImmediateCallbackable {
+export class ItemModel extends WorldPositionedObject implements IImmediateCallbackable<ItemModelCallbackType> {
     fileId: number;
     displayInfoId: number;
     itemMetadata: ItemMetadata
@@ -23,9 +23,9 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
 
     component1?: M2Model;
     component2?: M2Model;
-    sectionTextures: { [key: number]: ITexture};
+    sectionTextures: { [key: number]: [ITexture, ITexture, ITexture]};
 
-    callbackMgr: ICallbackManager<ItemModel>
+    callbackMgr: ICallbackManager<ItemModelCallbackType, ItemModel>
 
     private isInitialized: boolean;
 
@@ -171,12 +171,19 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
 
         if (metadata.componentSections) {
             const loadingPromises: Promise<void>[] = [];
+            const unkTexture = this.engine.getSolidColorTexture([0,0,0,0]);
             for(const section of metadata.componentSections) {
-                const textureId = this.engine.texturePickingStrategy(section.textures, race, gender, charClass)[0];
-                const promise = this.engine.getTexture(textureId).then((texture) => {
-                    this.sectionTextures[section.section] = texture;
-                });
-                loadingPromises.push(promise);
+                this.sectionTextures[section.section] = [unkTexture, unkTexture, unkTexture];
+                const textureIds = this.engine.texturePickingStrategy(section.textures, race, gender, charClass);
+
+                for(let i = 0; i < 2; i++) {
+                    if (textureIds[i]) {
+                        const promise = this.engine.getTexture(textureIds[i]).then((texture) => {
+                            this.sectionTextures[section.section][i] = texture;
+                        });
+                        loadingPromises.push(promise);
+                    }
+                }
             }
             Promise.all(loadingPromises).then(this.onTexturesLoaded.bind(this));
         }
@@ -210,6 +217,6 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
 
     private onTexturesLoaded() {
         this.texturesLoaded = true;
-        this.callbackMgr.processCallbacks("texturesLoaded");
+        this.callbackMgr.processCallbacks("sectionTexturesLoaded");
     }
 }

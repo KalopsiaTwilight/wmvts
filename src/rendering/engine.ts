@@ -475,8 +475,8 @@ export class RenderingEngine implements IDisposable {
         return new AleaPrngGenerator(seed ? seed : 0xb00b1e5);
     }
 
-    getCallbackManager<T extends IImmediateCallbackable>() {
-        return new CallbackManager<T>();
+    getCallbackManager<TKeys extends string, T extends IImmediateCallbackable<TKeys>>() {
+        return new CallbackManager<TKeys, T>();
     }
 
     private setupDebugElements() {

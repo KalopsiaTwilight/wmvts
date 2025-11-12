@@ -38,7 +38,7 @@ const BATCH_IDENTIFIER = "M2";
 
 export type ParticeColorOverride = [Float3, Float3, Float3] | null;
 export type ParticleColorOverrides = [ ParticeColorOverride, ParticeColorOverride, ParticeColorOverride];
-export class M2Model extends WorldPositionedObject implements IImmediateCallbackable {
+export class M2Model extends WorldPositionedObject implements IImmediateCallbackable<M2ModelCallbackType> {
     fileId: number;
     modelData: WoWModelData;
 
@@ -68,7 +68,7 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
     invModelViewMatrix: Float44;
     isMirrored: boolean;
 
-    callbackMgr: ICallbackManager<M2Model>
+    callbackMgr: ICallbackManager<M2ModelCallbackType, M2Model>
 
     constructor(fileId: number) {
         super();

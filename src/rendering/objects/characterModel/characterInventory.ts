@@ -44,8 +44,6 @@ export interface EquippedItemData {
 
 export class CharacterInventory {
     inventoryData: { [key: number]: EquippedItemData }
-
-
     parent: CharacterModel
 
     constructor(parent: CharacterModel) {
@@ -67,8 +65,12 @@ export class CharacterInventory {
                 data.attachments = data.attachmentIds.map(i => this.parent.modelData.attachments.find(x => x.id === i));
             })
         })
-
-        
+        model1.on("sectionTexturesLoaded", (model) => {
+            for(const section in model.sectionTextures) {
+                const sectionNr = parseInt(section, 10);
+                this.parent.setTexturesForSection(sectionNr, slot, model.sectionTextures[section])
+            }
+        });
 
         let model2: ItemModel;
         if (displayId2) {
@@ -85,6 +87,10 @@ export class CharacterInventory {
             attachments: [],
             attachmentMatrices: []
         }
+    }
+
+    unequipItem(slot: EquipmentSlot) {
+        this.unloadItem(slot);
     }
 
     update(deltaTime: number) {
@@ -152,6 +158,7 @@ export class CharacterInventory {
             data.model2.dispose()
         }
         this.inventoryData[slot] = null;
+        this.parent.clearTexturesForSlot(slot);
     }
 
     private getAttachmentIdsForSlot(slot: EquipmentSlot, type: InventoryType) : number[] {

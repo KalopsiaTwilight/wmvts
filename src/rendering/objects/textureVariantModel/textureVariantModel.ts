@@ -9,9 +9,9 @@ import { CallbackFn, ICallbackManager, IImmediateCallbackable } from "@app/utils
 export type TextureVariantModelCallbackType  = "textureVariationsLoaded" | M2ModelCallbackType
 
 
-export class TextureVariantModel extends M2Model implements IImmediateCallbackable {
+export class TextureVariantModel extends M2Model implements IImmediateCallbackable<TextureVariantModelCallbackType> {
     textureVariations: TextureVariationsMetadata;
-    override callbackMgr: ICallbackManager<TextureVariantModel>;
+    override callbackMgr: ICallbackManager<TextureVariantModelCallbackType, TextureVariantModel>;
 
     loadedTextures: ITexture[]
 

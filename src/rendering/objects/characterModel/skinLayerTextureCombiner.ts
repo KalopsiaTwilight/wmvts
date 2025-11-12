@@ -37,6 +37,7 @@ export class SkinLayerTextureCombiner {
     backgroundTexture: ITexture;
 
     currentBatchId: number;
+    resolution: Float32Array;
 
     constructor(parent: CharacterModel, textureType: number, width: number, height: number) {
         this.parentId = parent.modelId;
@@ -76,6 +77,7 @@ export class SkinLayerTextureCombiner {
         this.backgroundTexture = this.engine.graphics.createEmptyTexture(this.width, this.height);
 
         this.currentBatchId = 0;
+        this.resolution = new Float32Array([this.width, this.height]);
     }
 
     clear() {
@@ -141,13 +143,17 @@ export class SkinLayerTextureCombiner {
 
         const materials = [diffuseMaterial, specularMaterial, emissiveMaterial];
 
+        const isUpscaled = textures[0].width < width || textures[0].height < height;
+
         const uniforms = {
             "u_drawX": x / this.width,
             "u_drawY": y / this.height, 
             "u_drawWidth": width / this.width,
             "u_drawHeight": height / this.height, 
             "u_blendMode": blendMode,
-            "u_backgroundResolution": new Float32Array([this.width, this.height]), // TODO: Instantiate once.
+            "u_backgroundResolution": this.resolution,
+            "u_isUpscaled": isUpscaled,
+            "u_textureResolution": new Float32Array([textures[0].width, textures[0].height]),
             "u_diffuseTexture": textures[0] ? textures[0] : this.blackTexture,
             "u_specularTexture": textures[1] ? textures[1] : this.blackTexture,
             "u_emissiveTexture": textures[2] ? textures[2]: this.alphaTexture,

@@ -12,9 +12,37 @@ import { ICallbackManager, CallbackFn, IImmediateCallbackable } from "@app/utils
 
 const DEFAULT_GEOSET_IDS = [1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 2, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 
-export type CharacterModelCallbackType = "characterMetadataLoaded" | "modelDataLoaded" | "modelTexturesLoaded"
+export type CharacterModelCallbackType = "characterMetadataLoaded" | "modelDataLoaded" | "modelTexturesLoaded" | "skinTexturesLoaded"
 
-export class CharacterModel extends M2Proxy implements IImmediateCallbackable {
+interface TextureSectionTextureData {
+    priority: number;
+    slot: EquipmentSlot;
+    textures: [ITexture, ITexture, ITexture]
+}
+
+const slotToPriorityMap = [
+    11, // Heads
+    0, // Neck
+    10, // Shoulders
+    5, // Body
+    1, // Chest
+    8, // Waist
+    2, // Legs
+    3, // Feet
+    4, // Wrists
+    6, // Hands
+    0, // Finger1
+    0, // Finger2
+    0, // Trinket1
+    0, // Trinket2
+    9, // Back
+    0, // MainHand
+    0, // Offhand
+    0, // Ranged
+    7, // Tabard
+];
+
+export class CharacterModel extends M2Proxy implements IImmediateCallbackable<CharacterModelCallbackType> {
     fileId: number;
     modelId: number;
     race: number;
@@ -29,9 +57,10 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable {
     private textureLayerBaseFileIds: { [key: string]: [number, number, number] }
     private textureLayerBaseTextures: { [key: string]: [ITexture, ITexture, ITexture] }
     private textureLayerCombiners: { [key: string]: SkinLayerTextureCombiner }
+    private textureSectionTextures: { [key: number]: TextureSectionTextureData[] }
     private skinLayerTexturesLoaded: boolean;
     private inventory: CharacterInventory
-    private callbackMgr: ICallbackManager<CharacterModel>;
+    private callbackMgr: ICallbackManager<CharacterModelCallbackType, CharacterModel>;
 
     constructor(modelId: number) {
         super();
@@ -43,6 +72,7 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable {
         this.textureLayerBaseFileIds = {};
         this.textureLayerBaseTextures = {};
         this.textureLayerCombiners = {};
+        this.textureSectionTextures = {};
         this.skinLayerTexturesLoaded = false;
         this.inventory = new CharacterInventory(this);
     }
@@ -93,6 +123,7 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable {
             case "characterMetadataLoaded": return this.characterMetadata != null;
             case "modelDataLoaded": return this.modelData != null;
             case "modelTexturesLoaded": return this.textureObjects != null;
+            case "skinTexturesLoaded": return this.skinLayerTexturesLoaded;
             default: return false;
         }
     }
@@ -109,7 +140,7 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable {
             if (!choice) {
                 return;
             }
-            
+
             this.customizationChoices[optionIndex] = choice;
             this.applyCustomizations();
         })
@@ -117,6 +148,31 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable {
 
     equipItem(slot: EquipmentSlot, displayId1: number, displayId2?: number) {
         this.inventory.equipItem(slot, displayId1, displayId2);
+    }
+
+    unequipItem(slot: EquipmentSlot) {
+        this.inventory.unequipItem(slot);
+    }
+
+    setTexturesForSection(section: number, slot: EquipmentSlot, textures: [ITexture, ITexture, ITexture]) {
+        let data = this.textureSectionTextures[section];
+        if (!data) {
+            data = [];
+            this.textureSectionTextures[section] = data;
+        }
+        data.push({ priority: slotToPriorityMap[slot], slot: slot, textures });
+        if (this.skinLayerTexturesLoaded) {
+            this.updateSkinTextures();
+        }
+    }
+
+    clearTexturesForSlot(slot: EquipmentSlot) {
+        for(const section in this.textureSectionTextures) {
+            this.textureSectionTextures[section] = this.textureSectionTextures[section].filter(x => x.slot !== slot);
+        }
+        if (this.skinLayerTexturesLoaded) {
+            this.updateSkinTextures();
+        }
     }
 
     private onCharacterMetadataLoaded(data: CharacterMetadata | null) {
@@ -234,10 +290,19 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable {
     }
 
     private onSkinTexturesLoaded() {
+        this.updateSkinTextures();
+        this.skinLayerTexturesLoaded = true;
+        this.callbackMgr.processCallbacks("skinTexturesLoaded")
+    }
+
+    private updateSkinTextures() {
         for(const key in this.textureLayerCombiners) {
             this.textureLayerCombiners[key].clear();
         }
 
+        // Draw base layers
+        const hasChestEquipment = this.textureSectionTextures[3] && this.textureSectionTextures[3].length;
+        const hasLegEquipment = this.textureSectionTextures[5] && this.textureSectionTextures[5].length;
         const layers = this.customizationData.textureLayers.sort((a,b) => a.chrModelTextureTargetId - b.chrModelTextureTargetId);
         for(const layer of layers) {
             if (!this.textureLayerBaseFileIds[layer.layer]) {
@@ -246,6 +311,16 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable {
 
             const combiner = this.textureLayerCombiners[layer.textureType];
             if (!combiner) {
+                continue;
+            }
+
+            // skip base upper torso if equipment draws there
+            if (layer.textureSection === 3 && hasChestEquipment) {
+                continue;
+            }
+
+            // skip base lower torso if equipment draws there
+            if (layer.textureSection === 5 && hasLegEquipment) {
                 continue;
             }
 
@@ -270,6 +345,24 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable {
             combiner.drawTextureSection(this.textureLayerBaseTextures[layer.layer], x, y, width, height, layer.blendMode);
         }
 
+        for(const section in this.textureSectionTextures) {
+            // TODO: Check if it's always layer 1
+            const combiner = this.textureLayerCombiners[1];
+            if (!combiner) {
+                continue;
+            }
+
+            const textureSection = this.customizationData.textureSections[section]
+            if (!textureSection) {
+                continue;
+            }
+
+            const textureData = this.textureSectionTextures[section].sort((a,b) => a.priority - b.priority);
+            for(const item of textureData) {
+                combiner.drawTextureSection(item.textures, textureSection.x, textureSection.y, textureSection.width,textureSection.height, 0);
+            }
+        }
+        
         this.on("modelTexturesLoaded", () => {
             for(const key in (this.textureLayerCombiners)) {
                 const textureIndex = this.modelData.textures.findIndex(x => x.type === parseInt(key, 10));
@@ -280,7 +373,6 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable {
                 this.swapTexture(textureIndex, this.textureLayerCombiners[key].diffuseTexture);
             }
         })
-        this.skinLayerTexturesLoaded = true;
     }
 
     private updateGeosets() {
