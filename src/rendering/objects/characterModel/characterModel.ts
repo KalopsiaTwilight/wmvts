@@ -336,7 +336,7 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
                 continue;
             }
 
-            const textureSection = this.customizationData.textureSections[section]
+            const textureSection = this.customizationData.textureSections.find(x => x.sectionType === parseInt(section, 10));
             if (!textureSection) {
                 continue;
             }
