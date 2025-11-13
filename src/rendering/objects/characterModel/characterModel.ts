@@ -373,7 +373,7 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
         for(const key in equipmentToggles) {
             const group = parseInt(key, 10);
             const val = equipmentToggles[group as GeoSet];
-            this.toggleGeosets(group * 100, group * 100 -1, false);
+            this.toggleGeosets(group * 100, (group+1) * 100 -1, false);
             this.toggleGeoset(group * 100 + val, true);
         }
     }
