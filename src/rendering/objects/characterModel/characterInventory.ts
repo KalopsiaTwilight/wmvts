@@ -176,10 +176,25 @@ export class CharacterInventory {
         if (!this.isLoaded) {
             return { };
         }
-        // TODO: Get geoset overrides from helmets
-        // TODO: Process geoset override on Helmets, Shoulders, Waist
 
         const geoSetMap: { [key in GeoSet]?: number } = {};
+
+        const helmItem = this.inventoryData[EquipmentSlot.Head];
+        if (helmItem) {
+            const metadata = helmItem.model1.itemMetadata;
+            const hideGeosetData = this.parent.gender === 0 ? metadata.hideGeoset1 : metadata.hideGeoset2;
+            if (hideGeosetData) {
+                for(const hideGeoset of hideGeosetData) {
+                    if (hideGeoset.raceId !== this.parent.race) {
+                        continue;
+                    }
+                    
+                    geoSetMap[hideGeoset.geosetGroup as GeoSet] = -1;
+                }
+            }
+        }
+
+        // TODO: Process geoset override on Helmets, Shoulders, Waist
 
         const priorityOrderedSlots = Object.values(EquipmentSlot)
             .sort((a,b) => slotToPriorityMap[a as EquipmentSlot] - slotToPriorityMap[b as EquipmentSlot]) as EquipmentSlot[];

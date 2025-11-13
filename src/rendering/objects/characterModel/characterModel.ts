@@ -361,7 +361,6 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
 
     private onGeosetUpdate() {
         this.toggleGeosets(0, 5300, false);
-        this.toggleGeoset(0, true);
         const geosetIds = [...DEFAULT_GEOSET_IDS];
         for(const geoSetType in this.customizationGeosets) {
             geosetIds[parseInt(geoSetType, 10)] = this.customizationGeosets[geoSetType];
@@ -374,7 +373,10 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
             const group = parseInt(key, 10);
             const val = equipmentToggles[group as GeoSet];
             this.toggleGeosets(group * 100, (group+1) * 100 -1, false);
-            this.toggleGeoset(group * 100 + val, true);
+            if (val > -1) {
+                this.toggleGeoset(group * 100 + val, true);
+            }
         }
+        this.toggleGeoset(0, true);
     }
 }
