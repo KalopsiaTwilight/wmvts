@@ -3,11 +3,12 @@ import {
     CharacterMetadata 
 } from "@app/metadata";
 import { RenderingEngine, ITexture } from "@app/rendering";
+import { ICallbackManager, CallbackFn, IImmediateCallbackable } from "@app/utils";
 
 import { SkinLayerTextureCombiner } from "./skinLayerTextureCombiner";
 import { M2Proxy } from "./m2Proxy";
-import { CharacterInventory, EquipmentSlot } from "./characterInventory";
-import { ICallbackManager, CallbackFn, IImmediateCallbackable } from "@app/utils";
+import { EquipmentSlot, GeoSet } from "./enums"
+import { CharacterInventory } from "./characterInventory";
 
 
 const DEFAULT_GEOSET_IDS = [1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 2, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
@@ -19,28 +20,6 @@ interface TextureSectionTextureData {
     slot: EquipmentSlot;
     textures: [ITexture, ITexture, ITexture]
 }
-
-const slotToPriorityMap = [
-    11, // Heads
-    0, // Neck
-    10, // Shoulders
-    5, // Body
-    1, // Chest
-    8, // Waist
-    2, // Legs
-    3, // Feet
-    4, // Wrists
-    6, // Hands
-    0, // Finger1
-    0, // Finger2
-    0, // Trinket1
-    0, // Trinket2
-    9, // Back
-    0, // MainHand
-    0, // Offhand
-    0, // Ranged
-    7, // Tabard
-];
 
 export class CharacterModel extends M2Proxy implements IImmediateCallbackable<CharacterModelCallbackType> {
     fileId: number;
@@ -153,13 +132,13 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
         this.inventory.unequipItem(slot);
     }
 
-    setTexturesForSection(section: number, slot: EquipmentSlot, textures: [ITexture, ITexture, ITexture]) {
+    setTexturesForSection(section: number, slot: EquipmentSlot, priority: number, textures: [ITexture, ITexture, ITexture]) {
         let data = this.textureSectionTextures[section];
         if (!data) {
             data = [];
             this.textureSectionTextures[section] = data;
         }
-        data.push({ priority: slotToPriorityMap[slot], slot: slot, textures });
+        data.push({ priority, slot, textures });
         if (this.skinLayerTexturesLoaded) {
             this.updateSkinTextures();
         }
@@ -172,6 +151,12 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
         if (this.skinLayerTexturesLoaded) {
             this.updateSkinTextures();
         }
+    }
+
+    updateGeosets() {
+        this.on("modelTexturesLoaded", () => { 
+            this.onGeosetUpdate();
+        });
     }
 
     private onCharacterMetadataLoaded(data: CharacterMetadata | null) {
@@ -374,17 +359,22 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
         })
     }
 
-    private updateGeosets() {
-        this.on("modelTexturesLoaded", () => {
-            this.toggleGeosets(0, 5300, false);
-            this.toggleGeoset(0, true);
-            const geosetIds = [...DEFAULT_GEOSET_IDS];
-            for(const geoSetType in this.customizationGeosets) {
-                geosetIds[parseInt(geoSetType, 10)] = this.customizationGeosets[geoSetType];
-            }
-            for(let i = 0; i < geosetIds.length; i++) {
-                this.toggleGeoset(i * 100 + geosetIds[i], true);
-            }
-        });
+    private onGeosetUpdate() {
+        this.toggleGeosets(0, 5300, false);
+        this.toggleGeoset(0, true);
+        const geosetIds = [...DEFAULT_GEOSET_IDS];
+        for(const geoSetType in this.customizationGeosets) {
+            geosetIds[parseInt(geoSetType, 10)] = this.customizationGeosets[geoSetType];
+        }
+        for(let i = 0; i < geosetIds.length; i++) {
+            this.toggleGeoset(i * 100 + geosetIds[i], true);
+        }
+        const equipmentToggles = this.inventory.getGeosetToggles();
+        for(const key in equipmentToggles) {
+            const group = parseInt(key, 10);
+            const val = equipmentToggles[group as GeoSet];
+            this.toggleGeosets(group * 100, group * 100 -1, false);
+            this.toggleGeoset(group * 100 + val, true);
+        }
     }
 }

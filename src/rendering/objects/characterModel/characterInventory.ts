@@ -1,35 +1,13 @@
 
-import { InventoryType } from "@app/metadata";
+import { InventoryType, ItemFeatureFlag } from "@app/metadata";
 import { WoWAttachmentData } from "@app/modeldata";
 import { Float44 } from "@app/rendering/math";
 
 import { ItemModel } from "../itemModel";
 
 import { CharacterModel } from "./characterModel";
+import { EquipmentSlot, GeoSet } from "./enums";
 
-export enum EquipmentSlot {
-    Start        = 0,
-    Head         = 0,
-    Neck         = 1,
-    Shoulders    = 2,
-    Body         = 3,
-    Chest        = 4,
-    Waist        = 5,
-    Legs         = 6,
-    Feet         = 7,
-    Wrists       = 8,
-    Hands        = 9,
-    Finger1      = 10,
-    Finger2      = 11,
-    Trinket1     = 12,
-    Trinket2     = 13,
-    Back         = 14,
-    MainHand     = 15,
-    OffHand      = 16,
-    Ranged       = 17,
-    Tabard       = 18,
-    End          = 19
-}
 
 export interface EquippedItemData {
     displayId1: number;
@@ -40,10 +18,57 @@ export interface EquippedItemData {
     attachmentMatrices: Float44[];
     model1: ItemModel
     model2?: ItemModel;
+} 
+
+const equipmentSlotToGeosetsMap: { [key in EquipmentSlot]: GeoSet[] } = {
+    [EquipmentSlot.Head]: [GeoSet.Helmet],
+    [EquipmentSlot.Neck]: [],
+    [EquipmentSlot.Shoulders]: [GeoSet.Shoulders],
+    [EquipmentSlot.Body]: [GeoSet.Sleeves, GeoSet.ShirtDoublet, GeoSet.LowerBody, GeoSet.Torso, GeoSet.ArmUpper],
+    [EquipmentSlot.Shirt]: [GeoSet.Sleeves, GeoSet.ShirtDoublet],
+    [EquipmentSlot.Waist]: [GeoSet.Belt],
+    [EquipmentSlot.Legs]: [GeoSet.PantDoublet, GeoSet.Legcuffs, GeoSet.LowerBody],
+    [EquipmentSlot.Feet]: [GeoSet.Boots, GeoSet.Feet],
+    [EquipmentSlot.Wrists]: [],
+    [EquipmentSlot.Hands]: [GeoSet.Wrists, GeoSet.HandAttachments],
+    [EquipmentSlot.Finger1]: [],
+    [EquipmentSlot.Finger2]: [],
+    [EquipmentSlot.Trinket1]: [],
+    [EquipmentSlot.Trinket2]: [],
+    [EquipmentSlot.Back]: [GeoSet.Cloak],
+    [EquipmentSlot.MainHand]: [],
+    [EquipmentSlot.OffHand]: [],
+    [EquipmentSlot.Ranged]: [],
+    [EquipmentSlot.Tabard]: [GeoSet.Tabard],
+    [EquipmentSlot.End]: [],
+}
+
+
+const slotToPriorityMap: { [key in EquipmentSlot]: number } = {
+    [EquipmentSlot.Head]: 11,
+    [EquipmentSlot.Neck]: 0,
+    [EquipmentSlot.Shoulders]: 10,
+    [EquipmentSlot.Body]: 5,
+    [EquipmentSlot.Shirt]: 1,
+    [EquipmentSlot.Waist]: 8,
+    [EquipmentSlot.Legs]: 2,
+    [EquipmentSlot.Feet]: 3,
+    [EquipmentSlot.Wrists]: 4,
+    [EquipmentSlot.Hands]: 6,
+    [EquipmentSlot.Finger1]: 0,
+    [EquipmentSlot.Finger2]: 0,
+    [EquipmentSlot.Trinket1]: 0,
+    [EquipmentSlot.Trinket2]: 0,
+    [EquipmentSlot.Back]: 9,
+    [EquipmentSlot.MainHand]: 0,
+    [EquipmentSlot.OffHand]: 0,
+    [EquipmentSlot.Ranged]: 0,
+    [EquipmentSlot.Tabard]: 7,
+    [EquipmentSlot.End]: 0,
 }
 
 export class CharacterInventory {
-    inventoryData: { [key: number]: EquippedItemData }
+    inventoryData: { [key in EquipmentSlot]?: EquippedItemData }
     parent: CharacterModel
 
     constructor(parent: CharacterModel) {
@@ -68,7 +93,12 @@ export class CharacterInventory {
         model1.on("sectionTexturesLoaded", (model) => {
             for(const section in model.sectionTextures) {
                 const sectionNr = parseInt(section, 10);
-                this.parent.setTexturesForSection(sectionNr, slot, model.sectionTextures[section])
+                let priority = slotToPriorityMap[slot];
+                if (slot == EquipmentSlot.Hands && model.itemMetadata.geosetGroup[0] === 0) {
+                    priority -= 2;
+                }
+                this.parent.setTexturesForSection(sectionNr, slot, priority, model.sectionTextures[section]);
+                this.parent.updateGeosets();
             }
         });
 
@@ -95,7 +125,7 @@ export class CharacterInventory {
 
     update(deltaTime: number) {
         for(const slot in this.inventoryData) {
-            const data = this.inventoryData[slot];
+            const data = this.inventoryData[slot as unknown as EquipmentSlot];
             if (!data) {
                 continue;
             }
@@ -115,13 +145,13 @@ export class CharacterInventory {
 
     draw() {
         for(const slot in this.inventoryData) {
-            const data = this.inventoryData[slot];
+            const data = this.inventoryData[slot as unknown as EquipmentSlot];
             if (!data) {
                 continue;
             }
-            this.inventoryData[slot].model1.draw();
-            if (this.inventoryData[slot].model2) {
-                this.inventoryData[slot].model2.draw();
+            data.model1.draw();
+            if (data.model2) {
+                data.model2.draw();
             }
         }
     }
@@ -130,6 +160,77 @@ export class CharacterInventory {
         for(const slot in this.inventoryData) {
             this.unloadItem(slot as unknown as EquipmentSlot);
         }
+    }
+
+    getGeosetToggles() {
+        // TODO: Get geoset overrides from helmets
+        // TODO: Process geoset override on Helmets, Shoulders, Waist
+
+        const geoSetMap: { [key in GeoSet]?: number } = {};
+
+        const priorityOrderedSlots = Object.values(EquipmentSlot)
+            .sort((a,b) => slotToPriorityMap[a as EquipmentSlot] - slotToPriorityMap[b as EquipmentSlot]) as EquipmentSlot[];
+        for(const slot of priorityOrderedSlots) {
+            const item = this.inventoryData[slot];
+            if (!item) {
+                continue;
+            }
+
+            const geoSets = equipmentSlotToGeosetsMap[slot];
+            // TODO: Properly index this when item uses multiple models?
+            const itemGeosets = item.model1.itemMetadata.geosetGroup;
+            for(let i = 0; i < geoSets.length; i++) {
+                if (!itemGeosets[i]) {
+                    continue;
+                }
+
+                geoSetMap[geoSets[i]] = itemGeosets[i] + 1;
+            }
+        }
+
+        // Disable sleeves when wielding gloves
+        const handItem = this.inventoryData[EquipmentSlot.Hands];
+        if (handItem && handItem.model1.itemMetadata.geosetGroup[0]) {
+            geoSetMap[GeoSet.Sleeves] = 1;
+        }
+
+        // Handle tabard special cases
+        const tabardItem = this.inventoryData[EquipmentSlot.Tabard];
+        if (tabardItem) {
+            if(tabardItem.model1.itemMetadata.flags & ItemFeatureFlag.UnknownEffect1)
+            {
+                geoSetMap[GeoSet.Torso] = 2;
+            }
+            if (!geoSetMap[GeoSet.Tabard]) {
+                const waistItem = this.inventoryData[EquipmentSlot.Waist];
+                if (waistItem && (waistItem.model1.itemMetadata.flags & ItemFeatureFlag.DisableTabardGeo)) {
+                    geoSetMap[GeoSet.Tabard] = 3;
+                } else {
+                    geoSetMap[GeoSet.Tabard] = 2;
+                }
+            }
+        }
+
+        const feetItem = this.inventoryData[EquipmentSlot.Feet];
+        if (feetItem) {
+            if (!geoSetMap[GeoSet.Feet] && feetItem.model1.itemMetadata.flags & ItemFeatureFlag.UnknownEffect1) {
+                geoSetMap[GeoSet.Feet] = 2;
+            } else { 
+                geoSetMap[GeoSet.Feet] = 1;
+            }
+        } else {
+            geoSetMap[GeoSet.Feet] = 1;
+        }
+
+        // Disable lower body stuff if robe geo is set.
+        if (geoSetMap[GeoSet.LowerBody]) {
+            geoSetMap[GeoSet.Legcuffs] = 1;
+            geoSetMap[GeoSet.PantDoublet] = 1;
+            geoSetMap[GeoSet.Boots] = 1;
+            geoSetMap[GeoSet.Tabard] = 1;
+        }
+
+        return geoSetMap;
     }
 
     private updateComponentAttachments(data: EquippedItemData, model: ItemModel) {
