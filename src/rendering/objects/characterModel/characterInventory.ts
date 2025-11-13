@@ -71,6 +71,16 @@ export class CharacterInventory {
     inventoryData: { [key in EquipmentSlot]?: EquippedItemData }
     parent: CharacterModel
 
+    get isLoaded() {
+        for(const slot in this.inventoryData) {
+            const data = this.inventoryData[slot as unknown as EquipmentSlot];
+            if (!data.model1.isLoaded || (data.model2 && !data.model2.isLoaded)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     constructor(parent: CharacterModel) {
         this.parent = parent;
         this.inventoryData = { };
@@ -162,7 +172,10 @@ export class CharacterInventory {
         }
     }
 
-    getGeosetToggles() {
+    getGeosetToggles(): { [key in GeoSet]?: number }  {
+        if (!this.isLoaded) {
+            return { };
+        }
         // TODO: Get geoset overrides from helmets
         // TODO: Process geoset override on Helmets, Shoulders, Waist
 
