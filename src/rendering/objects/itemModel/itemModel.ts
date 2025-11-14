@@ -223,6 +223,10 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
         }
 
         this.callbackMgr.processCallbacks("metadataLoaded")
+
+        if (!metadata.componentSections) {
+            this.onTexturesLoaded();
+        }
     }
 
     private onComponentLoaded() {
