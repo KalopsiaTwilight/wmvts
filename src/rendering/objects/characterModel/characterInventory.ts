@@ -7,6 +7,7 @@ import { ItemModel } from "../itemModel";
 
 import { CharacterModel } from "./characterModel";
 import { EquipmentSlot, GeoSet } from "./enums";
+import { M2Model } from "../m2Model";
 
 
 export interface EquippedItemData {
@@ -21,7 +22,7 @@ export interface EquippedItemData {
 } 
 
 const equipmentSlotToGeosetsMap: { [key in EquipmentSlot]: GeoSet[] } = {
-    [EquipmentSlot.Head]: [GeoSet.Helmet],
+    [EquipmentSlot.Head]: [GeoSet.Helmet, GeoSet.Head],
     [EquipmentSlot.Neck]: [],
     [EquipmentSlot.Shoulders]: [GeoSet.Shoulders],
     [EquipmentSlot.Body]: [GeoSet.Sleeves, GeoSet.ShirtDoublet, GeoSet.LowerBody, GeoSet.Torso, GeoSet.ArmUpper],
@@ -29,7 +30,7 @@ const equipmentSlotToGeosetsMap: { [key in EquipmentSlot]: GeoSet[] } = {
     [EquipmentSlot.Waist]: [GeoSet.Belt],
     [EquipmentSlot.Legs]: [GeoSet.PantDoublet, GeoSet.Legcuffs, GeoSet.LowerBody],
     [EquipmentSlot.Feet]: [GeoSet.Boots, GeoSet.Feet],
-    [EquipmentSlot.Wrists]: [],
+    [EquipmentSlot.Wrists]: [GeoSet.HandAttachments],
     [EquipmentSlot.Hands]: [GeoSet.Wrists, GeoSet.HandAttachments],
     [EquipmentSlot.Finger1]: [],
     [EquipmentSlot.Finger2]: [],
@@ -99,6 +100,9 @@ export class CharacterInventory {
                 const data = this.inventoryData[slot];
                 data.attachments = data.attachmentIds.map(i => this.parent.modelData.attachments.find(x => x.id === i));
             })
+        })
+        model1.on("componentsLoaded", (model) => {
+            this.updateAttachmentGeosets(slot, model);
         })
         model1.on("sectionTexturesLoaded", (model) => {
             for(const section in model.sectionTextures) {
@@ -194,7 +198,7 @@ export class CharacterInventory {
             }
         }
 
-        // TODO: Process geoset override on Helmets, Shoulders, Waist
+        // TODO: Process geoset override when handling 10.x and later, no data for it currently.
 
         const priorityOrderedSlots = Object.values(EquipmentSlot)
             .sort((a,b) => slotToPriorityMap[a as EquipmentSlot] - slotToPriorityMap[b as EquipmentSlot]) as EquipmentSlot[];
@@ -259,6 +263,30 @@ export class CharacterInventory {
         }
 
         return geoSetMap;
+    }
+
+    private updateAttachmentGeosets(slot: EquipmentSlot, model: ItemModel) {
+        const itemMeta = model.itemMetadata;
+        const geoSets = equipmentSlotToGeosetsMap[slot];
+        if (model.component1) {
+            this.updateAttachmentGeoSetsForComponent(model.component1, geoSets, itemMeta.geosetGroup, itemMeta.attachmentGeosetGroup)
+        }
+        if (model.component2) {
+            this.updateAttachmentGeoSetsForComponent(model.component2, geoSets, itemMeta.geosetGroup, itemMeta.attachmentGeosetGroup)
+        }
+    }
+
+    private updateAttachmentGeoSetsForComponent(component: M2Model, geoSets: GeoSet[], geosetGroup: number[], attachmentGeosetGroup: number[]) {
+        component.toggleGeosets(1, 5300, false);
+        for(let i = 0; i < geoSets.length; i++) {
+            const groupVal = geoSets[i] * 100;
+            if (geosetGroup[i] > 0) {
+                component.toggleGeoset(groupVal + geosetGroup[i], true);
+            } 
+            if (attachmentGeosetGroup[i] > 0) {
+                component.toggleGeoset(groupVal + attachmentGeosetGroup[i] + 1, true);
+            }
+        }
     }
 
     private updateComponentAttachments(data: EquippedItemData, model: ItemModel) {

@@ -202,7 +202,6 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
             }
         }
 
-
         if (metadata.componentSections) {
             const loadingPromises: Promise<void>[] = [];
             const unkTexture = this.engine.getSolidColorTexture([0,0,0,0]);
