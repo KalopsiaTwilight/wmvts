@@ -37,7 +37,6 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
     private textureLayerBaseTextures: { [key: string]: [ITexture, ITexture, ITexture] }
     private textureLayerCombiners: { [key: string]: SkinLayerTextureCombiner }
     private textureSectionTextures: { [key: number]: TextureSectionTextureData[] }
-    private skinLayerTexturesLoaded: boolean;
     private inventory: CharacterInventory
     private callbackMgr: ICallbackManager<CharacterModelCallbackType, CharacterModel>;
 
@@ -52,7 +51,6 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
         this.textureLayerBaseTextures = {};
         this.textureLayerCombiners = {};
         this.textureSectionTextures = {};
-        this.skinLayerTexturesLoaded = false;
         this.inventory = new CharacterInventory(this);
     }
     
@@ -78,6 +76,18 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
 
     get customizationData() {
         return this.characterMetadata.characterCustomizationData;
+    }
+
+    get skinLayerTexturesLoaded() {
+        for(const key in this.textureLayerBaseFileIds) {
+            const fileIds = this.textureLayerBaseFileIds[key];
+            for(let i = 0; i < fileIds.length; i++) {
+                if (this.textureLayerBaseTextures[key][i]?.fileId != fileIds[i]) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     override update(deltaTime: number) {
@@ -243,9 +253,6 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
     private loadSkinTextures(newSkinLayers: { [key: string]: [number, number, number] }) {
         const toLoad: string[] = [];
         for(const key in newSkinLayers) {
-            const currentIds = this.textureLayerBaseFileIds[key];
-            const newIds = newSkinLayers[key];
-            
             // TODO: Should this be inited somewhere else?
             const layer = this.customizationData.textureLayers[parseInt(key, 10)];
             const material = this.customizationData.modelMaterials.find(x => x.textureType === layer.textureType)
@@ -253,11 +260,9 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
                 this.textureLayerCombiners[layer.textureType] = new SkinLayerTextureCombiner(this, layer.textureType, material.width, material.height)
             }
 
-            if (!currentIds || currentIds[0] !== newIds[0] || currentIds[1] !== newIds[1] || currentIds[2] !== newIds[2]) {
-                this.textureLayerBaseFileIds[key] = newSkinLayers[key];
-                this.textureLayerBaseTextures[key] = [null, null, null];
-                toLoad.push(key);
-            }
+            this.textureLayerBaseFileIds[key] = newSkinLayers[key];
+            this.textureLayerBaseTextures[key] = [null, null, null];
+            toLoad.push(key);
         }
         const promises = [];
         for(const key of toLoad) {
@@ -265,7 +270,9 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
                 const fileId = newSkinLayers[key][j];
                 if (fileId) {
                     promises.push(this.engine.getTexture(fileId).then((texture) => {
-                        this.textureLayerBaseTextures[key][j] = texture;
+                        if (this.textureLayerBaseFileIds[key][j] === texture.fileId) {
+                            this.textureLayerBaseTextures[key][j] = texture;
+                        }
                     }))
                 }
             } 
@@ -275,11 +282,14 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
 
     private onSkinTexturesLoaded() {
         this.updateSkinTextures();
-        this.skinLayerTexturesLoaded = true;
         this.callbackMgr.processCallbacks("skinTexturesLoaded")
     }
 
     private updateSkinTextures() {
+        if (!this.skinLayerTexturesLoaded) {
+            return;
+        }
+
         for(const key in this.textureLayerCombiners) {
             this.textureLayerCombiners[key].clear();
         }
