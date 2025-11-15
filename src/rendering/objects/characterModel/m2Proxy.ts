@@ -1,8 +1,8 @@
-import { RenderingEngine, M2Model, ITexture } from "@app/rendering";
+import { RenderingEngine, M2Model, ITexture, ISkinnedModel } from "@app/rendering";
 
 import { WorldPositionedObject } from "../worldPositionedObject";
 
-export class M2Proxy extends WorldPositionedObject  {
+export class M2Proxy extends WorldPositionedObject implements ISkinnedModel  {
     fileId: number;
 
     get isLoaded(): boolean {

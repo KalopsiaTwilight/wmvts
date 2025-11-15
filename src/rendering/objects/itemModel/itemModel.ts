@@ -37,7 +37,6 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
     }
     
     override initialize(engine: RenderingEngine): void {
-
         if (!this.isInitialized) {
             this.isInitialized = true;
             super.initialize(engine);
@@ -57,8 +56,6 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
         if (!this.isLoaded || this.isDisposing) {
             return;
         }
-
-        this.updateAttachedBones();
         
         if (this.component1) {
             this.component1.update(deltaTime);
@@ -66,40 +63,6 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
 
         if (this.component2) {
             this.component2.update(deltaTime);
-        }
-    }
-
-    private updateAttachedBones() {
-        if (!this.character || !this.character.isLoaded ||  (!this.component1 && !this.component2)) {
-            return;
-        }
-
-        const characterBones = this.character.boneData;
-        const parentBoneMap: { [key: number]: number} = {};
-        for(let i = 0; i < characterBones.length; i++) {
-            parentBoneMap[characterBones[i].crc] = i;
-        }
-        if (this.component1?.boneData?.length) {
-            for(let i = 0; i < this.component1.boneData.length; i++) {
-                const boneData = this.component1.boneData[i];
-                const parentBoneIndex = parentBoneMap[boneData.crc];
-                if (!parentBoneIndex) {
-                    continue;
-                }
-                boneData.isOverriden = true;
-                Float44.copy(characterBones[parentBoneIndex].positionMatrix, boneData.positionMatrix);
-            }
-        }
-        if (this.component2?.boneData?.length) {
-            for(let i = 0; i < this.component2.boneData.length; i++) {
-                const boneData = this.component2.boneData[i];
-                const parentBoneIndex = parentBoneMap[boneData.crc];
-                if (!parentBoneIndex) {
-                    continue;
-                }
-                boneData.isOverriden = true;
-                Float44.copy(characterBones[parentBoneIndex].positionMatrix, boneData.positionMatrix);
-            }
         }
     }
 
@@ -178,6 +141,7 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
                 this.addChild(this.component1);
                 // TODO: Test if it's always index 0 or type: 2 or w/e
                 this.component1.setTexture(0, textureId);
+                this.component1.attachTo(this.character);
                 this.component1.on("texturesLoaded", this.onComponentLoaded.bind(this))
                 if (particleColorOverride) {
                     this.component1.particleColorOverrides = particleColorOverride;
@@ -195,6 +159,7 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
                 this.addChild(this.component2);
                 // TODO: Test if it's always index 0 or type: 2 or w/e
                 this.component2.setTexture(0, textureId);
+                this.component2.attachTo(this.character);
                 this.component2.on("texturesLoaded", this.onComponentLoaded.bind(this))
                 if (particleColorOverride) {
                     this.component2.particleColorOverrides = particleColorOverride;

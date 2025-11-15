@@ -2,7 +2,7 @@ import {
     CharacterCustomizationOptionChoiceData, CharacterCustomizationOptionChoiceElementData,
     CharacterMetadata 
 } from "@app/metadata";
-import { RenderingEngine, ITexture } from "@app/rendering";
+import { RenderingEngine, ITexture, ISkinnedModel } from "@app/rendering";
 import { ICallbackManager, CallbackFn, IImmediateCallbackable } from "@app/utils";
 
 import { SkinLayerTextureCombiner } from "./skinLayerTextureCombiner";
@@ -21,7 +21,7 @@ interface TextureSectionTextureData {
     textures: [ITexture, ITexture, ITexture]
 }
 
-export class CharacterModel extends M2Proxy implements IImmediateCallbackable<CharacterModelCallbackType> {
+export class CharacterModel extends M2Proxy implements IImmediateCallbackable<CharacterModelCallbackType>, ISkinnedModel {
     fileId: number;
     modelId: number;
     race: number;

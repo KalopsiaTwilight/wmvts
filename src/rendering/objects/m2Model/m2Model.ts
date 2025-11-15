@@ -34,13 +34,17 @@ export interface BoneData {
     positionMatrix: Float44;
 }
 
+export interface ISkinnedModel {
+    boneData: BoneData[];
+}
+
 export type M2ModelCallbackType = "modelDataLoaded" | "texturesLoaded" | "texturesLoadStart"
 
 const BATCH_IDENTIFIER = "M2";
 
 export type ParticeColorOverride = [Float3, Float3, Float3] | null;
 export type ParticleColorOverrides = [ ParticeColorOverride, ParticeColorOverride, ParticeColorOverride];
-export class M2Model extends WorldPositionedObject implements IImmediateCallbackable<M2ModelCallbackType> {
+export class M2Model extends WorldPositionedObject implements IImmediateCallbackable<M2ModelCallbackType>, ISkinnedModel {
     fileId: number;
     modelData: WoWModelData;
 
@@ -65,6 +69,7 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
 
     textureUnitData: TextureUnitData[]
     boneData: BoneData[];
+    attachedToModel?: ISkinnedModel;
 
     modelViewMatrix: Float44;
     invModelViewMatrix: Float44;
@@ -115,6 +120,24 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
         for (const data of this.boneData) {
             data.hasUpdatedThisTick = false;
         }
+        
+        if (this.attachedToModel) {
+            const parentBones = this.attachedToModel.boneData;
+            const parentBoneMap: { [key: number]: number} = {};
+            for(let i = 0; i < parentBones.length; i++) {
+                parentBoneMap[parentBones[i].crc] = i;
+            }
+            for(let i = 0; i < this.boneData.length; i++) {
+                const boneData = this.boneData[i];
+                const parentBoneIndex = parentBoneMap[boneData.crc];
+                if (!parentBoneIndex) {
+                    continue;
+                }
+                boneData.isOverriden = true;
+                Float44.copy(parentBones[parentBoneIndex].positionMatrix, boneData.positionMatrix);
+            }
+        }
+
         for (let i = 0; i < this.modelData.bones.length; i++) {
             this.updateBone(this.modelData.bones[i], i);
         }
@@ -129,6 +152,10 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
         for (let i = 0; i < this.modelData.ribbonEmitters.length; i++) {
             this.ribbonEmitters[i].update(deltaTime);
         }
+    }
+
+    attachTo(model: ISkinnedModel) {
+        this.attachedToModel = model;
     }
 
     draw(): void {
