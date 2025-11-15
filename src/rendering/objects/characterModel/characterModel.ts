@@ -297,7 +297,7 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
         // Draw base layers
         const hasChestEquipment = this.textureSectionTextures[3] && this.textureSectionTextures[3].length;
         const hasLegEquipment = this.textureSectionTextures[5] && this.textureSectionTextures[5].length;
-        const layers = this.customizationData.textureLayers.sort((a,b) => a.chrModelTextureTargetId - b.chrModelTextureTargetId);
+        const layers = this.customizationData.textureLayers.sort((a,b) => a.layer - b.layer);
         for(const layer of layers) {
             if (!this.textureLayerBaseFileIds[layer.layer]) {
                 continue;
