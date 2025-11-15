@@ -107,6 +107,7 @@ export interface IVertexArrayObject extends IBindable {
 
 
 export interface ITextureOptions {
+    preMultiplyAlpha?: number,
     clampS?: boolean,
     clampT?: boolean,
 }

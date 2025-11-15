@@ -180,11 +180,12 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
 
     createTextureFromImg(img: HTMLImageElement, opts: ITextureOptions): ITexture {
         const result = new WebGLTextureAbstraction(this.gl, createTexture(this.gl, {
-            premultiplyAlpha: 0,
+            premultiplyAlpha: opts?.preMultiplyAlpha ? opts.preMultiplyAlpha : 0,
             src: img,
             auto: true,
             wrapS: opts?.clampS ? this.gl.CLAMP_TO_EDGE : this.gl.REPEAT,
-            wrapT: opts?.clampT ? this.gl.CLAMP_TO_EDGE : this.gl.REPEAT
+            wrapT: opts?.clampT ? this.gl.CLAMP_TO_EDGE : this.gl.REPEAT,
+            
         }));
         result.width = img.width;
         result.height = img.height;
