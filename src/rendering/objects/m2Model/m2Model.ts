@@ -124,18 +124,18 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
         if (this.attachedToModel) {
             const parentBones = this.attachedToModel.boneData;
             if (parentBones) {
-            const parentBoneMap: { [key: number]: number} = {};
-            for(let i = 0; i < parentBones.length; i++) {
-                parentBoneMap[parentBones[i].crc] = i;
-            }
-            for(let i = 0; i < this.boneData.length; i++) {
-                const boneData = this.boneData[i];
-                const parentBoneIndex = parentBoneMap[boneData.crc];
-                if (!parentBoneIndex) {
-                    continue;
+                const parentBoneMap: { [key: number]: number} = {};
+                for(let i = 0; i < parentBones.length; i++) {
+                    parentBoneMap[parentBones[i].crc] = i;
                 }
-                boneData.isOverriden = true;
-                Float44.copy(parentBones[parentBoneIndex].positionMatrix, boneData.positionMatrix);
+                for(let i = 0; i < this.boneData.length; i++) {
+                    const boneData = this.boneData[i];
+                    const parentBoneIndex = parentBoneMap[boneData.crc];
+                    if (!parentBoneIndex) {
+                        continue;
+                    }
+                    boneData.isOverriden = true;
+                    Float44.copy(parentBones[parentBoneIndex].positionMatrix, boneData.positionMatrix);
                 }
             }
         }
@@ -228,25 +228,23 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
     }
 
     toggleGeosets(start: number, end: number, show: boolean) {
-        if (!this.textureUnitData || this.textureUnitData.length === 0) {
-            return;
-        }
-
-        for (let i = 0; i < this.textureUnitData.length; i++) {
-            const texUnitData = this.textureUnitData[i];
-            if (texUnitData.geoSetId >= start && texUnitData.geoSetId <= end) {
-                texUnitData.show = show;
-            }
-        }
-
-        if (this.modelData.particleEmitterGeosets && this.modelData.particleEmitterGeosets.length > 0) {
-            for (let i = 0; i < this.modelData.particleEmitterGeosets.length; ++i) {
-                let particleEmitterGeoset = this.modelData.particleEmitterGeosets[i];
-                if (particleEmitterGeoset >= start && particleEmitterGeoset <= end) {
-                    this.particleEmitters[i].show = show;
+        this.on("texturesLoaded", () => {
+            for (let i = 0; i < this.textureUnitData.length; i++) {
+                const texUnitData = this.textureUnitData[i];
+                if (texUnitData.geoSetId >= start && texUnitData.geoSetId <= end) {
+                    texUnitData.show = show;
                 }
             }
-        }
+
+            if (this.modelData.particleEmitterGeosets && this.modelData.particleEmitterGeosets.length > 0) {
+                for (let i = 0; i < this.modelData.particleEmitterGeosets.length; ++i) {
+                    let particleEmitterGeoset = this.modelData.particleEmitterGeosets[i];
+                    if (particleEmitterGeoset >= start && particleEmitterGeoset <= end) {
+                        this.particleEmitters[i].show = show;
+                    }
+                }
+            }
+        })
     }
 
     canExecuteCallback(type: M2ModelCallbackType): boolean {

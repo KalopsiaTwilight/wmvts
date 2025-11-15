@@ -2,7 +2,7 @@ import {
     CharacterCustomizationOptionChoiceData, CharacterCustomizationOptionChoiceElementData,
     CharacterMetadata 
 } from "@app/metadata";
-import { RenderingEngine, ITexture, ISkinnedModel } from "@app/rendering";
+import { RenderingEngine, ITexture, ISkinnedModel, M2Model } from "@app/rendering";
 import { ICallbackManager, CallbackFn, IImmediateCallbackable } from "@app/utils";
 
 import { SkinLayerTextureCombiner } from "./skinLayerTextureCombiner";
@@ -37,6 +37,7 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
     private textureLayerBaseTextures: { [key: string]: [ITexture, ITexture, ITexture] }
     private textureLayerCombiners: { [key: string]: SkinLayerTextureCombiner }
     private textureSectionTextures: { [key: number]: TextureSectionTextureData[] }
+    private skinnedModels: { [key: number]: M2Model }
     private inventory: CharacterInventory
     private callbackMgr: ICallbackManager<CharacterModelCallbackType, CharacterModel>;
 
@@ -51,6 +52,7 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
         this.textureLayerBaseTextures = {};
         this.textureLayerCombiners = {};
         this.textureSectionTextures = {};
+        this.skinnedModels = {};
         this.inventory = new CharacterInventory(this);
     }
     
@@ -98,12 +100,20 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
         super.update(deltaTime);
 
         this.inventory.update(deltaTime);
+
+        for(const fileId in this.skinnedModels) {
+            this.skinnedModels[fileId].update(deltaTime);
+        }
     }
 
     override draw() {
         super.draw();
 
         this.inventory.draw();
+        
+        for(const fileId in this.skinnedModels) {
+            this.skinnedModels[fileId].draw();
+        }
     }
     
     on(type: CharacterModelCallbackType, fn: CallbackFn<CharacterModel>, persistent = false): void {
@@ -192,6 +202,8 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
                 this.callbackMgr.processCallbacks("modelTexturesLoaded")
             });
         });
+
+        this.loadSkinnedModels();
         this.setDefaultCustomizations();
         this.applyCustomizations();
         this.callbackMgr.processCallbacks("characterMetadataLoaded")
@@ -245,10 +257,18 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
             for(const elem of geoSetElements) {
                 this.customizationGeosets[elem.geoset.geosetType] = elem.geoset.geosetId
             }
-            // TODO: Add skinnedModelElements as seperate models;
+
+            const skinnedModelElements = applicableElements.filter(elem => elem.skinnedModel);
+            for(const elem of skinnedModelElements) {
+                const model = this.skinnedModels[elem.skinnedModel.collectionsFileDataId];
+                model.toggleGeosets(0, 5300, false);
+                model.toggleGeoset(elem.skinnedModel.geosetType * 100 + elem.skinnedModel.geosetId, true);
+            }
             // TODO: Process conditional elements && swap model if necessary
             // TODO: Process CustItemGeoModifyId && set ids;
         }
+
+        // TODO: Process bone file id?
 
         this.loadSkinTextures(newSkinLayerTextures);
         this.updateGeosets();
@@ -392,5 +412,24 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
             }
         }
         this.toggleGeoset(0, true);
+    }
+
+    private loadSkinnedModels() {
+        const skinnedModelFileIds = this.customizationData.options
+            .reduce((acc, x) => acc.concat(x.choices
+                .reduce((acc2, y) => acc2.concat(y.elements
+                    .filter(z => z.skinnedModel).map(z => z.skinnedModel.collectionsFileDataId)), 
+                [])), 
+            []);
+        const fileIds = new Set(skinnedModelFileIds);
+        if (fileIds.size != 0) {
+            for(const fileId of fileIds) {
+                const model = new M2Model(fileId);
+                this.addChild(model);
+                model.attachTo(this);
+                model.toggleGeosets(0, 5300, false);
+                this.skinnedModels[fileId] = model;
+            }
+        }
     }
 }
