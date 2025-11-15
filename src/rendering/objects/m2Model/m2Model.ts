@@ -123,6 +123,7 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
         
         if (this.attachedToModel) {
             const parentBones = this.attachedToModel.boneData;
+            if (parentBones) {
             const parentBoneMap: { [key: number]: number} = {};
             for(let i = 0; i < parentBones.length; i++) {
                 parentBoneMap[parentBones[i].crc] = i;
@@ -135,6 +136,7 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
                 }
                 boneData.isOverriden = true;
                 Float44.copy(parentBones[parentBoneIndex].positionMatrix, boneData.positionMatrix);
+                }
             }
         }
 
