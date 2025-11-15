@@ -79,6 +79,10 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
     }
 
     get skinLayerTexturesLoaded() {
+        if (!this.characterMetadata) {
+            return false;
+        }
+
         for(const key in this.textureLayerBaseFileIds) {
             const fileIds = this.textureLayerBaseFileIds[key];
             for(let i = 0; i < fileIds.length; i++) {
