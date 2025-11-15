@@ -219,7 +219,6 @@ export class M2ParticleEmitter implements IDisposable {
             if (this.parent.particleColorOverrides[index]) {
                 this.particleColorOverride = this.parent.particleColorOverrides[index];
             }
-            // TODO: Load particle override if available in parent item / creature
         }
 
         switch (this.m2data.emitterType) {
@@ -348,7 +347,6 @@ export class M2ParticleEmitter implements IDisposable {
         Float44.getTranslation(currentModelMatrix, currentBonePosition);
         currentBonePosition[3] = 1;
         Float44.transformDirection4(currentBonePosition, this.engine.viewMatrix, currentBonePosition);
-        // TODO: Use Z-Order in batch sorting.
         this.zOrder = currentBonePosition[2];
 
         Float44.copy(currentModelMatrix, this.emitterModelMatrix);
@@ -943,7 +941,6 @@ export class M2ParticleEmitter implements IDisposable {
             }
         }
         
-        // TODO: Is this always unique?
         this.material = new RenderMaterial();
         this.material.useShaderProgram(this.shaderProgram);
         let blendMode = this.m2data.blendingType;

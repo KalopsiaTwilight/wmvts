@@ -38,7 +38,6 @@ export class TextureVariantModel extends M2Model implements IImmediateCallbackab
             return;
         }
 
-        // TODO: Load TV Textures and swap textures in model.
         for (let i = 0; i < data.textureIds.length; i++) {
             if (i >= this.modelData.textureCombos.length) {
                 break;

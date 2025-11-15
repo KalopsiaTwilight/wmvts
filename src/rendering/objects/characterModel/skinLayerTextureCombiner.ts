@@ -23,7 +23,6 @@ export class SkinLayerTextureCombiner {
 
     frameBuffer: IFrameBuffer;
 
-    // TODO: Possibly unnecessary
     parentId: number;
 
     outputTexture: ITexture;

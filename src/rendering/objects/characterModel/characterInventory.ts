@@ -209,7 +209,6 @@ export class CharacterInventory {
             }
 
             const geoSets = equipmentSlotToGeosetsMap[slot];
-            // TODO: Properly index this when item uses multiple models?
             const itemGeosets = item.model1.itemMetadata.geosetGroup;
             for(let i = 0; i < geoSets.length; i++) {
                 if (!itemGeosets[i]) {
