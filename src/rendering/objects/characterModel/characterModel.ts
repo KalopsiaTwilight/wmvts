@@ -382,13 +382,13 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
         }
         
         this.on("modelTexturesLoaded", () => {
-            for(const key in (this.textureLayerCombiners)) {
+            for(const key in this.textureLayerCombiners) {
                 const textureIndex = this.modelData.textures.findIndex(x => x.type === parseInt(key, 10));
                 if (textureIndex < 0) {
                     return;
                 }
 
-                this.swapTexture(textureIndex, this.textureLayerCombiners[key].diffuseTexture);
+                this.swapTexture(textureIndex, this.textureLayerCombiners[key].outputTexture);
             }
         })
     }

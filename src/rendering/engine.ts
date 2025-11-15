@@ -370,12 +370,7 @@ export class RenderingEngine implements IDisposable {
     }
 
     getUnknownTexture(): ITexture {
-        if (this.textureCache.contains(UNKNOWN_TEXTURE_ID)) {
-            return this.textureCache.get(UNKNOWN_TEXTURE_ID);
-        }
-
         const unknownTexture = this.graphics.createSolidColorTexture(Float4.create(0, 1, 0, 1));
-        this.textureCache.store(UNKNOWN_TEXTURE_ID, unknownTexture, -1);
         return unknownTexture;
     }
 

@@ -3,6 +3,8 @@ precision mediump float;
 varying vec2 v_texCoord;
 
 uniform sampler2D u_diffuseTexture;
+uniform sampler2D u_emissiveTexture;
+uniform sampler2D u_specularTexture;
 uniform sampler2D u_backgroundTexture;
 uniform int u_blendMode;
 uniform vec2 u_backgroundResolution;
@@ -29,6 +31,8 @@ vec3 screen(vec3 a, vec3 b) {
 
 void main() {
     vec4 diffuse = texture2D(u_diffuseTexture, v_texCoord);
+    vec4 specular = texture2D(u_specularTexture, v_texCoord);
+    vec4 emission = texture2D(u_emissiveTexture, v_texCoord);
     vec4 backGround = texture2D(u_backgroundTexture, gl_FragCoord.xy / u_backgroundResolution);
     
     // Default: Overlay diffuse on background   
@@ -57,5 +61,8 @@ void main() {
     else {
         materialColor = mix(backGround.rgb, diffuse.rgb, diffuse.a);
     }
-    gl_FragColor = vec4(materialColor, opacity);
+
+    vec3 outputColor = materialColor + specular.rgb + emission.rgb;
+
+    gl_FragColor = vec4(outputColor, opacity);
 }

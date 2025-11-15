@@ -736,12 +736,11 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
 
         let renderMaterial = new RenderMaterial();
 
-        const unkTexture = this.engine.getUnknownTexture();
         const texUnitData: TextureUnitData = {
             color: Float4.one(),
             textureMatrices: [Float44.identity(), Float44.identity()],
             textureWeights: Float4.one(),
-            textures: [unkTexture, unkTexture, unkTexture, unkTexture],
+            textures: [this.engine.getUnknownTexture(), this.engine.getUnknownTexture(), this.engine.getUnknownTexture(), this.engine.getUnknownTexture()],
             material: renderMaterial,
             geoSetId: this.modelData.submeshes[texUnit.skinSectionIndex].submeshId,
             show: true

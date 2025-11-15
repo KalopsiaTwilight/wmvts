@@ -30,6 +30,7 @@ export abstract class CachedGraphics implements IGraphics {
         this.lastUsedColorMask = undefined;
         this.lastUsedBackFaceCulling = undefined;
         this.lastUsedCounterClockWiseFrontFaces = undefined;
+        this.lastUsedFrameBuffer = undefined;
     }
     abstract clearFrame(color: Float4): void;
 
