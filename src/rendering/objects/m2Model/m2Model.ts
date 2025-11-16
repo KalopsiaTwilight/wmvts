@@ -1,4 +1,4 @@
-import { WoWBoneData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureUnitData } from "@app/modeldata";
+import { WoWBoneData, WoWBoneFileData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureUnitData } from "@app/modeldata";
 import {
     RenderingEngine, ColorMask,Float4, Float3, ITexture, Float44, IShaderProgram, M2BlendModeToEGxBlend,
     AABB, RenderMaterial, DrawingBatchRequest, IDataBuffers,
@@ -47,6 +47,8 @@ export type ParticleColorOverrides = [ ParticeColorOverride, ParticeColorOverrid
 export class M2Model extends WorldPositionedObject implements IImmediateCallbackable<M2ModelCallbackType>, ISkinnedModel {
     fileId: number;
     modelData: WoWModelData;
+    boneFileId?: number;
+    boneFileData?: WoWBoneFileData;
 
     isModelDataLoaded: boolean;
     isTexturesLoaded: boolean;
@@ -76,6 +78,7 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
     isMirrored: boolean;
 
     callbackMgr: ICallbackManager<M2ModelCallbackType, M2Model>
+
 
     constructor(fileId: number) {
         super();
@@ -256,6 +259,15 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
             default: dataNeeded = null; break;
         }
         return !!dataNeeded;
+    }
+
+    loadBoneFile(id: number) {
+        if (this.boneFileId === id || id <= 0) {
+            return;
+        }
+
+        this.boneFileId = id;
+        this.engine.getBoneFileData(id).then(this.onBoneFileLoaded.bind(this));
     }
 
     override dispose(): void {
@@ -609,13 +621,14 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
         this.boneData = new Array(this.modelData.bones.length);
         for (let i = 0; i < this.modelData.bones.length; i++) {
             this.boneData[i] = {
-                boneOffsetMatrix: null,
+                boneOffsetMatrix: Float44.identity(),
                 hasUpdatedThisTick: false,
                 isOverriden: false,
                 crc: this.modelData.bones[i].boneNameCRC,
                 positionMatrix: Float44.identity()
             };
         }
+        this.processBoneFileData();
 
         this.isModelDataLoaded = true;
         this.callbackMgr.processCallbacks("modelDataLoaded");
@@ -729,6 +742,26 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
         }
 
         this.callbackMgr.processCallbacks("texturesLoaded");
+    }
+
+    private onBoneFileLoaded(data: WoWBoneFileData | null) {
+        if (!data) {
+            return;
+        }
+
+        this.boneFileData = data;
+        this.processBoneFileData();
+    }
+
+    private processBoneFileData() {
+        const data =this.boneFileData; 
+        if (!data || !this.boneData?.length) {
+            return;
+        }
+
+        for(let i = 0; i < data.boneIds.length; i++) {
+            Float44.copy(data.boneOffsetMatrices[i], this.boneData[data.boneIds[i]].boneOffsetMatrix);
+        }
     }
 
     private createTextureUnitData(i: number) {

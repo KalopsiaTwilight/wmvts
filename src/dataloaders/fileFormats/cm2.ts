@@ -147,7 +147,7 @@ export function parseCM2BoneFile(data: ArrayBuffer) {
     let inflatedData: Uint8Array;
     inflatedData = inflate(data);
 
-    var reader = new BinaryReader(inflatedData);
+    var reader = new BinaryReader(inflatedData.buffer);
     var boneIds = readArray(reader, (r) => r.readUInt16LE());
     var boneOffsetMatrices = readArray(reader, readFloat44);
 

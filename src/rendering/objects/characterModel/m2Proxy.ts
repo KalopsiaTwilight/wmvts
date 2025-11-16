@@ -101,4 +101,8 @@ export class M2Proxy extends WorldPositionedObject implements ISkinnedModel  {
     toggleGeosets(start: number, end: number, show: boolean) {
         this.m2Model.toggleGeosets(start, end, show);
     }
+
+    loadBoneFile(id: number) {
+        this.m2Model.loadBoneFile(id);
+    }
 }

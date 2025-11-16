@@ -234,7 +234,6 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
             materialElements.sort((a,b) => b.relationChoiceID - a.relationChoiceID)
             for(const elem of materialElements) {
                 const textureIds = this.engine.texturePickingStrategy(elem.material.textureFiles, this.race, this.gender, this.class)
-                // TODO: Apply fallback race
                 if(!textureIds[0]) {
                     continue;
                 }
@@ -246,8 +245,6 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
                     continue;
                 }
                 
-                // Load textures 
-
                 newSkinLayerTextures[textureLayer.layer] = textureIds
             }
             
@@ -268,8 +265,7 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
             // TODO: Process CustItemGeoModifyId && set ids;
         }
 
-        // TODO: Process bone file id?
-
+        this.loadBoneFile(boneFileId);
         this.loadSkinTextures(newSkinLayerTextures);
         this.updateGeosets();
     }

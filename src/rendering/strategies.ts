@@ -3,6 +3,8 @@ import { ModelFileData, TextureFileData } from "@app/metadata";
 export type ITexturePickingStrategy = (textures: TextureFileData[], race: number, gender: number, charClass: number) => [number, number, number] | null;
 
 const MAX_USED_TEXTURES = 3;
+
+// TODO: Make sure to pick some texture if none match
 export const defaultTexturePickingStrategy: ITexturePickingStrategy = (textures, race, gender, charClass) => {
     if (!textures) {
         return null;
@@ -39,6 +41,7 @@ export const defaultTexturePickingStrategy: ITexturePickingStrategy = (textures,
 
 export type IModelPickingStrategy = (models: ModelFileData[], pos :number, race: number, gender: number, charClass: number) => number | null;
 
+// TODO: Make sure to pick some model if none match
 export const defaultModelPickingStrategy: IModelPickingStrategy = (models, pos, race, gender, charClass) => {
     if (!models) {
         return null;

@@ -5,7 +5,7 @@ import {
     DrawingBatchRequest, IDataBuffers, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest, 
     RenderMaterial 
 } from "./graphics";
-import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData, RequestFrameFunction } from "..";
+import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData, RequestFrameFunction, WoWBoneFileData } from "..";
 import { SimpleCache } from "./cache";
 import { TextureVariationsMetadata, LiquidTypeMetadata, CharacterMetadata, ItemMetadata } from "@app/metadata";
 
@@ -91,6 +91,7 @@ export class RenderingEngine implements IDisposable {
     textureVariationsCache: SimpleCache<TextureVariationsMetadata>;
     characterMetadataCache: SimpleCache<CharacterMetadata>;
     itemMetadataCache: SimpleCache<ItemMetadata>;
+    boneFileCache: SimpleCache<WoWBoneFileData>;
     runningRequests: { [key: string]: Promise<unknown> }
 
     // Some stats
@@ -150,7 +151,8 @@ export class RenderingEngine implements IDisposable {
         this.caches.push(this.characterMetadataCache);
         this.itemMetadataCache = new SimpleCache(cacheTtl);
         this.caches.push(this.itemMetadataCache);
-
+        this.boneFileCache = new SimpleCache(cacheTtl);
+        this.caches.push(this.boneFileCache);
 
         this.runningRequests = {};
         this.drawRequests = [];
@@ -420,6 +422,11 @@ export class RenderingEngine implements IDisposable {
     getTextureVariationsMetadata(fileId: number): Promise<TextureVariationsMetadata | null> {
         const key = "TextureVariations-" + fileId;
         return this.getDataFromLoaderOrCache(this.textureVariationsCache, key, (dl) => dl.loadTextureVariationsMetadata(fileId));
+    }
+
+    getBoneFileData(fileId: number): Promise<WoWBoneFileData | null> {
+        const key = "BoneFile-" + fileId;
+        return this.getDataFromLoaderOrCache(this.boneFileCache, key, (dl) => dl.loadBoneFile(fileId));
     }
 
     private async getDataFromLoaderOrCache<T>(cache: SimpleCache<T>, key: string, loadFn: (x: IDataLoader) => Promise<T>): Promise<T|null> {
