@@ -624,10 +624,6 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
 
         this.animationState = new AnimationState(this.modelData.animations, this.modelData.globalLoops);
         this.animationState.useAnimation(0);
-        if (!this.parent) {
-            this.engine.processNewBoundingBox(this.worldBoundingBox);
-        }
-
 
         this.setupDataBuffers();
 

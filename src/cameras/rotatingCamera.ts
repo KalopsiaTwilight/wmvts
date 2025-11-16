@@ -36,11 +36,7 @@ export class RotatingCamera extends Camera {
         Float44.invert(cameraMatrix, this.viewMatrix);
     }
 
-    override resizeForBoundingBox(box?: AABB): void {
-        this.lastBoundingBox = box;
-        if (!box) {
-            return;
-        }
+    override scaleToBoundingBox(box: AABB): void {
         const { min, max } = box;
         const diff = Float3.subtract(max, min);
         const distance = Float3.length(diff)

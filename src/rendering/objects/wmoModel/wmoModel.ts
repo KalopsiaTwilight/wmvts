@@ -193,9 +193,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
             return;
         }
 
-        if (!this.parent) {
-            this.engine.processNewBoundingBox(this.modelData.boundingBox);
-        }
+        this.setBoundingBox(this.modelData.boundingBox);
 
         this.setupPortals();
         // TODO: This would be unneccesary with a data format closer to how WMOs are actually stored.

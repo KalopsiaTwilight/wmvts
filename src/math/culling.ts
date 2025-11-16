@@ -164,6 +164,10 @@ export namespace AABB {
         return { min, max };
     }
 
+    export function zero() {
+        return AABB.create(Float3.zero(), Float3.zero());
+    }
+
     export function fromVertices(vertexPositions: Float3[], marginOfError = 0.1) {
         let minX, minY, minZ;
         minX = minY = minZ = 9999;
@@ -222,7 +226,7 @@ export namespace AABB {
     ]
     
     export function merge(a: AABB, b: AABB) {
-        return AABB.fromVertices([a.max, a.min, b.max, b.min]);
+        return AABB.fromVertices([a.max, a.min, b.max, b.min], 0);
     }
 
     export function visibleInFrustrum(aabb: AABB, frustrum: Frustrum) {

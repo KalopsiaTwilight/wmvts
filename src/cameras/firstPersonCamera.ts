@@ -129,17 +129,13 @@ export class FirstPersonCamera extends Camera {
         super.dispose();
     }
 
-    override resizeForBoundingBox(box?: AABB): void {
-        this.lastBoundingBox = box;
-
-        if (box) {
-            const { min, max } = box;
-            Float3.copy(max, this.position);
-            const lookDir = Float3.negate(this.position);
-            const horizontalDistance = Math.sqrt(lookDir[0] *lookDir[0] + lookDir[2]*lookDir[2])
-            this.pitch = Math.atan2(lookDir[1], horizontalDistance)
-            this.yaw = Math.atan2(lookDir[0], lookDir[2])
-        } 
+    override scaleToBoundingBox(box?: AABB): void {
+        const { min, max } = box;
+        Float3.copy(max, this.position);
+        const lookDir = Float3.negate(this.position);
+        const horizontalDistance = Math.sqrt(lookDir[0] *lookDir[0] + lookDir[2]*lookDir[2])
+        this.pitch = Math.atan2(lookDir[1], horizontalDistance)
+        this.yaw = Math.atan2(lookDir[0], lookDir[2])
     }
     
     handleKeyDown(eventArgs: KeyboardEvent) {

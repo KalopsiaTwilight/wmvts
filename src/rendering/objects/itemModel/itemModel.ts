@@ -223,16 +223,14 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
         }
 
         this.componentsLoaded = true;
-        if (!this.parent) {
-            if (this.component1 || this.component2) {
-                let bb: AABB;
-                if (this.component1 &&  this.component2) {
-                    bb = AABB.merge(this.component1.worldBoundingBox, this.component2.worldBoundingBox);
-                } else {
-                    bb = this.component1 ? this.component1.worldBoundingBox : this.component2.worldBoundingBox;
-                }
-                this.engine.processNewBoundingBox(bb);
+        if (this.component1 || this.component2) {
+            let bb: AABB;
+            if (this.component1 &&  this.component2) {
+                bb = AABB.merge(this.component1.worldBoundingBox, this.component2.worldBoundingBox);
+            } else {
+                bb = this.component1 ? this.component1.worldBoundingBox : this.component2.worldBoundingBox;
             }
+            this.setBoundingBox(bb);
         }
 
         this.callbackMgr.processCallbacks("componentsLoaded");

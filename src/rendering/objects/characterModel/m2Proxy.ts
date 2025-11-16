@@ -46,19 +46,16 @@ export class M2Proxy extends WorldPositionedObject implements IM2Proxy  {
         this.m2Model = new M2Model(fileId);
         this.addChild(this.m2Model);
 
-        if (!this.parent) {
-            this.m2Model.on("modelDataLoaded", () => {
-                this.callbackMgr.processCallbacks("modelDataLoaded")
-            });
-            this.m2Model.on("texturesLoaded", () => {
-                this.callbackMgr.processCallbacks("modelTexturesLoaded")
-            });
-            this.callbackMgr.processCallbacks("modelCreated");
-            this.m2Model.on("modelDataLoaded", () => {
-                this.setBoundingBox(this.m2Model.localBoundingBox);
-                this.engine.processNewBoundingBox(this.worldBoundingBox);
-            })
-        }
+        this.m2Model.on("modelDataLoaded", () => {
+            this.callbackMgr.processCallbacks("modelDataLoaded")
+        });
+        this.m2Model.on("texturesLoaded", () => {
+            this.callbackMgr.processCallbacks("modelTexturesLoaded")
+        });
+        this.callbackMgr.processCallbacks("modelCreated");
+        this.m2Model.on("modelDataLoaded", () => {
+            this.setBoundingBox(this.m2Model.localBoundingBox);
+        })
 
         if (configureFn) {
             configureFn(this.m2Model);

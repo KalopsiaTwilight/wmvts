@@ -112,5 +112,6 @@ export abstract class WorldPositionedObject implements IWorldPositionedObject {
     protected setBoundingBox(boundingBox: AABB) {
         this.localBoundingBox = boundingBox; 
         this.worldBoundingBox = AABB.transform(this.localBoundingBox, this.worldModelMatrix);
+        this.engine.processNewBoundingBox(this.worldBoundingBox);
     }
 }

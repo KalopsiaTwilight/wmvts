@@ -5,7 +5,7 @@ import { IDisposable, IProgressReporter, IDataLoader, RequestFrameFunction, Erro
 import { CallbackManager, IImmediateCallbackable } from "@app/utils";
 import { WoWModelData, WoWWorldModelData, WoWBoneFileData } from "@app/modeldata";
 
-import { IRenderObject } from "./objects";
+import { IRenderObject, isWorldPositionedObject } from "./objects";
 import { 
     DrawingBatchRequest, IDataBuffers, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest, 
     RenderMaterial 
@@ -109,6 +109,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
     drawRequests: DrawingBatchRequest[];
     otherGraphicsRequests: RenderingBatchRequest[];
     sceneObjects: IRenderObject[];
+    sceneBoundingBox: AABB;
 
     constructor(graphics: IGraphics, dataLoader: IDataLoader, requestFrame: RequestFrameFunction,
         options: RenderingEngineOptions) {
@@ -121,6 +122,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         this.containerElement = options.container;
 
         this.sceneObjects = [];
+        this.sceneBoundingBox = AABB.zero();
 
         this.viewMatrix = Float44.identity();
         this.invViewMatrix = Float44.identity();
@@ -300,7 +302,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
 
     switchCamera(newCamera: Camera) {
         newCamera.initialize(this);
-        newCamera.resizeForBoundingBox(this.sceneCamera.getBoundingBox())
+        newCamera.scaleToBoundingBox(this.sceneBoundingBox);
         this.sceneCamera.dispose();
         this.sceneCamera = newCamera;
     }
@@ -313,32 +315,30 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
     removeSceneObject(object: IRenderObject) {
         this.sceneObjects = this.sceneObjects.filter((x) => x != object);
         object.dispose();
+        this.recalculateSceneBounds();
+    }
+
+    private recalculateSceneBounds() {
+        this.sceneBoundingBox = AABB.zero();
+        for(const obj of this.sceneObjects) {
+            if (isWorldPositionedObject(obj)) {
+                this.sceneBoundingBox = AABB.merge(this.sceneBoundingBox, obj.worldBoundingBox)
+            }
+        }
+        this.sceneCamera.scaleToBoundingBox(this.sceneBoundingBox);
     }
 
     processNewBoundingBox(boundingBox: AABB): void {
-        // TODO: Handle this differently;
-        this.sceneCamera.resizeForBoundingBox(boundingBox);
+        this.sceneBoundingBox = AABB.merge(this.sceneBoundingBox, boundingBox);
+        this.sceneCamera.scaleToBoundingBox(this.sceneBoundingBox);
     }
 
-    private async processTexture(fileId: number, imgData: string, opts?: ITextureOptions) {
-        return new Promise<ITexture>((res, rej) => {
-            const img = new Image();
-            img.onload = () => {
-                const texture = this.graphics.createTextureFromImg(img, opts);
-                texture.fileId = fileId;
-                this.textureCache.store(fileId, texture);
-                this.progress?.removeFileFromOperation(fileId);
-                delete this.runningRequests[fileId];
-                res(texture);
-            }
-            img.onerror = (evt, src, line, col, err) => {
-                this.errorHandler?.(DataProcessingErrorType, "TEXTURE-" + fileId, err ? err : new Error("Unable to process image data for file: " + fileId));
-                this.progress?.removeFileFromOperation(fileId);
-                delete this.runningRequests[fileId];
-                res(this.getUnknownTexture());
-            }
-            img.src = imgData;
-        });
+    submitDrawRequest(request: DrawingBatchRequest) {
+        this.drawRequests.push(request);
+    }
+
+    submitOtherGraphicsRequest(request: RenderingBatchRequest) {
+        this.otherGraphicsRequests.push(request);
     }
 
     async getTexture(fileId: number, opts?: ITextureOptions): Promise<ITexture | null> {
@@ -373,6 +373,27 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         return texture;
     }
 
+    private async processTexture(fileId: number, imgData: string, opts?: ITextureOptions) {
+        return new Promise<ITexture>((res, rej) => {
+            const img = new Image();
+            img.onload = () => {
+                const texture = this.graphics.createTextureFromImg(img, opts);
+                texture.fileId = fileId;
+                this.textureCache.store(fileId, texture);
+                this.progress?.removeFileFromOperation(fileId);
+                delete this.runningRequests[fileId];
+                res(texture);
+            }
+            img.onerror = (evt, src, line, col, err) => {
+                this.errorHandler?.(DataProcessingErrorType, "TEXTURE-" + fileId, err ? err : new Error("Unable to process image data for file: " + fileId));
+                this.progress?.removeFileFromOperation(fileId);
+                delete this.runningRequests[fileId];
+                res(this.getUnknownTexture());
+            }
+            img.src = imgData;
+        });
+    }
+
     getSolidColorTexture(color: Float4) {
         return this.graphics.createSolidColorTexture(color);
     }
@@ -380,14 +401,6 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
     getUnknownTexture(): ITexture {
         const unknownTexture = this.graphics.createSolidColorTexture(Float4.create(0, 1, 0, 1));
         return unknownTexture;
-    }
-
-    submitDrawRequest(request: DrawingBatchRequest) {
-        this.drawRequests.push(request);
-    }
-
-    submitOtherGraphicsRequest(request: RenderingBatchRequest) {
-        this.otherGraphicsRequests.push(request);
     }
 
     getShaderProgram(key: string, vertexShader: string, fragmentShader: string): IShaderProgram {
@@ -435,6 +448,16 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         return this.getDataFromLoaderOrCache(this.boneFileCache, key, (dl) => dl.loadBoneFile(fileId));
     }
 
+    getDataBuffers(key: string, createFn: (graphics: IGraphics) => IDataBuffers): IDataBuffers {
+        if (this.dataBuffersCache.contains(key)) {
+            return this.dataBuffersCache.get(key);
+        }
+
+        const dataBuffers = createFn(this.graphics);
+        this.dataBuffersCache.store(key, dataBuffers);
+        return dataBuffers;
+    }
+
     private async getDataFromLoaderOrCache<T>(cache: SimpleCache<T>, key: string, loadFn: (x: IDataLoader) => Promise<T|Error>): Promise<T|null> {
         if (this.runningRequests[key]) {
             const data = await this.runningRequests[key];
@@ -462,16 +485,6 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         }
         cache.store(key, data);
         return data;
-    }
-
-    getDataBuffers(key: string, createFn: (graphics: IGraphics) => IDataBuffers): IDataBuffers {
-        if (this.dataBuffersCache.contains(key)) {
-            return this.dataBuffersCache.get(key);
-        }
-
-        const dataBuffers = createFn(this.graphics);
-        this.dataBuffersCache.store(key, dataBuffers);
-        return dataBuffers;
     }
 
     addEngineMaterialParams(material: RenderMaterial) {

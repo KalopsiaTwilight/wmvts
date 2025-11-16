@@ -7,7 +7,6 @@ export class Camera implements ICamera {
     viewMatrix: Float44;
     position: Float3;
     engine: IRenderingEngine;
-    lastBoundingBox: AABB;
 
     constructor() {
         this.viewMatrix = Float44.identity();
@@ -28,25 +27,16 @@ export class Camera implements ICamera {
         this.isDisposing = true;
         this.viewMatrix = null;
         this.position = null;
-        this.lastBoundingBox = null;
     }
 
     getViewMatrix() {
         return Float44.copy(this.viewMatrix);
     }
 
-    resizeForBoundingBox(boundingBox?: AABB) {
-        this.lastBoundingBox = boundingBox;
-
-        if (boundingBox) {
-            const { min, max } = boundingBox;
-            Float3.copy(max, this.position);
-            Float44.lookAt(this.position, [0, 0, 0], [0, 0, 1], this.viewMatrix);
-            Float44.invert(this.viewMatrix, this.viewMatrix);
-        } 
-    }
-
-    getBoundingBox(): AABB {
-        return this.lastBoundingBox;
+    scaleToBoundingBox(boundingBox: AABB) {
+        const { min, max } = boundingBox;
+        Float3.copy(max, this.position);
+        Float44.lookAt(this.position, [0, 0, 0], [0, 0, 1], this.viewMatrix);
+        Float44.invert(this.viewMatrix, this.viewMatrix);
     }
 }
