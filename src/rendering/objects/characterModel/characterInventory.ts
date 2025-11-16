@@ -103,6 +103,11 @@ export class CharacterInventory {
         })
         model1.on("componentsLoaded", (model) => {
             this.updateAttachmentGeosets(slot, model);
+
+            // Cloaks are weird in that they use an attachment in the model
+            if(slot == EquipmentSlot.Back) {
+                this.parent.swapTextureType(2, model.component1Texture);
+            }
         })
         model1.on("sectionTexturesLoaded", (model) => {
             for(const section in model.sectionTextures) {

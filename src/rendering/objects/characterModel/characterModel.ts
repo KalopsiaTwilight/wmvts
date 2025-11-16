@@ -6,14 +6,14 @@ import { RenderingEngine, ITexture, ISkinnedModel, M2Model } from "@app/renderin
 import { ICallbackManager, CallbackFn, IImmediateCallbackable } from "@app/utils";
 
 import { SkinLayerTextureCombiner } from "./skinLayerTextureCombiner";
-import { M2Proxy } from "./m2Proxy";
+import { M2Proxy, M2ProxyCallbackType } from "./m2Proxy";
 import { EquipmentSlot, GeoSet } from "./enums"
 import { CharacterInventory } from "./characterInventory";
 
 
 const DEFAULT_GEOSET_IDS = [1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 2, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 
-export type CharacterModelCallbackType = "characterMetadataLoaded" | "modelDataLoaded" | "modelTexturesLoaded" | "skinTexturesLoaded"
+export type CharacterModelCallbackType = "characterMetadataLoaded" | "skinTexturesLoaded" | M2ProxyCallbackType
 
 interface TextureSectionTextureData {
     priority: number;
@@ -116,16 +116,18 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
         }
     }
     
-    on(type: CharacterModelCallbackType, fn: CallbackFn<CharacterModel>, persistent = false): void {
+    override on(type: CharacterModelCallbackType, fn: CallbackFn<CharacterModel>, persistent = false): void {
         this.callbackMgr.addCallback(type, fn, persistent);
     }
 
     canExecuteCallback(type: CharacterModelCallbackType): boolean {
         switch(type) {
             case "characterMetadataLoaded": return this.characterMetadata != null;
-            case "modelDataLoaded": return this.modelData != null;
-            case "modelTexturesLoaded": return this.textureObjects != null;
             case "skinTexturesLoaded": return this.skinLayerTexturesLoaded;
+            case "modelCreated":
+            case "modelDataLoaded":
+            case "modelTexturesLoaded": 
+                return super.canExecuteCallback(type);
             default: return false;
         }
     }
@@ -194,14 +196,7 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
 
         this.characterMetadata = data;
 
-        this.createM2Model(data.fileDataId, (model) => {
-            model.on("modelDataLoaded", () => {
-                this.callbackMgr.processCallbacks("modelDataLoaded")
-            });
-            model.on("texturesLoaded", () => {
-                this.callbackMgr.processCallbacks("modelTexturesLoaded")
-            });
-        });
+        this.createM2Model(data.fileDataId);
 
         this.loadSkinnedModels();
         this.setDefaultCustomizations();
@@ -379,12 +374,7 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
         
         this.on("modelTexturesLoaded", () => {
             for(const key in this.textureLayerCombiners) {
-                const textureIndex = this.modelData.textures.findIndex(x => x.type === parseInt(key, 10));
-                if (textureIndex < 0) {
-                    return;
-                }
-
-                this.swapTexture(textureIndex, this.textureLayerCombiners[key].outputTexture);
+                this.swapTextureType(parseInt(key, 10), this.textureLayerCombiners[key].outputTexture);
             }
         })
     }

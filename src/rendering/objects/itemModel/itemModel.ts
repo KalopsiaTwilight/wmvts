@@ -23,7 +23,10 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
 
     component1?: M2Model;
     component2?: M2Model;
-    sectionTextures: { [key: number]: [ITexture, ITexture, ITexture]};
+    sectionTextures: { [key: number]: [ITexture, ITexture, ITexture] };
+
+    component1Texture?: ITexture;
+    component2Texture?: ITexture;
 
     callbackMgr: ICallbackManager<ItemModelCallbackType, ItemModel>
 
@@ -47,7 +50,7 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
     }
 
     override get isLoaded(): boolean {
-        return this.itemMetadata != null && this.componentsLoaded;
+        return this.itemMetadata != null && this.texturesLoaded && this.componentsLoaded;
     }
 
     override update(deltaTime: number) {
@@ -131,16 +134,27 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
             }
         }
 
+        const textureLoadingPromises: Promise<void>[] = []; 
+
         if (metadata.component1) {
             const position = this.itemMetadata.inventoryType === InventoryType.Shoulders ? 0 : -1;
 
-            const fileId = this.engine.modelPickingStrategy(metadata.component1.modelFiles, position, race, gender, charClass);
-            if (fileId) {
-                const textureId = this.engine.texturePickingStrategy(metadata.component1.textureFiles, race, gender, charClass)[0];
-                this.component1 = new M2Model(fileId);
+            const modelFileId = this.engine.modelPickingStrategy(metadata.component1.modelFiles, position, race, gender, charClass);
+            const textureFileId = this.engine.texturePickingStrategy(metadata.component1.textureFiles, race, gender, charClass)[0];
+            if (textureFileId) {
+                this.component1Texture = this.engine.getUnknownTexture();
+                const promise = this.engine.getTexture(textureFileId).then((texture) => {
+                    this.component1Texture.swapFor(texture);
+                    if (this.component1) {
+                        // TODO: Test if it's always index 0 or type: 2 or w/e
+                        this.component1.swapTextureType(2, texture);
+                    }
+                });
+                textureLoadingPromises.push(promise);
+            }
+            if (modelFileId) {
+                this.component1 = new M2Model(modelFileId);
                 this.addChild(this.component1);
-                // TODO: Test if it's always index 0 or type: 2 or w/e
-                this.component1.setTexture(0, textureId);
                 this.component1.attachTo(this.character);
                 this.component1.on("texturesLoaded", this.onComponentLoaded.bind(this))
                 if (particleColorOverride) {
@@ -152,13 +166,22 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
         if (metadata.component2) {
             const position = this.itemMetadata.inventoryType === InventoryType.Shoulders ? 1 : -1;
 
-            const fileId = this.engine.modelPickingStrategy(metadata.component2.modelFiles, position, race, gender, charClass);
-            if (fileId) {
-                const textureId = this.engine.texturePickingStrategy(metadata.component1.textureFiles, race, gender, charClass)[0];
-                this.component2 = new M2Model(fileId);
+            const modelFileId = this.engine.modelPickingStrategy(metadata.component1.modelFiles, position, race, gender, charClass);
+            const textureFileId = this.engine.texturePickingStrategy(metadata.component1.textureFiles, race, gender, charClass)[0];
+            if (textureFileId) {
+                this.component2Texture = this.engine.getUnknownTexture();
+                const promise = this.engine.getTexture(textureFileId).then((texture) => {
+                    this.component2Texture.swapFor(texture);
+                    if (this.component2) {
+                        // TODO: Test if it's always index 0 or type: 2 or w/e
+                        this.component2.swapTextureType(2, texture);
+                    }
+                });
+                textureLoadingPromises.push(promise);
+            }
+            if (modelFileId) {
+                this.component2 = new M2Model(modelFileId);
                 this.addChild(this.component2);
-                // TODO: Test if it's always index 0 or type: 2 or w/e
-                this.component2.setTexture(0, textureId);
                 this.component2.attachTo(this.character);
                 this.component2.on("texturesLoaded", this.onComponentLoaded.bind(this))
                 if (particleColorOverride) {
@@ -168,8 +191,7 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
         }
 
         if (metadata.componentSections) {
-            const loadingPromises: Promise<void>[] = [];
-            const unkTexture = this.engine.getSolidColorTexture([0,0,0,0]);
+            const unkTexture = this.engine.getUnknownTexture();
             for(const section of metadata.componentSections) {
                 this.sectionTextures[section.section] = [unkTexture, unkTexture, unkTexture];
                 const textureIds = this.engine.texturePickingStrategy(section.textures, race, gender, charClass);
@@ -179,18 +201,15 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
                         const promise = this.engine.getTexture(textureIds[i]).then((texture) => {
                             this.sectionTextures[section.section][i] = texture;
                         });
-                        loadingPromises.push(promise);
+                        textureLoadingPromises.push(promise);
                     }
                 }
             }
-            Promise.all(loadingPromises).then(this.onTexturesLoaded.bind(this));
         }
 
         this.callbackMgr.processCallbacks("metadataLoaded")
-
-        if (!metadata.componentSections) {
-            this.onTexturesLoaded();
-        }
+        Promise.all(textureLoadingPromises).then(this.onTexturesLoaded.bind(this));
+        this.onComponentLoaded();
     }
 
     private onComponentLoaded() {

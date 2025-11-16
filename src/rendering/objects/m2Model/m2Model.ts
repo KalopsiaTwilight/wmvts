@@ -187,6 +187,7 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
         }
     }
 
+    // TODO: Deprecate
     setTexture(index: number, fileId: number) {
         if (!this.isModelDataLoaded) {
             this.on("texturesLoadStart", (model) => {
@@ -199,7 +200,28 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
     }
 
     swapTexture(index: number, texture: ITexture) {
-        this.textureObjects[index].swapFor(texture);
+        if (!texture) {
+            return;
+        }
+        
+        this.on("texturesLoaded", () => {
+            this.textureObjects[index].swapFor(texture);
+        })
+    }
+
+    swapTextureType(type: number, texture: ITexture) {
+        if (!texture) {
+            return;
+        }
+
+        this.on("modelDataLoaded", () => {
+            const textureIndex = this.modelData.textures.findIndex(x => x.type === type);
+            if (textureIndex < 0) {
+                return;
+            }
+
+            this.swapTexture(textureIndex, texture);
+        })
     }
 
     on(type: M2ModelCallbackType, fn: CallbackFn<M2Model>, persistent = false): void {
@@ -207,6 +229,10 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
     }
     
     getAnimations(): number[] {
+        if (!this.modelData) {
+            return [];
+        }
+
         return distinct(this.modelData.animations.map((x) => x.id)).sort((a, b) => a - b);
     }
 
