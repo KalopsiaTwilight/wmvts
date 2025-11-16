@@ -1,5 +1,5 @@
-import { IDataLoader, IProgressReporter,  RequestFrameFunction } from "./interfaces";
-import { RenderingEngine, IRenderObject, WebGlGraphics, M2Model, WMOModel, ErrorHandlerFn } from "./rendering";
+import { IDataLoader, IProgressReporter,  RequestFrameFunction, ErrorHandlerFn  } from "./interfaces";
+import { RenderingEngine, IRenderObject, WebGlGraphics, M2Model, WMOModel } from "./rendering";
 import { Camera } from "./cameras";
 import { Float4, Float3 } from "./math";
 

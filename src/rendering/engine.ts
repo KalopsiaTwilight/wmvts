@@ -1,7 +1,7 @@
 import { Camera } from "@app/cameras";
 import { TextureVariationsMetadata, LiquidTypeMetadata, CharacterMetadata, ItemMetadata } from "@app/metadata";
 import { AABB, AleaPrngGenerator, Float3, Float4, Float44, Frustrum } from "@app/math";
-import { IDisposable, IProgressReporter, IDataLoader, RequestFrameFunction } from "@app/interfaces";
+import { IDisposable, IProgressReporter, IDataLoader, RequestFrameFunction, ErrorHandlerFn, ErrorType } from "@app/interfaces";
 import { CallbackManager, IImmediateCallbackable } from "@app/utils";
 import { WoWModelData, WoWWorldModelData, WoWBoneFileData } from "@app/modeldata";
 
@@ -15,12 +15,9 @@ import { SimpleCache } from "./cache";
 import { defaultModelPickingStrategy, defaultTexturePickingStrategy, IModelPickingStrategy, ITexturePickingStrategy } from "./strategies";
 import { IRenderingEngine } from "./interfaces";
 
-const DataLoadingErrorType = "dataFetching";
-const DataProcessingErrorType = "dataProcessing";
-const RenderingErrorType = "rendering"
-export type ErrorType = "dataFetching" | "dataProcessing" | "rendering";
-
-export type ErrorHandlerFn = (type: ErrorType, errorMsg: string) => void;
+const DataLoadingErrorType: ErrorType = "dataFetching";
+const DataProcessingErrorType: ErrorType = "dataProcessing";
+const RenderingErrorType: ErrorType = "rendering"
 
 const LoadDataOperationText: string = "Loading model data..."
 
@@ -326,7 +323,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
     private async processTexture(fileId: number, imgData: string | null, opts?: ITextureOptions) {
         return new Promise<ITexture>((res, rej) => {
             if (imgData === null) {
-                this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve image data for file: " + fileId);
+                this.errorHandler?.(DataLoadingErrorType, new Error("Unable to retrieve image data for file: " + fileId));
                 this.progress?.removeFileFromOperation(fileId);
                 delete this.runningRequests[fileId];
                 res(this.getUnknownTexture());
@@ -341,8 +338,8 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
                 delete this.runningRequests[fileId];
                 res(texture);
             }
-            img.onerror = (err) => {
-                this.errorHandler?.(DataProcessingErrorType, "Unable to process image data for file: " + fileId);
+            img.onerror = (evt, src, line, col, err) => {
+                this.errorHandler?.(DataProcessingErrorType, err ? err : new Error("Unable to process image data for file: " + fileId));
                 this.progress?.removeFileFromOperation(fileId);
                 delete this.runningRequests[fileId];
                 res(this.getUnknownTexture());
@@ -351,7 +348,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         });
     }
 
-    async getTexture(fileId: number, opts?: ITextureOptions): Promise<ITexture> {
+    async getTexture(fileId: number, opts?: ITextureOptions): Promise<ITexture | null> {
         if (this.runningRequests[fileId]) {
             const texture = await this.runningRequests[fileId];
             return texture as ITexture;
@@ -366,10 +363,20 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         this.progress?.setOperation(LoadDataOperationText);
         this.progress?.addFileToOperation(fileId);
         const req = this.dataLoader.loadTexture(fileId)
-            .then((imgData) => this.processTexture(fileId, imgData, opts));
+            .then(async (imgData) => {
+                if (imgData instanceof Error) {
+                    return imgData;
+                } else {
+                    return this.processTexture(fileId, imgData, opts)
+                }
+            });
 
         this.runningRequests[fileId] = req;
         const texture = await req;
+        if (texture instanceof Error) {
+            this.errorHandler?.(DataProcessingErrorType, texture);
+            return null;
+        }
         return texture;
     }
 
@@ -435,7 +442,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         return this.getDataFromLoaderOrCache(this.boneFileCache, key, (dl) => dl.loadBoneFile(fileId));
     }
 
-    private async getDataFromLoaderOrCache<T>(cache: SimpleCache<T>, key: string, loadFn: (x: IDataLoader) => Promise<T>): Promise<T|null> {
+    private async getDataFromLoaderOrCache<T>(cache: SimpleCache<T>, key: string, loadFn: (x: IDataLoader) => Promise<T|Error>): Promise<T|null> {
         if (this.runningRequests[key]) {
             const data = await this.runningRequests[key];
             return data as T;
@@ -450,8 +457,9 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         const req = loadFn(this.dataLoader);
         this.runningRequests[key] = req;
         const data = await req;
-        if (data === null) {
-            this.errorHandler?.(DataLoadingErrorType, "Unable to retrieve data from dataloader for key: " + key);
+        if (data instanceof Error) {
+            this.errorHandler?.(DataLoadingErrorType, data);
+            return null;  
         }
         cache.store(key, data);
         delete this.runningRequests[key];

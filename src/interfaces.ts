@@ -10,16 +10,18 @@ export interface IDisposable {
 
 export type RequestFrameFunction = (callback: Function) => void;
 
+export type ErrorType = "dataFetching" | "dataProcessing" | "rendering";
+export type ErrorHandlerFn = (type: ErrorType, error: Error) => void;
 export interface IDataLoader {
-    loadBoneFile(fileId: number): Promise<WoWBoneFileData|null>
-    loadTexture(fileId: number): Promise<string|null> 
-    loadItemvisualMetadata(visualId: number): Promise<ItemVisualMetadata|null>
-    loadCharacterMetadata(modelId: number): Promise<CharacterMetadata|null>;
-    loadItemMetadata(displayId: number): Promise<ItemMetadata|null>;
-    loadLiquidTypeMetadata(liquidId: number): Promise<LiquidTypeMetadata>;
-    loadTextureVariationsMetadata(fileId: number): Promise<TextureVariationsMetadata|null>;
-    loadModelFile(fileId: number): Promise<WoWModelData|null>
-    loadWorldModelFile(fileId: number): Promise<WoWWorldModelData|null>
+    loadBoneFile(fileId: number): Promise<WoWBoneFileData|Error>
+    loadTexture(fileId: number): Promise<string|Error> 
+    loadItemvisualMetadata(visualId: number): Promise<ItemVisualMetadata|Error>
+    loadCharacterMetadata(modelId: number): Promise<CharacterMetadata|Error>;
+    loadItemMetadata(displayId: number): Promise<ItemMetadata|Error>;
+    loadLiquidTypeMetadata(liquidId: number): Promise<LiquidTypeMetadata|Error>;
+    loadTextureVariationsMetadata(fileId: number): Promise<TextureVariationsMetadata|Error>;
+    loadModelFile(fileId: number): Promise<WoWModelData|Error>
+    loadWorldModelFile(fileId: number): Promise<WoWWorldModelData|Error>
     useProgressReporter(progress?: IProgressReporter): void;
 }
 
