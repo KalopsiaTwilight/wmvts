@@ -53,7 +53,12 @@ export function parseCM2File(data: ArrayBuffer) {
 
     let inflatedData: Uint8Array;
     const remainingBytes = reader.readRemainingBytes();
-    inflatedData = inflate(remainingBytes)
+    try {
+        inflatedData = inflate(remainingBytes)
+    } catch (err) {
+        throw new Error("Error while inflating zlib compressed data: " + err);
+    }
+    
     if (inflatedData.length < dataEndPos) {
         throw new Error("Compressed data appears to be smaller than expected? Received: " + inflatedData.length + " expected: " + dataEndPos);
     }
@@ -145,7 +150,11 @@ export function parseCM2File(data: ArrayBuffer) {
 
 export function parseCM2BoneFile(data: ArrayBuffer) {
     let inflatedData: Uint8Array;
-    inflatedData = inflate(data);
+    try {
+        inflatedData = inflate(data)
+    } catch (err) {
+        throw new Error("Error while inflating zlib compressed data: " + err);
+    }
 
     var reader = new BinaryReader(inflatedData.buffer);
     var boneIds = readArray(reader, (r) => r.readUInt16LE());

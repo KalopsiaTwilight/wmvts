@@ -39,7 +39,11 @@ export function parseCWMOFile(data: ArrayBuffer) {
 
     let inflatedData: Uint8Array;
     const remainingBytes = reader.readRemainingBytes();
-    inflatedData = inflate(remainingBytes)
+    try {
+        inflatedData = inflate(remainingBytes)
+    } catch (err) {
+        throw new Error("Error while inflating zlib compressed data: " + err);
+    }
     if (inflatedData.length < dataEndPos) {
         throw new Error("Compressed data appears to be smaller than expected? Received: " + inflatedData.length + " expected: " + dataEndPos);
     }

@@ -445,6 +445,9 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
     private async getDataFromLoaderOrCache<T>(cache: SimpleCache<T>, key: string, loadFn: (x: IDataLoader) => Promise<T|Error>): Promise<T|null> {
         if (this.runningRequests[key]) {
             const data = await this.runningRequests[key];
+            if (data instanceof Error) {
+                return null;  
+            }
             return data as T;
         }
 
@@ -457,13 +460,14 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         const req = loadFn(this.dataLoader);
         this.runningRequests[key] = req;
         const data = await req;
+        delete this.runningRequests[key];
+        this.progress?.removeFileFromOperation(key);
+
         if (data instanceof Error) {
             this.errorHandler?.(DataLoadingErrorType, data);
             return null;  
         }
         cache.store(key, data);
-        delete this.runningRequests[key];
-        this.progress?.removeFileFromOperation(key);
         return data;
     }
 
