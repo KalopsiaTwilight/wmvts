@@ -216,6 +216,8 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
     private applyCustomizations() {
         this.itemGeoModifyData = [];
         let boneFileId = 0;
+        let modelFileId = this.characterMetadata.fileDataId;
+
         const elemApplicable = (elem: CharacterCustomizationElementData) => 
             (elem.relationChoiceID == 0 || this.customizationChoices.some((choice) => choice.id == elem.relationChoiceID))
         
@@ -264,10 +266,15 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
             for(const elem of custItemGeoModifyElements) {
                 this.itemGeoModifyData.push(elem.custItemGeoModify);
             }
-            // TODO: Process conditional elements && swap model if necessary
+
+            const conditionalModelElement = applicableElements.find(elem => elem.conditionalModelFileDataId != 0);
+            if (conditionalModelElement) {
+                modelFileId = conditionalModelElement.conditionalModelFileDataId;
+            }
         }
 
         this.loadBoneFile(boneFileId);
+        this.createM2Model(modelFileId);
         this.loadSkinTextures(newSkinLayerTextures);
         this.updateGeosets();
     }
@@ -377,6 +384,12 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
             for(const item of textureData) {
                 combiner.drawTextureSection(item.textures, textureSection.x, textureSection.y, textureSection.width,textureSection.height, 0);
             }
+        }
+
+        // Cloaks are unusual in that they use a geoset in the model without a normal skin section texture
+        const cloakItem = this.inventory.inventoryData[EquipmentSlot.Back];
+        if(cloakItem) {
+            this.swapTextureType(2, cloakItem.model1.component1Texture);
         }
         
         this.on("modelTexturesLoaded", () => {

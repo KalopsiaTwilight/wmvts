@@ -35,6 +35,13 @@ export class M2Proxy extends WorldPositionedObject implements ISkinnedModel, IIm
 
 
     protected createM2Model(fileId: number, configureFn?: (model: M2Model) => void) {
+        if (this.m2Model) {
+            if (this.m2Model.fileId == fileId) {
+                return;
+            }
+            this.m2Model.dispose();
+        }
+
         this.m2Model = new M2Model(fileId);
         this.addChild(this.m2Model);
 

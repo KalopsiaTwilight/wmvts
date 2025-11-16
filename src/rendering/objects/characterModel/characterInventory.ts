@@ -103,11 +103,6 @@ export class CharacterInventory {
         })
         model1.on("componentsLoaded", (model) => {
             this.updateAttachmentGeosets(slot, model);
-
-            // Cloaks are weird in that they use an attachment in the model
-            if(slot == EquipmentSlot.Back) {
-                this.parent.swapTextureType(2, model.component1Texture);
-            }
         })
         model1.on("sectionTexturesLoaded", (model) => {
             for(const section in model.sectionTextures) {
@@ -294,11 +289,14 @@ export class CharacterInventory {
     }
 
     private updateComponentAttachments(data: EquippedItemData, model: ItemModel) {
+        const parentBoneData = this.parent.boneData;
+        if (!parentBoneData) {
+            return;
+        }
         for(let i = 0; i < data.attachmentIds.length; i++) {
             const attachmentData = data.attachments[i];
             if (attachmentData) {
-                Float44.copy(this.parent.boneData[attachmentData.bone].positionMatrix, data.attachmentMatrices[i]);
-                Float44.translate(data.attachmentMatrices[i], attachmentData.position, data.attachmentMatrices[i]);
+                Float44.translate(parentBoneData[attachmentData.bone].positionMatrix, attachmentData.position, data.attachmentMatrices[i]);
 
                 const component = i === 0 ? model.component1 : model.component2;
                 if (component) {
