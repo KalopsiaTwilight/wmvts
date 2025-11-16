@@ -30,54 +30,61 @@ export interface CharacterCustomizationOptionData
     id: number;
     name: string;
     orderIndex: number;
-    choices: CharacterCustomizationOptionChoiceData[];
+    choices: CharacterCustomizationChoiceData[];
 }
 
-export interface CharacterCustomizationOptionChoiceData
+export interface CharacterCustomizationChoiceData
 {
     id: number;
     name: string;
     orderIndex: number;
-    elements: CharacterCustomizationOptionChoiceElementData[];
+    elements: CharacterCustomizationElementData[];
 }
 
-export interface CharacterCustomizationOptionChoiceElementData
+export interface CharacterCustomizationElementData
 {
     id: number;
-    chrCustItemGeoModifyId: number;
     conditionalModelFileDataId: number;
     relationChoiceID: number;
     relationIndex: number;
-    boneSet?: CharacterCustomizationOptionChoiceElementBoneSetData;
-    geoset?: CharacterCustomizationOptionChoiceElementGeosetData;
-    material?: CharacterCustomizationOptionChoiceElementMaterialData;
-    skinnedModel?: CharacterCustomizationOptionChoiceElementSkinnedModelData;
+    boneSet?: CharacterCustomizationBoneSetData;
+    geoset?: CharacterCustomizationGeosetData;
+    material?: CharacterCustomizationElementMaterialData;
+    skinnedModel?: CharacterCustomizationSkinnedModelData;
+    custItemGeoModify?: CharacterCustomizationtItemGeoModifyData;
 }
 
-export interface CharacterCustomizationOptionChoiceElementBoneSetData
+export interface CharacterCustomizationBoneSetData
 {
     boneFileDataId: number;
     modelFileDataId: number;
 }
 
-export interface CharacterCustomizationOptionChoiceElementMaterialData
+export interface CharacterCustomizationElementMaterialData
 {
     chrModelTextureTargetId: number;
     textureFiles: TextureFileData[];
 }
-export interface CharacterCustomizationOptionChoiceElementGeosetData
+export interface CharacterCustomizationGeosetData
 {
     geosetType: number;
     geosetId: number;
     modifier: number;
 }
-export interface CharacterCustomizationOptionChoiceElementSkinnedModelData
+export interface CharacterCustomizationSkinnedModelData
 {
     collectionsFileDataId: number;
     geosetType: number;
     geosetId: number;
     modifier: number;
     flags: number;
+}
+
+export interface CharacterCustomizationtItemGeoModifyData
+{
+    geosetType: number;
+    original: number;
+    override: number;
 }
 
 export interface CharacterCustomizationTextureLayerData

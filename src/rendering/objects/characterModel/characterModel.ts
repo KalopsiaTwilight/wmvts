@@ -1,5 +1,6 @@
 import { 
-    CharacterCustomizationOptionChoiceData, CharacterCustomizationOptionChoiceElementData,
+    CharacterCustomizationChoiceData, CharacterCustomizationElementData,
+    CharacterCustomizationtItemGeoModifyData,
     CharacterMetadata 
 } from "@app/metadata";
 import { RenderingEngine, ITexture, ISkinnedModel, M2Model } from "@app/rendering";
@@ -29,7 +30,8 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
     class: number;
 
     characterMetadata: CharacterMetadata;
-    customizationChoices: CharacterCustomizationOptionChoiceData[];
+    customizationChoices: CharacterCustomizationChoiceData[];
+    itemGeoModifyData: CharacterCustomizationtItemGeoModifyData[]
     customizationGeosets: { [key: number]: number};
 
 
@@ -39,7 +41,7 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
     private textureSectionTextures: { [key: number]: TextureSectionTextureData[] }
     private skinnedModels: { [key: number]: M2Model }
     private inventory: CharacterInventory
-    private callbackMgr: ICallbackManager<CharacterModelCallbackType, CharacterModel>;
+    override callbackMgr: ICallbackManager<CharacterModelCallbackType, CharacterModel>;
 
     constructor(modelId: number) {
         super();
@@ -212,8 +214,9 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
     }
 
     private applyCustomizations() {
+        this.itemGeoModifyData = [];
         let boneFileId = 0;
-        const elemApplicable = (elem: CharacterCustomizationOptionChoiceElementData) => 
+        const elemApplicable = (elem: CharacterCustomizationElementData) => 
             (elem.relationChoiceID == 0 || this.customizationChoices.some((choice) => choice.id == elem.relationChoiceID))
         
         this.customizationGeosets = {};
@@ -256,8 +259,12 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
                 model.toggleGeosets(0, 5300, false);
                 model.toggleGeoset(elem.skinnedModel.geosetType * 100 + elem.skinnedModel.geosetId, true);
             }
+
+            const custItemGeoModifyElements = applicableElements.filter(elem => elem.custItemGeoModify);
+            for(const elem of custItemGeoModifyElements) {
+                this.itemGeoModifyData.push(elem.custItemGeoModify);
+            }
             // TODO: Process conditional elements && swap model if necessary
-            // TODO: Process CustItemGeoModifyId && set ids;
         }
 
         this.loadBoneFile(boneFileId);
@@ -391,7 +398,15 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
         const equipmentToggles = this.inventory.getGeosetToggles();
         for(const key in equipmentToggles) {
             const group = parseInt(key, 10);
-            const val = equipmentToggles[group as GeoSet];
+            let val = equipmentToggles[group as GeoSet];
+
+            for(const override of this.itemGeoModifyData) {
+                if (override.geosetType === group && override.original === val) {
+                    val = override.override;
+                    break;
+                }
+            }
+
             this.toggleGeosets(group * 100, (group+1) * 100 -1, false);
             if (val > -1) {
                 this.toggleGeoset(group * 100 + val, true);
