@@ -1,6 +1,5 @@
 import { WoWAnimationData, WoWAnimationFlags, WoWTrackData } from "@app/modeldata";
-import { M2Model } from "./m2Model";
-import { Float3, Float4 } from "@app/index";
+import { Float3, Float4 } from "@app/math";
 
 const FALLBACK_ANIM_ID = 0;
 
@@ -25,22 +24,19 @@ export class AnimationState {
     isPaused: boolean;
     speed: number;
 
-    model: M2Model;
-
-    constructor(model: M2Model) {
-        this.animations = model.modelData.animations;
+    constructor(animations: WoWAnimationData[], globalLoops: number[]) {
+        this.animations = animations;
 
         this.currentAnimActiveTime = 0;
         this.nextAnimActiveTime = 0;
         this.blendFactor = 1;
 
-        this.globalLoops = model.modelData.globalLoops;
+        this.globalLoops = globalLoops;
         this.globalTimers = new Array(this.globalLoops.length);
         for(let i = 0; i < this.globalTimers.length; i++) {
             this.globalTimers[i] = 0;
         }
 
-        this.model = model;
         this.speed = 1;
     }
 

@@ -1,5 +1,5 @@
 import { WoWLocalTrackData } from "@app/modeldata";
-import { Float2, Float3, Float4 } from "@app/rendering";
+import { Float2, Float3, Float4 } from "@app/math";
 
 export abstract class LocalAnimatedValue<T> {
     timestamps: number[];

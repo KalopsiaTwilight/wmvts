@@ -6,6 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "webpack serve -c webpack/webpack.dev.config.js",
+    "dependency-test": "npx dpdm -T ./src/index.ts",
     "build": "npm run standalone && npm run library",
     "library": "webpack -c webpack/webpack.library.config.js",
     "standalone": "webpack -c webpack/webpack.standalone.config.js"

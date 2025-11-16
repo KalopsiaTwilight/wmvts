@@ -1,5 +1,4 @@
-import { Float4 } from "../math";
-import { RenderingBatchRequest } from "./batchRequest";
+import { Float4 } from "@app/math";
 
 export enum BufferDataType {
     Float,

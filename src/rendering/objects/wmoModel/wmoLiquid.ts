@@ -1,12 +1,16 @@
-import { 
-    WoWWorldModelLiquid, RenderingEngine, ITexture, WowWorldModelGroupFlags, Float3, AABB, WorldModelRootFlags, 
-    WoWWorldModelGroup, Float2, Float4, GxBlend, ColorMask, IShaderProgram, IVertexArrayObject, 
-    BufferDataType, RenderMaterial, DrawingBatchRequest,
-} from "@app/index";
+import { WoWWorldModelLiquid, WowWorldModelGroupFlags, WoWWorldModelGroup, WorldModelRootFlags } from "@app/modeldata"
+import { Float2, Float3, Float4, AABB } from "@app/math";
 import { BinaryWriter } from "@app/utils";
 import { LiquidTypeMetadata } from "@app/metadata";
 
-import { WorldPositionedObject } from "../worldPositionedObject";
+import { 
+    ITexture, GxBlend, ColorMask, IShaderProgram, IVertexArrayObject, 
+    BufferDataType, RenderMaterial, DrawingBatchRequest
+} from "@app/rendering/graphics";
+import { 
+    IRenderingEngine
+} from "@app/rendering/interfaces";
+import { WorldPositionedObject } from "../worldPositionedObject"
 
 import fragmentShaderProgramText from "./wmoLiquid.frag";
 import vertexShaderProgramText from "./wmoLiquid.vert";
@@ -59,7 +63,6 @@ export class WMOLiquid extends WorldPositionedObject {
     vao: IVertexArrayObject;
     vertices: WMOLiquidVertexData[] = [];
     indices: number[] = [];
-    boundingBox: AABB;
     materials: RenderMaterial[];
 
     liquidCategory: LiquidCategory;
@@ -84,7 +87,7 @@ export class WMOLiquid extends WorldPositionedObject {
         this.texturesLoaded = false;
     }
 
-    override initialize(engine: RenderingEngine): void {
+    override initialize(engine: IRenderingEngine): void {
         super.initialize(engine);
 
         this.shaderProgram = engine.getShaderProgram("WMOLiquid", vertexShaderProgramText, fragmentShaderProgramText);
@@ -103,7 +106,7 @@ export class WMOLiquid extends WorldPositionedObject {
             }
         }
 
-        this.boundingBox = AABB.fromVertices(potentialVertices.map(x => x.position));
+        this.setBoundingBox(AABB.fromVertices(potentialVertices.map(x => x.position)));
 
         let currentIndex = 0;
         let tempLiquidtype = -1;

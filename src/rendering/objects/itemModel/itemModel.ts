@@ -1,17 +1,19 @@
-import { AABB, CharacterModel, Float3, Float44, ITexture, M2Model, RenderingEngine } from "@app/rendering";
+import { AABB, Float3 } from "@app/math"; 
 import { InventoryType, ItemMetadata } from "@app/metadata";
-import { CallbackFn, ICallbackManager, IImmediateCallbackable } from "@app/utils";
+import { CallbackFn, ICallbackManager } from "@app/utils";
+import { ITexture } from "@app/rendering/graphics";
+import { IRenderingEngine } from "@app/rendering/interfaces";
 
-import { ParticeColorOverride, ParticleColorOverrides, WorldPositionedObject } from "../";
+import { WorldPositionedObject } from "../worldPositionedObject";
+import { ICharacterModel } from "../characterModel";
+import { M2Model, IM2Model, ParticleColorOverride, ParticleColorOverrides } from "../m2Model";
 
+import { IItemModel, ItemModelCallbackType } from "./interfaces";
 
 function parseIntToColor(val: number, dest: Float3) {
     return Float3.set(dest, ((val >> 16) & 255), ((val >> 8) & 255), ((val >> 0) & 255));
 }
-
-export type ItemModelCallbackType = "metadataLoaded" | "sectionTexturesLoaded" | "componentsLoaded" 
-
-export class ItemModel extends WorldPositionedObject implements IImmediateCallbackable<ItemModelCallbackType> {
+export class ItemModel extends WorldPositionedObject implements IItemModel{
     fileId: number;
     displayInfoId: number;
     itemMetadata: ItemMetadata
@@ -19,10 +21,10 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
     componentsLoaded: boolean;
     texturesLoaded: boolean;
 
-    character?: CharacterModel;
+    character?: ICharacterModel;
 
-    component1?: M2Model;
-    component2?: M2Model;
+    component1?: IM2Model;
+    component2?: IM2Model;
     sectionTextures: { [key: number]: [ITexture, ITexture, ITexture] };
 
     component1Texture?: ITexture;
@@ -39,7 +41,7 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
         this.isInitialized = false;
     }
     
-    override initialize(engine: RenderingEngine): void {
+    override initialize(engine: IRenderingEngine): void {
         if (!this.isInitialized) {
             this.isInitialized = true;
             super.initialize(engine);
@@ -83,7 +85,7 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
         }
     }
 
-    equipTo(character: CharacterModel) {
+    equipTo(character: ICharacterModel) {
         this.character = character;
         this.parent = character;
         this.character.children.push(this);
@@ -126,7 +128,7 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
         let particleColorOverride: ParticleColorOverrides = [null, null, null];
         if (metadata.particleColor) {
             for(let i = 0; i < metadata.particleColor.start.length; i++) {
-                let override: ParticeColorOverride = [Float3.zero(), Float3.zero(), Float3.zero()];
+                let override: ParticleColorOverride = [Float3.zero(), Float3.zero(), Float3.zero()];
                 parseIntToColor(metadata.particleColor.start[i], override[0]);
                 parseIntToColor(metadata.particleColor.mid[i], override[1]);
                 parseIntToColor(metadata.particleColor.end[i], override[2]);
@@ -158,7 +160,7 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
                 this.component1.attachTo(this.character);
                 this.component1.on("texturesLoaded", this.onComponentLoaded.bind(this))
                 if (particleColorOverride) {
-                    this.component1.particleColorOverrides = particleColorOverride;
+                    this.component1.setParticleColorOverride(particleColorOverride);
                 }
             }
         }
@@ -185,7 +187,7 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
                 this.component2.attachTo(this.character);
                 this.component2.on("texturesLoaded", this.onComponentLoaded.bind(this))
                 if (particleColorOverride) {
-                    this.component2.particleColorOverrides = particleColorOverride;
+                    this.component2.setParticleColorOverride(particleColorOverride);
                 }
             }
         }
@@ -229,7 +231,7 @@ export class ItemModel extends WorldPositionedObject implements IImmediateCallba
                 } else {
                     bb = this.component1 ? this.component1.worldBoundingBox : this.component2.worldBoundingBox;
                 }
-                this.engine.sceneCamera.resizeForBoundingBox(bb);
+                this.engine.processNewBoundingBox(bb);
             }
         }
 

@@ -1,18 +1,19 @@
-import { AleaPrngGenerator, Float3, Float4, Float44, Frustrum } from "./math";
-import { Camera } from "../cameras";
-import { RenderObject, IDisposable } from "./objects";
+import { Camera } from "@app/cameras";
+import { TextureVariationsMetadata, LiquidTypeMetadata, CharacterMetadata, ItemMetadata } from "@app/metadata";
+import { AABB, AleaPrngGenerator, Float3, Float4, Float44, Frustrum } from "@app/math";
+import { IDisposable, IProgressReporter, IDataLoader, RequestFrameFunction } from "@app/interfaces";
+import { CallbackManager, IImmediateCallbackable } from "@app/utils";
+import { WoWModelData, WoWWorldModelData, WoWBoneFileData } from "@app/modeldata";
+
+import { IRenderObject } from "./objects";
 import { 
     DrawingBatchRequest, IDataBuffers, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest, 
     RenderMaterial 
 } from "./graphics";
-import { IProgressReporter, IDataLoader, WoWModelData, WoWWorldModelData, RequestFrameFunction, WoWBoneFileData } from "..";
 import { SimpleCache } from "./cache";
-import { TextureVariationsMetadata, LiquidTypeMetadata, CharacterMetadata, ItemMetadata } from "@app/metadata";
 
 import { defaultModelPickingStrategy, defaultTexturePickingStrategy, IModelPickingStrategy, ITexturePickingStrategy } from "./strategies";
-import { CallbackManager, IImmediateCallbackable } from "@app/utils";
-
-const UNKNOWN_TEXTURE_ID = -123;
+import { IRenderingEngine } from "./interfaces";
 
 const DataLoadingErrorType = "dataFetching";
 const DataProcessingErrorType = "dataProcessing";
@@ -42,7 +43,7 @@ export interface RenderingEngineOptions {
     disableLighting?: boolean
 }
 
-export class RenderingEngine implements IDisposable {
+export class RenderingEngine implements IRenderingEngine, IDisposable {
     // Options / Configurables
     graphics: IGraphics;
     dataLoader: IDataLoader;
@@ -110,7 +111,7 @@ export class RenderingEngine implements IDisposable {
     // Drawing data
     drawRequests: DrawingBatchRequest[];
     otherGraphicsRequests: RenderingBatchRequest[];
-    sceneObjects: RenderObject[];
+    sceneObjects: IRenderObject[];
 
     constructor(graphics: IGraphics, dataLoader: IDataLoader, requestFrame: RequestFrameFunction,
         options: RenderingEngineOptions) {
@@ -307,14 +308,19 @@ export class RenderingEngine implements IDisposable {
         this.sceneCamera = newCamera;
     }
 
-    addSceneObject(object: RenderObject, priority: number) {
+    addSceneObject(object: IRenderObject, priority: number) {
         object.initialize(this);
         this.sceneObjects.push(object);
     }
 
-    removeSceneObject(object: RenderObject) {
+    removeSceneObject(object: IRenderObject) {
         this.sceneObjects = this.sceneObjects.filter((x) => x != object);
         object.dispose();
+    }
+
+    processNewBoundingBox(boundingBox: AABB): void {
+        // TODO: Handle this differently;
+        this.sceneCamera.resizeForBoundingBox(boundingBox);
     }
 
     private async processTexture(fileId: number, imgData: string | null, opts?: ITextureOptions) {

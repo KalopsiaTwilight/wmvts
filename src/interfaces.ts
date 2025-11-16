@@ -1,6 +1,14 @@
-import { CharacterCustomizationMetadata, CharacterMetadata, ItemMetadata, ItemVisualMetadata, TextureVariationsMetadata } from "./metadata";
-import { LiquidTypeMetadata } from "./metadata/liquid";
+import { AABB, Float44 } from "./math";
+import { CharacterMetadata, ItemMetadata, ItemVisualMetadata, TextureVariationsMetadata, LiquidTypeMetadata } from "./metadata";
 import { WoWBoneFileData, WoWModelData, WoWWorldModelData } from "./modeldata";
+import { IRenderingEngine } from "./rendering";
+
+export interface IDisposable {
+    isDisposing: boolean;
+    dispose(): void;
+}
+
+export type RequestFrameFunction = (callback: Function) => void;
 
 export interface IDataLoader {
     loadBoneFile(fileId: number): Promise<WoWBoneFileData|null>
@@ -21,4 +29,11 @@ export interface IProgressReporter {
     addFileToOperation(file: number|string): void;
     removeFileFromOperation(file: number|string): void;
     finishOperation(): void;
+}
+
+export interface ICamera extends IDisposable {
+    initialize(engine: IRenderingEngine): void;
+    resizeForBoundingBox(boundingBox?: AABB): void;
+    update(deltaTime: number): void;
+    getViewMatrix(): Float44
 }

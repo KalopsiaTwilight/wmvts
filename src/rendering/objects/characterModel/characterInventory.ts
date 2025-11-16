@@ -1,14 +1,13 @@
 
 import { InventoryType, ItemFeatureFlag } from "@app/metadata";
 import { WoWAttachmentData } from "@app/modeldata";
-import { Float44 } from "@app/rendering/math";
+import { Float44 } from "@app/math";
 
-import { ItemModel } from "../itemModel";
+import { ItemModel, IItemModel } from "../itemModel";
+import { IM2Model } from "../m2Model";
 
-import { CharacterModel } from "./characterModel";
-import { EquipmentSlot, GeoSet } from "./enums";
-import { M2Model } from "../m2Model";
-
+import { EquipmentSlot, GeoSet } from "./interfaces";
+import { type CharacterModel } from "../characterModel";
 
 export interface EquippedItemData {
     displayId1: number;
@@ -17,8 +16,8 @@ export interface EquippedItemData {
     attachmentIds: number[],
     attachments: WoWAttachmentData[];
     attachmentMatrices: Float44[];
-    model1: ItemModel
-    model2?: ItemModel;
+    model1: IItemModel
+    model2?: IItemModel;
 } 
 
 const equipmentSlotToGeosetsMap: { [key in EquipmentSlot]: GeoSet[] } = {
@@ -264,7 +263,7 @@ export class CharacterInventory {
         return geoSetMap;
     }
 
-    private updateAttachmentGeosets(slot: EquipmentSlot, model: ItemModel) {
+    private updateAttachmentGeosets(slot: EquipmentSlot, model: IItemModel) {
         const itemMeta = model.itemMetadata;
         const geoSets = equipmentSlotToGeosetsMap[slot];
         if (model.component1) {
@@ -275,7 +274,7 @@ export class CharacterInventory {
         }
     }
 
-    private updateAttachmentGeoSetsForComponent(component: M2Model, geoSets: GeoSet[], geosetGroup: number[], attachmentGeosetGroup: number[]) {
+    private updateAttachmentGeoSetsForComponent(component: IM2Model, geoSets: GeoSet[], geosetGroup: number[], attachmentGeosetGroup: number[]) {
         component.toggleGeosets(1, 5300, false);
         for(let i = 0; i < geoSets.length; i++) {
             const groupVal = geoSets[i] * 100;
@@ -288,7 +287,7 @@ export class CharacterInventory {
         }
     }
 
-    private updateComponentAttachments(data: EquippedItemData, model: ItemModel) {
+    private updateComponentAttachments(data: EquippedItemData, model: IItemModel) {
         const parentBoneData = this.parent.boneData;
         if (!parentBoneData) {
             return;

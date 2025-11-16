@@ -1,4 +1,7 @@
 import { createProgramInfo, createTexture, ProgramInfo, setUniforms } from "twgl.js";
+
+import { Float4 } from "@app/math";
+
 import { IGraphics, IVertexDataBuffer, IVertexIndexBuffer, IShaderProgram, 
     IUniformsData, IVertexAttributePointer, ITexture, IVertexArrayObject,
     GxBlend, ColorMask, BufferDataType,
@@ -6,7 +9,6 @@ import { IGraphics, IVertexDataBuffer, IVertexIndexBuffer, IShaderProgram,
     IFrameBuffer
 } from "./abstractions";
 import { CachedGraphics } from "./cachedGraphics";
-import { Float4 } from "../math";
 
 export class WebGlGraphics extends CachedGraphics implements IGraphics {
     gl: WebGLRenderingContext;

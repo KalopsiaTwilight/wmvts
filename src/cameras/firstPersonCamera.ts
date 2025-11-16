@@ -1,5 +1,6 @@
-import { RenderingEngine } from "../rendering/engine";
-import { AABB, Float3, Float4, Float44 } from "../rendering/math";
+import { AABB, Float3, Float4, Float44 } from "@app/math"
+import { IRenderingEngine } from "@app/rendering";
+
 import { Camera } from "./base";
 
 enum MovementState {
@@ -45,7 +46,7 @@ export class FirstPersonCamera extends Camera {
         this.isDraggingMouse = false;
     }
 
-    override initialize(engine: RenderingEngine): void {
+    override initialize(engine: IRenderingEngine): void {
         super.initialize(engine);
 
         if (engine.containerElement) {

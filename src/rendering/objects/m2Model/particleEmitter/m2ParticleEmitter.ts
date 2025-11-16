@@ -1,9 +1,14 @@
 import { WoWExtendedParticleData, WoWParticleEmitterData } from "@app/modeldata";
+import { Float2, Float3, Float33, Float4, Float44, IPseudoRandomNumberGenerator } from "@app/math";
+import { IDisposable } from "@app/interfaces";
+
 import { 
-    BufferDataType, ColorMask, DrawingBatchRequest, Float2, Float3, Float33, Float4, Float44, GxBlend, IDisposable, 
-    IPseudoRandomNumberGenerator, IShaderProgram, ITexture, IVertexArrayObject, IVertexDataBuffer, 
-    IVertexIndexBuffer, RenderingEngine, RenderMaterial } from "@app/rendering";
-import { M2Model } from "../m2Model";
+    BufferDataType, ColorMask, DrawingBatchRequest,  GxBlend, IShaderProgram, ITexture, IVertexArrayObject, IVertexDataBuffer, 
+    IVertexIndexBuffer, RenderMaterial
+} from "@app/rendering/graphics";
+import { IRenderingEngine } from "@app/rendering/interfaces";
+
+import type { M2Model } from "../m2Model";
 
 import fragmentShaderProgramText from "./m2ParticleEmitter.frag"; 
 import vertexShaderProgramText from "./m2ParticleEmitter.vert";
@@ -78,7 +83,7 @@ export class M2ParticleEmitter implements IDisposable {
     // References
     index: number;
     parent: M2Model;
-    engine: RenderingEngine;
+    engine: IRenderingEngine;
     m2data: WoWParticleEmitterData;
     exp2Data: WoWExtendedParticleData;
     rng: IPseudoRandomNumberGenerator;

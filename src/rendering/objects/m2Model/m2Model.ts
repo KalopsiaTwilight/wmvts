@@ -1,15 +1,19 @@
 import { WoWBoneData, WoWBoneFileData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureUnitData } from "@app/modeldata";
-import {
-    RenderingEngine, ColorMask,Float4, Float3, ITexture, Float44, IShaderProgram, M2BlendModeToEGxBlend,
-    AABB, RenderMaterial, DrawingBatchRequest, IDataBuffers,
-    BufferDataType,
-} from "@app/rendering";
-import { BinaryWriter, CallbackFn, distinct, ICallbackManager, IImmediateCallbackable } from "@app/utils";
+import { Float4, Float3, Float44, AABB } from "@app/math"
+import { BinaryWriter, CallbackFn, distinct, ICallbackManager } from "@app/utils";
 
+import { 
+    ColorMask, ITexture, IShaderProgram, M2BlendModeToEGxBlend,
+    RenderMaterial, DrawingBatchRequest, IDataBuffers, BufferDataType
+} from "@app/rendering/graphics";
+import { IRenderingEngine } from "@app/rendering/interfaces";
+import { WorldPositionedObject } from "../worldPositionedObject";
+
+import { IBoneData, IM2Model, ISkinnedObject, M2ModelCallbackType, ParticleColorOverrides } from "./interfaces";
 import fragmentShaderProgramText from "./m2Model.frag";
 import vertexShaderProgramText from "./m2Model.vert";
 import { getM2PixelShaderId, getM2VertexShaderId } from "./m2Shaders";
-import { WorldPositionedObject } from "../worldPositionedObject";
+
 import { M2ParticleEmitter } from "./particleEmitter/m2ParticleEmitter";
 import { M2RibbonEmitter } from "./ribbonEmitter/m2RibbonEmitter";
 import { AnimationState } from "./animatedValue";
@@ -26,25 +30,9 @@ interface TextureUnitData {
     textureMatrices: Float44[];
 }
 
-export interface BoneData {
-    hasUpdatedThisTick: boolean;
-    isOverriden: boolean;
-    crc: number;
-    boneOffsetMatrix: Float44;
-    positionMatrix: Float44;
-}
-
-export interface ISkinnedModel {
-    boneData: BoneData[];
-}
-
-export type M2ModelCallbackType = "modelDataLoaded" | "texturesLoaded" | "texturesLoadStart"
-
 const BATCH_IDENTIFIER = "M2";
 
-export type ParticeColorOverride = [Float3, Float3, Float3] | null;
-export type ParticleColorOverrides = [ ParticeColorOverride, ParticeColorOverride, ParticeColorOverride];
-export class M2Model extends WorldPositionedObject implements IImmediateCallbackable<M2ModelCallbackType>, ISkinnedModel {
+export class M2Model extends WorldPositionedObject implements IM2Model {
     fileId: number;
     modelData: WoWModelData;
     boneFileId?: number;
@@ -70,8 +58,8 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
     textureObjects: { [key: number]: ITexture };
 
     textureUnitData: TextureUnitData[]
-    boneData: BoneData[];
-    attachedToModel?: ISkinnedModel;
+    boneData: IBoneData[];
+    attachedToModel?: ISkinnedObject;
 
     modelViewMatrix: Float44;
     invModelViewMatrix: Float44;
@@ -100,7 +88,7 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
         return this.isModelDataLoaded && this.isTexturesLoaded;
     }
 
-    override initialize(engine: RenderingEngine): void {
+    override initialize(engine: IRenderingEngine): void {
         super.initialize(engine);
         this.shaderProgram = this.engine.getShaderProgram("M2", vertexShaderProgramText, fragmentShaderProgramText);
 
@@ -159,7 +147,7 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
         }
     }
 
-    attachTo(model: ISkinnedModel) {
+    attachTo(model: ISkinnedObject) {
         this.attachedToModel = model;
     }
 
@@ -203,7 +191,7 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
         if (!texture) {
             return;
         }
-        
+
         this.on("texturesLoaded", () => {
             this.textureObjects[index].swapFor(texture);
         })
@@ -294,6 +282,11 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
 
         this.boneFileId = id;
         this.engine.getBoneFileData(id).then(this.onBoneFileLoaded.bind(this));
+    }
+
+    setParticleColorOverride(overrides: ParticleColorOverrides) {
+        this.particleColorOverrides = overrides;
+        // TODO: Reload particle emitters if necessary
     }
 
     override dispose(): void {
@@ -617,10 +610,6 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
         this.engine.submitDrawRequest(batchRequest);
     }
 
-    private resizeForBounds() {
-        this.engine.sceneCamera.resizeForBoundingBox(this.worldBoundingBox);
-    }
-
     protected onModelLoaded(data: WoWModelData | null) {
         if (data === null) {
             this.dispose();
@@ -631,14 +620,12 @@ export class M2Model extends WorldPositionedObject implements IImmediateCallback
         }
 
         this.modelData = data;
+        this.setBoundingBox(AABB.fromVertices(this.modelData.vertices.map(x => x.position), 0));
 
-        this.localBoundingBox = AABB.fromVertices(this.modelData.vertices.map(x => x.position), 0);
-        this.worldBoundingBox = AABB.transform(this.localBoundingBox, this.worldModelMatrix);
-
-        this.animationState = new AnimationState(this);
+        this.animationState = new AnimationState(this.modelData.animations, this.modelData.globalLoops);
         this.animationState.useAnimation(0);
         if (!this.parent) {
-            this.resizeForBounds();
+            this.engine.processNewBoundingBox(this.worldBoundingBox);
         }
 
 

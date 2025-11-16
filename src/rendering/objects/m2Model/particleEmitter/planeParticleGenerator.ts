@@ -1,4 +1,5 @@
-import { Float2, Float3 } from "@app/rendering/math";
+import { Float2, Float3 } from "@app/math";
+
 import { BaseParticleGenerator, ParticleData } from "./baseParticleGenerator";
 
 export class PlaneParticleGenerator extends BaseParticleGenerator {

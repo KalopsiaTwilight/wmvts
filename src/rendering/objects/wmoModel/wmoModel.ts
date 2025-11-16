@@ -1,12 +1,18 @@
-import {
-    AABB, Axis, BspTree, BufferDataType, ColorMask, DrawingBatchRequest, Float2, Float3, Float4, Float44, Frustrum, GxBlend, 
-    IDataBuffers, IShaderProgram, ITexture, IVertexArrayObject, M2BlendModeToEGxBlend, M2Model, Plane, RenderingEngine, 
-    RenderMaterial,
-} from "@app/rendering";
+import { AABB, Axis, BspTree, Float2, Float3, Float4, Float44, Frustrum, Plane } from "@app/math";
 import { BinaryWriter } from "@app/utils";
-import { WoWWorldModelBspNode, WoWWorldModelData, WowWorldModelGroupFlags, WoWWorldModelMaterialMaterialFlags, WoWWorldModelPortalRef } from "@app/modeldata";
+import { 
+    WoWWorldModelBspNode, WoWWorldModelData, WowWorldModelGroupFlags, 
+    WoWWorldModelMaterialMaterialFlags, WoWWorldModelPortalRef 
+} from "@app/modeldata";
+
+import {
+    BufferDataType, ColorMask, DrawingBatchRequest, GxBlend, IDataBuffers, IShaderProgram, 
+    ITexture, IVertexArrayObject, M2BlendModeToEGxBlend, RenderMaterial
+} from "@app/rendering/graphics";
+import { IRenderingEngine } from "@app/rendering/interfaces"
 
 import { WorldPositionedObject } from "../worldPositionedObject";
+import { M2Model } from "../m2Model";
 
 import { getWMOPixelShader, getWMOVertexShader } from "./wmoShaders";
 import fragmentShaderProgramText from "./wmoModel.frag";
@@ -14,6 +20,7 @@ import vertexShaderProgramText from "./wmoModel.vert";
 import portalFragmentShaderProgramText from "./wmoPortal.frag";
 import portalVertexShaderProgramText from "./wmoPortal.vert";
 import { WMOLiquid } from "./wmoLiquid";
+import { IWMOModel } from "./interfaces";
 
 export interface PortalMapData {
     index: number;
@@ -33,7 +40,7 @@ export enum WMOOwnerTypes {
 const BATCH_IDENTIFIER = "WMO";
 const PORTAL_BATCH_IDENTIFIER = "WMO-PORTAL";
 
-export class WMOModel extends WorldPositionedObject {
+export class WMOModel extends WorldPositionedObject implements IWMOModel {
     isModelDataLoaded: boolean;
     isTexturesLoaded: boolean;
 
@@ -88,7 +95,7 @@ export class WMOModel extends WorldPositionedObject {
         this.localCameraFrustrum = Frustrum.zero();
     }
 
-    override initialize(engine: RenderingEngine): void {
+    override initialize(engine: IRenderingEngine): void {
         super.initialize(engine);
         this.shaderProgram = this.engine.getShaderProgram("WMO", vertexShaderProgramText, fragmentShaderProgramText);
         this.portalShader = this.engine.getShaderProgram("WMOPortal", portalVertexShaderProgramText, portalFragmentShaderProgramText);
@@ -175,7 +182,7 @@ export class WMOModel extends WorldPositionedObject {
         return this.isModelDataLoaded && this.isTexturesLoaded && this.children.every((x) => x.isLoaded);
     }
 
-    onModelLoaded(data: WoWWorldModelData) {
+    private onModelLoaded(data: WoWWorldModelData) {
         this.modelData = data;
 
         if (this.modelData == null) {
@@ -187,7 +194,7 @@ export class WMOModel extends WorldPositionedObject {
         }
 
         if (!this.parent) {
-            this.resizeForBounds();
+            this.engine.processNewBoundingBox(this.modelData.boundingBox);
         }
 
         this.setupPortals();
@@ -201,10 +208,6 @@ export class WMOModel extends WorldPositionedObject {
         this.setupPortalGraphics();
 
         this.isModelDataLoaded = true;
-    }
-
-    private resizeForBounds() {
-        this.engine.sceneCamera.resizeForBoundingBox(this.modelData.boundingBox);
     }
 
     private loadDoodads() {
@@ -683,7 +686,6 @@ export class WMOModel extends WorldPositionedObject {
         }
     }
     
-
     private setupPortalGraphics() {
         const portalVB = this.engine.graphics.createVertexDataBuffer([
             { index: this.portalShader.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: 12, offset: 0 },

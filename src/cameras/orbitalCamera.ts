@@ -1,6 +1,7 @@
+import { AABB, Float3, Float44 } from "@app/math"
+import { IRenderingEngine } from "@app/rendering";
+
 import { Camera } from "./base";
-import { RenderingEngine } from "../rendering/engine";
-import { AABB, Float3, Float44 } from "../rendering/math";
 
 export enum DragOperation {
     None,
@@ -71,7 +72,7 @@ export class OrbitalCamera extends Camera {
         Float44.lookAt(this.position, this.targetLocation, this.upDir, this.cameraMatrix);
     }
 
-    override initialize(engine: RenderingEngine) {
+    override initialize(engine: IRenderingEngine) {
         super.initialize(engine);
         
         if (engine.containerElement) {

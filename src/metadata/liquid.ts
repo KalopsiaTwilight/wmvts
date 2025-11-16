@@ -1,4 +1,4 @@
-import { Float3 } from "@app/rendering";
+import { Float3 } from "@app/math";
 
 export interface LiquidTypeMetadata {
     id: number,

@@ -1,4 +1,4 @@
-import { Float44 } from "@app/index";
+import { Float44 } from "@app/math";
 
 export interface WoWBoneFileData {
     boneIds: number[];

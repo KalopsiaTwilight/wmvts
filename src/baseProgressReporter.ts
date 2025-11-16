@@ -1,4 +1,4 @@
-import { IProgressReporter } from ".";
+import { IProgressReporter } from "./interfaces";
 
 export abstract class BaseProgressReporter implements IProgressReporter {
     isDisposing: boolean;

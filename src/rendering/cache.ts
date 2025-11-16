@@ -1,4 +1,4 @@
-import { IDisposable } from "./objects";
+import { IDisposable } from "@app/interfaces";
 
 interface CacheEntry<TValue> {
     value: TValue

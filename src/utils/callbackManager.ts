@@ -1,6 +1,9 @@
 
 export type CallbackFn<T> = (obj: T) => void
 
+export interface ISupportCallbacks<TKey extends string> {
+    on(key: TKey, fn: CallbackFn<ISupportCallbacks<TKey>>, persistent?: boolean): void;
+}
 
 export interface IImmediateCallbackable<TKey extends string> {
     canExecuteCallback(type: TKey): boolean;

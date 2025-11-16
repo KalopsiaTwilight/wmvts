@@ -1,8 +1,13 @@
 import { inflate } from "pako";
 
 import { BinaryReader } from "@app/utils";
+import { 
+    WoWWorldModelAmbientVolume, WoWWorldModelBatch, WoWWorldModelBspNode, WoWWorldModelData, WoWWorldModelDoodadDef, 
+    WoWWorldModelDoodadSet, WoWWorldModelFog, WoWWorldModelGroup, WoWWorldModelGroupInfo, WoWWorldModelLiquid, 
+    WoWWorldModelLiquidTile, WoWWorldModelLiquidVertex, WoWWorldModelMaterial, WoWWorldModelPortal, WoWWorldModelPortalRef 
+} from "@app/modeldata"
+
 import { readAABB, readArray, readColor, readFloat2, readFloat3, readFloat4, readInt2 } from "./compressedReading";
-import { WoWWorldModelAmbientVolume, WoWWorldModelBatch, WoWWorldModelBspNode, WoWWorldModelData, WoWWorldModelDoodadDef, WoWWorldModelDoodadSet, WoWWorldModelFog, WoWWorldModelGroup, WoWWorldModelGroupInfo, WoWWorldModelLiquid, WoWWorldModelLiquidTile, WoWWorldModelLiquidVertex, WoWWorldModelMaterial, WoWWorldModelPortal, WoWWorldModelPortalRef } from "../..";
 
 export function parseCWMOFile(data: ArrayBuffer) {
     let reader = new BinaryReader(data);

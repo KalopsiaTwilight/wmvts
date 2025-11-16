@@ -1,5 +1,9 @@
-import { Float4 } from "../math";
-import { IGraphics, IShaderProgram, ITexture, IVertexArrayObject, IVertexAttributePointer, IVertexDataBuffer, IVertexIndexBuffer, ColorMask, GxBlend, ITextureOptions, IFrameBuffer } from "./abstractions";
+import { Float4 } from "@app/math";
+
+import { 
+    IGraphics, IShaderProgram, ITexture, IVertexArrayObject, IVertexAttributePointer, IVertexDataBuffer, 
+    IVertexIndexBuffer, ColorMask, GxBlend, ITextureOptions, IFrameBuffer 
+} from "./abstractions";
 
 export abstract class CachedGraphics implements IGraphics {
     lastUsedVertexDataBuffer?: IVertexDataBuffer;

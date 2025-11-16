@@ -1,27 +1,36 @@
-import { RenderingEngine } from "../engine";
-import { Float3, Float4, Float44 } from "../math";
-import { RenderObject } from "./interfaces";
+import { AABB, Float3, Float4, Float44 } from "@app/math";
 
-export abstract class WorldPositionedObject implements RenderObject {
+import { IRenderingEngine } from "../interfaces";
+import { IWorldPositionedObject } from "./interfaces";
+
+export abstract class WorldPositionedObject implements IWorldPositionedObject {
     isDisposing: boolean;
     abstract fileId: number;
 
-    parent?: WorldPositionedObject;
-    children: WorldPositionedObject[];
+    parent?: IWorldPositionedObject;
+    children: IWorldPositionedObject[];
+
     localModelMatrix: Float44;
     worldModelMatrix: Float44;
+    localBoundingBox: AABB;
+    worldBoundingBox: AABB;
     invWorldModelMatrix: Float44;
-    engine: RenderingEngine;
+
+    engine: IRenderingEngine;
 
     constructor() {
         this.children = [];
         this.worldModelMatrix = Float44.identity();
         this.localModelMatrix = Float44.identity();
+
+        this.localBoundingBox = AABB.create(Float3.zero(), Float3.zero());
+        this.worldBoundingBox = AABB.create(Float3.zero(), Float3.zero());
+
         this.invWorldModelMatrix = Float44.invert(this.worldModelMatrix);
         this.isDisposing = false;
     }
 
-    initialize(engine: RenderingEngine): void {
+    initialize(engine: IRenderingEngine): void {
         this.engine = engine;
     }
 
@@ -30,7 +39,7 @@ export abstract class WorldPositionedObject implements RenderObject {
             return;
         }
 
-        const toRemove: RenderObject[] = [];
+        const toRemove: IWorldPositionedObject[] = [];
         for (const child of this.children) {
             if (child.isDisposing) {
                 toRemove.push(child);
@@ -94,9 +103,14 @@ export abstract class WorldPositionedObject implements RenderObject {
         }
     }
 
-    protected addChild(obj: WorldPositionedObject) {
+    protected addChild(obj: IWorldPositionedObject) {
         obj.parent = this;
         this.children.push(obj);
         obj.initialize(this.engine);
+    }
+
+    protected setBoundingBox(boundingBox: AABB) {
+        this.localBoundingBox = boundingBox; 
+        this.worldBoundingBox = AABB.transform(this.localBoundingBox, this.worldModelMatrix);
     }
 }

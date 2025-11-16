@@ -1,5 +1,5 @@
 import { Float2, Float3, Float4, GxBlend } from "@app/index"
-import { AABB, Plane } from "@app/rendering/math/culling";
+import { AABB, Plane } from "@app/math";
 
 export type Color = [number, number, number, number];
 export type Int2 = [number, number];

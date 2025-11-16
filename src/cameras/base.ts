@@ -1,12 +1,12 @@
-import { RenderingEngine } from "../rendering/engine";
-import { AABB, Float3, Float44 } from "../rendering/math";
-import { IDisposable } from "../rendering/objects";
+import { ICamera } from "@app/interfaces";
+import { AABB, Float3, Float44 } from "@app/math"
+import { IRenderingEngine } from "@app/rendering";
 
-export class Camera implements IDisposable {
+export class Camera implements ICamera {
     isDisposing: boolean;
     viewMatrix: Float44;
     position: Float3;
-    engine: RenderingEngine;
+    engine: IRenderingEngine;
     lastBoundingBox: AABB;
 
     constructor() {
@@ -16,7 +16,7 @@ export class Camera implements IDisposable {
         this.position = Float3.zero();
     }
 
-    initialize(engine: RenderingEngine) {
+    initialize(engine: IRenderingEngine) {
         this.engine = engine;
     }
 

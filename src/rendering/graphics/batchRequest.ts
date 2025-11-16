@@ -1,4 +1,7 @@
-import { ColorMask, GxBlend, IDataBuffers, IFrameBuffer, IGraphics, IShaderProgram, ITexture, IUniformsData, IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer } from "./abstractions";
+import { 
+    ColorMask, GxBlend, IDataBuffers, IFrameBuffer, IGraphics, IShaderProgram, ITexture, IUniformsData, 
+    IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer 
+} from "./abstractions";
 
 export enum DrawInstructionType {
     Triangle,

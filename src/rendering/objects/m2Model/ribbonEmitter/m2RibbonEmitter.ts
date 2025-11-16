@@ -1,10 +1,14 @@
 import { WoWRibbonEmiterData } from "@app/modeldata";
+import { Float2, Float3, Float4, Float44 } from "@app/math";
+import { IDisposable } from "@app/interfaces";
+
 import { 
-    BufferDataType, ColorMask, DrawingBatchRequest, Float2, Float3, Float4, Float44, GxBlend, IDisposable, IShaderProgram, 
-    IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer, M2BlendModeToEGxBlend, M2Model, RenderingEngine, RenderMaterial
-} from "@app/rendering";
+    BufferDataType, ColorMask, DrawingBatchRequest, GxBlend, IShaderProgram, IVertexArrayObject, 
+    IVertexDataBuffer, IVertexIndexBuffer, M2BlendModeToEGxBlend, RenderMaterial
+} from "@app/rendering/graphics";
+import { IRenderingEngine } from "@app/rendering/interfaces";
 
-
+import type { M2Model } from "../m2Model";
 import fragmentShaderProgramText from "./m2RibbonEmitter.frag";
 import vertexShaderProgramText from "./m2RibbonEmitter.vert";
 
@@ -35,7 +39,7 @@ export class M2RibbonEmitter implements IDisposable {
     isDisposing: boolean;
     parent: M2Model;
     m2data: WoWRibbonEmiterData;
-    engine: RenderingEngine;
+    engine: IRenderingEngine;
 
     materials: RenderMaterial[];
     indexBuffer: IVertexIndexBuffer;

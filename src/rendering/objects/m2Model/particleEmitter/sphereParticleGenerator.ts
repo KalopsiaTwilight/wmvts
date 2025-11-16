@@ -1,6 +1,7 @@
 import { WoWParticleEmitterData } from "@app/modeldata";
+import { Float2, Float3, IPseudoRandomNumberGenerator } from "@app/math";
+
 import { BaseParticleGenerator, ParticleData } from "./baseParticleGenerator";
-import { Float2, Float3, IPseudoRandomNumberGenerator } from "@app/rendering/math";
 
 export class SphereParticleGenerator extends BaseParticleGenerator {
     particlesGoUp: boolean;

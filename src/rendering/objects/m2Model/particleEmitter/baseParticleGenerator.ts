@@ -1,5 +1,5 @@
 import { WoWParticleEmitterData } from "@app/modeldata";
-import { Float2, Float3, IPseudoRandomNumberGenerator } from "@app/rendering/math";
+import { Float2, Float3, IPseudoRandomNumberGenerator } from "@app/math";
 
 export interface ParticleData {
     position: Float3;

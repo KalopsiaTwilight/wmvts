@@ -3,18 +3,19 @@ import {
     CharacterCustomizationtItemGeoModifyData,
     CharacterMetadata 
 } from "@app/metadata";
-import { RenderingEngine, ITexture, ISkinnedModel, M2Model } from "@app/rendering";
-import { ICallbackManager, CallbackFn, IImmediateCallbackable } from "@app/utils";
+import { ICallbackManager, CallbackFn } from "@app/utils";
+import { ITexture } from "@app/rendering/graphics";
+import { IRenderingEngine } from "@app/rendering/interfaces";
+
+import { M2Model } from "../m2Model";
 
 import { SkinLayerTextureCombiner } from "./skinLayerTextureCombiner";
-import { M2Proxy, M2ProxyCallbackType } from "./m2Proxy";
-import { EquipmentSlot, GeoSet } from "./enums"
+import { M2Proxy  } from "./m2Proxy";
+import { CharacterModelCallbackType, EquipmentSlot, GeoSet, ICharacterModel } from "./interfaces"
 import { CharacterInventory } from "./characterInventory";
 
 
 const DEFAULT_GEOSET_IDS = [1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 2, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
-
-export type CharacterModelCallbackType = "characterMetadataLoaded" | "skinTexturesLoaded" | M2ProxyCallbackType
 
 interface TextureSectionTextureData {
     priority: number;
@@ -22,7 +23,7 @@ interface TextureSectionTextureData {
     textures: [ITexture, ITexture, ITexture]
 }
 
-export class CharacterModel extends M2Proxy implements IImmediateCallbackable<CharacterModelCallbackType>, ISkinnedModel {
+export class CharacterModel extends M2Proxy implements ICharacterModel {
     fileId: number;
     modelId: number;
     race: number;
@@ -58,7 +59,7 @@ export class CharacterModel extends M2Proxy implements IImmediateCallbackable<Ch
         this.inventory = new CharacterInventory(this);
     }
     
-    override initialize(engine: RenderingEngine): void {
+    override initialize(engine: IRenderingEngine): void {
         super.initialize(engine);
 
         this.callbackMgr = engine.getCallbackManager(this);

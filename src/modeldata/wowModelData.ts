@@ -1,4 +1,4 @@
-import { AABB, Float2, Float3, Float4  } from "@app/index"
+import { AABB, Float2, Float3, Float4  } from "@app/math"
 
 export interface WoWModelData {
     flags: number;

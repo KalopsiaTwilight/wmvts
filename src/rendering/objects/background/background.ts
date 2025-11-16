@@ -1,22 +1,23 @@
+import { Float2, Float4 } from "@app/math";
 import { 
-    BufferDataType, ColorMask, DrawingBatchRequest, Float2, Float4, GenericBatchRequest, GxBlend, 
-    IDataBuffers, IShaderProgram, ITexture, ITextureOptions, RenderMaterial, RenderingEngine 
-} from "@app/rendering";
+    BufferDataType, ColorMask, DrawingBatchRequest, GenericBatchRequest, GxBlend, 
+    IDataBuffers, IShaderProgram, ITexture, ITextureOptions, RenderMaterial 
+} from "@app/rendering/graphics";
+import { IRenderingEngine } from "@app/rendering/interfaces"
 
-import { RenderObject } from "../interfaces";
-
+import { IBackground } from "./interfaces";
 import vsProgramText from "./background.vert";
 import fsProgramText from "./background.frag";
 
 const BATCH_IDENTIFIER = "BACKGROUND"
 const BACKGROUND_LAYER_ID = -100;
 
-export class Background implements RenderObject {
+export class Background implements IBackground {
     fileId: number;
     isLoaded: boolean;
     isDisposing: boolean;
 
-    engine: RenderingEngine;
+    engine: IRenderingEngine;
 
     private material: RenderMaterial;
     private program: IShaderProgram;
@@ -29,7 +30,7 @@ export class Background implements RenderObject {
         this.transform = Float4.create(0, 0, 1, 1);
     }
 
-    initialize(engine: RenderingEngine): void {
+    initialize(engine: IRenderingEngine): void {
         this.engine = engine;
         
         this.program = this.engine.getShaderProgram("BG", vsProgramText, fsProgramText);

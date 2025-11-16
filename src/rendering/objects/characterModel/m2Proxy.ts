@@ -1,11 +1,16 @@
-import { RenderingEngine, M2Model, ITexture, ISkinnedModel } from "@app/rendering";
+import { CallbackFn, ICallbackManager } from "@app/utils";
+import { ITexture } from "@app/rendering/graphics";
+import { IRenderingEngine } from "@app/rendering/interfaces";
+
+import { M2Model, IM2Model, ISkinnedObject, ParticleColorOverrides } from "../m2Model";
 
 import { WorldPositionedObject } from "../worldPositionedObject";
-import { CallbackFn, ICallbackManager, IImmediateCallbackable } from "@app/utils";
+
+import { IM2Proxy } from "./interfaces";
 
 export type M2ProxyCallbackType = "modelCreated" | "modelDataLoaded" | "modelTexturesLoaded" ;
 
-export class M2Proxy extends WorldPositionedObject implements ISkinnedModel, IImmediateCallbackable<M2ProxyCallbackType>  {
+export class M2Proxy extends WorldPositionedObject implements IM2Proxy  {
     fileId: number;
 
     get isLoaded(): boolean {
@@ -19,22 +24,18 @@ export class M2Proxy extends WorldPositionedObject implements ISkinnedModel, IIm
     get boneData() {
         return this.m2Model?.boneData;
     }
-
-    get textureObjects() {
-        return this.m2Model?.textureObjects;
-    }
     
-    private m2Model: M2Model;
+    private m2Model: IM2Model;
     protected callbackMgr: ICallbackManager<M2ProxyCallbackType, M2Proxy>;
     
-    override initialize(engine: RenderingEngine): void {
+    override initialize(engine: IRenderingEngine): void {
         super.initialize(engine);
 
         this.callbackMgr = engine.getCallbackManager(this);
     }
 
 
-    protected createM2Model(fileId: number, configureFn?: (model: M2Model) => void) {
+    protected createM2Model(fileId: number, configureFn?: (model: IM2Model) => void) {
         if (this.m2Model) {
             if (this.m2Model.fileId == fileId) {
                 return;
@@ -54,7 +55,8 @@ export class M2Proxy extends WorldPositionedObject implements ISkinnedModel, IIm
             });
             this.callbackMgr.processCallbacks("modelCreated");
             this.m2Model.on("modelDataLoaded", () => {
-                this.engine.sceneCamera.resizeForBoundingBox(this.m2Model.worldBoundingBox);
+                this.setBoundingBox(this.m2Model.localBoundingBox);
+                this.engine.processNewBoundingBox(this.worldBoundingBox);
             })
         }
 
@@ -159,11 +161,19 @@ export class M2Proxy extends WorldPositionedObject implements ISkinnedModel, IIm
         });
     }
 
+    attachTo(model: ISkinnedObject): void {
+        this.m2Model.attachTo(model);
+    }
+
+    setParticleColorOverride(overrides: ParticleColorOverrides): void {
+        this.m2Model.setParticleColorOverride(overrides);
+    }
+
     canExecuteCallback(type: M2ProxyCallbackType): boolean {
         switch(type) {
             case "modelCreated": return !!this.m2Model;
-            case "modelDataLoaded": return this.m2Model?.modelData != null;
-            case "modelTexturesLoaded": return this.m2Model?.textureObjects != null;
+            case "modelDataLoaded": return this.m2Model?.canExecuteCallback("modelDataLoaded") != null;
+            case "modelTexturesLoaded": return this.m2Model?.canExecuteCallback("texturesLoaded") != null;
             default: return false;
         }
     }

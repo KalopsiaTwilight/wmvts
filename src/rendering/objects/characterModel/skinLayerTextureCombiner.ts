@@ -1,7 +1,11 @@
+import { Float4 } from "@app/math"
 import { 
     BufferDataType, ColorMask, GxBlend, IFrameBuffer, IShaderProgram, ITexture, RenderMaterial, 
-    CharacterModel, Float4, RenderingEngine, OffMainDrawingRequest, GenericBatchRequest, IDataBuffers
-} from "@app/rendering";
+    OffMainDrawingRequest, GenericBatchRequest, IDataBuffers
+} from "@app/rendering/graphics";
+import { IRenderingEngine } from "@app/rendering/interfaces";
+
+import { ICharacterModel } from "./interfaces";
 
 import vsProgramText from "./skinLayerTextureCombiner.vert";
 import fsProgramText from "./skinLayerTextureCombiner.frag";
@@ -9,7 +13,7 @@ import fsProgramText from "./skinLayerTextureCombiner.frag";
 const BATCH_IDENTIFIER  = "CHAR-SKIN"
 
 export class SkinLayerTextureCombiner {
-    engine: RenderingEngine;
+    engine: IRenderingEngine;
     width: number;
     height: number;
     textureType: number;
@@ -31,7 +35,7 @@ export class SkinLayerTextureCombiner {
     currentBatchId: number;
     resolution: Float32Array;
 
-    constructor(parent: CharacterModel, textureType: number, width: number, height: number) {
+    constructor(parent: ICharacterModel, textureType: number, width: number, height: number) {
         this.parentId = parent.modelId;
         this.engine = parent.engine;
         this.textureType = textureType;

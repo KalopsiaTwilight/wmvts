@@ -1,3 +1,24 @@
+import { IM2Model, ITexture } from "@app/rendering";
+
+export type M2ProxyCallbackType = "modelCreated" | "modelDataLoaded" | "modelTexturesLoaded" ;
+export type CharacterModelCallbackType = "characterMetadataLoaded" | "skinTexturesLoaded" | M2ProxyCallbackType
+
+export interface IM2Proxy<Ct extends string = M2ProxyCallbackType>  extends IM2Model<Ct> {
+
+}
+
+export interface ICharacterModel<Ct extends string = CharacterModelCallbackType> extends IM2Proxy<Ct> {
+    fileId: number;
+    modelId: number;
+    race: number;
+    gender: number;
+    class: number;
+
+    setCustomizationChoice(optionId: number, choiceId: number): void;
+    equipItem(slot: EquipmentSlot, displayId1: number, displayId2?: number): void;
+    unequipItem(slot: EquipmentSlot): void;
+}
+
 export enum EquipmentSlot {
     Start        = 0,
     Head         = 0,

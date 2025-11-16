@@ -1,15 +1,15 @@
-import { M2Model, M2ModelCallbackType } from "../m2Model";
-import { WorldPositionedObject } from "../worldPositionedObject";
 
-import { ITexture, RenderingEngine } from "@app/rendering";
 import { TextureVariationsMetadata } from "@app/metadata";
 import { WoWTextureType } from "@app/modeldata";
-import { CallbackFn, ICallbackManager, IImmediateCallbackable } from "@app/utils";
+import { ICallbackManager } from "@app/utils";
+import { ITexture } from "@app/rendering/graphics";
+import { IRenderingEngine } from "@app/rendering/interfaces";
 
-export type TextureVariantModelCallbackType  = "textureVariationsLoaded" | M2ModelCallbackType
+import { M2Model } from "../m2Model";
 
+import { ITextureVariantModel, TextureVariantModelCallbackType } from "./interfaces";
 
-export class TextureVariantModel extends M2Model implements IImmediateCallbackable<TextureVariantModelCallbackType> {
+export class TextureVariantModel extends M2Model implements ITextureVariantModel{
     textureVariations: TextureVariationsMetadata;
     override callbackMgr: ICallbackManager<TextureVariantModelCallbackType, TextureVariantModel>;
 
@@ -18,19 +18,6 @@ export class TextureVariantModel extends M2Model implements IImmediateCallbackab
     constructor(fileId: number) {
         super(fileId);
     }
-
-    override initialize(engine: RenderingEngine): void {
-        super.initialize(engine);
-
-        this.on("modelDataLoaded", () => {
-            this.engine.getTextureVariationsMetadata(this.fileId).then(this.onTextureVariationsLoaded.bind(this));
-        })
-    }
-
-    override get isLoaded(): boolean {
-        return super.isLoaded && this.textureVariations != null;
-    }
-
     
     useTextureVariation(index: number) {
         const data = this.textureVariations.textureVariations[index];
@@ -51,24 +38,28 @@ export class TextureVariantModel extends M2Model implements IImmediateCallbackab
         }
     }
 
+    override initialize(engine: IRenderingEngine): void {
+        super.initialize(engine);
 
-    
-    override on(type: TextureVariantModelCallbackType, fn: CallbackFn<TextureVariantModel>, persistent = false): void {
-        this.callbackMgr.addCallback(type, fn, persistent);
+        this.on("modelDataLoaded", () => {
+            this.engine.getTextureVariationsMetadata(this.fileId).then(this.onTextureVariationsLoaded.bind(this));
+        })
+    }
+
+    override get isLoaded(): boolean {
+        return super.isLoaded && this.textureVariations != null;
     }
 
     override canExecuteCallback(type: TextureVariantModelCallbackType): boolean {
-        let dataNeeded: unknown;
         switch(type) {
             case "modelDataLoaded": 
             case "texturesLoadStart": 
             case "texturesLoaded":
-                return super.canExecuteCallback(type); break;
+                return super.canExecuteCallback(type);
             case "textureVariationsLoaded":
-                dataNeeded = this.textureVariations;
-            default: dataNeeded = null; break;
+                return this.textureVariations != null;
+            default: return false;
         }
-        return dataNeeded != null;
     }
 
     override dispose(): void {

@@ -1,4 +1,4 @@
-import { AABB, Float2, Float3, Float4, Float44 } from "@app/rendering";
+import { AABB, Float2, Float3, Float4, Float44 } from "@app/math";
 import { BinaryReader } from "@app/utils";
 import { Color, Int2 } from "@app/modeldata";
 

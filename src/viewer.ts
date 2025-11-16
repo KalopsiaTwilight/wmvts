@@ -1,10 +1,9 @@
-import { IDataLoader, IProgressReporter } from "./iDataLoader";
-import { RenderingEngine, RenderObject, WebGlGraphics, 
-    M2Model, WMOModel, ErrorHandlerFn, Float3, Float4 } from "./rendering";
+import { IDataLoader, IProgressReporter,  RequestFrameFunction } from "./interfaces";
+import { RenderingEngine, IRenderObject, WebGlGraphics, M2Model, WMOModel, ErrorHandlerFn } from "./rendering";
 import { Camera } from "./cameras";
+import { Float4, Float3 } from "./math";
 
 export type CanvasCreationFunction = () => HTMLCanvasElement;
-export type RequestFrameFunction = (callback: Function) => void;
 
 export interface WoWModelViewerOptions {
     dataLoader: IDataLoader,
@@ -25,7 +24,7 @@ export interface WoWModelViewerOptions {
         lightColor?: Float4;
         ambientColor?: Float4;
         camera?: Camera;
-        objects?: RenderObject[];
+        objects?: IRenderObject[];
         disableLighting?: boolean;
     }
     misc?: {
@@ -70,7 +69,7 @@ export class WoWModelViewer {
         return model;
     }
 
-    addSceneObject(object: RenderObject) {
+    addSceneObject(object: IRenderObject) {
         this.renderEngine.addSceneObject(object, 0);
     }
 
@@ -81,7 +80,7 @@ export class WoWModelViewer {
         }
     }
 
-    removeSceneObject(object: RenderObject) {
+    removeSceneObject(object: IRenderObject) {
         this.renderEngine.removeSceneObject(object);
     }
 
