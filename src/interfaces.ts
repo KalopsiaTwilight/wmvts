@@ -11,7 +11,7 @@ export interface IDisposable {
 export type RequestFrameFunction = (callback: Function) => void;
 
 export type ErrorType = "dataFetching" | "dataProcessing" | "rendering";
-export type ErrorHandlerFn = (type: ErrorType, error: Error) => void;
+export type ErrorHandlerFn = (type: ErrorType, objectId: string|null, error: Error) => void;
 export interface IDataLoader {
     loadBoneFile(fileId: number): Promise<WoWBoneFileData|Error>
     loadTexture(fileId: number): Promise<string|Error> 

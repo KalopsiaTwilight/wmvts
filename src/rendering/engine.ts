@@ -249,7 +249,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
             this.timeElapsed += deltaTime;
         }
         catch (err) {
-            this.errorHandler?.(RenderingErrorType, err.toString());
+            this.errorHandler?.(RenderingErrorType, null, err);
         }
     }
 
@@ -320,15 +320,8 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         this.sceneCamera.resizeForBoundingBox(boundingBox);
     }
 
-    private async processTexture(fileId: number, imgData: string | null, opts?: ITextureOptions) {
+    private async processTexture(fileId: number, imgData: string, opts?: ITextureOptions) {
         return new Promise<ITexture>((res, rej) => {
-            if (imgData === null) {
-                this.errorHandler?.(DataLoadingErrorType, new Error("Unable to retrieve image data for file: " + fileId));
-                this.progress?.removeFileFromOperation(fileId);
-                delete this.runningRequests[fileId];
-                res(this.getUnknownTexture());
-            }
-
             const img = new Image();
             img.onload = () => {
                 const texture = this.graphics.createTextureFromImg(img, opts);
@@ -339,7 +332,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
                 res(texture);
             }
             img.onerror = (evt, src, line, col, err) => {
-                this.errorHandler?.(DataProcessingErrorType, err ? err : new Error("Unable to process image data for file: " + fileId));
+                this.errorHandler?.(DataProcessingErrorType, "TEXTURE-" + fileId, err ? err : new Error("Unable to process image data for file: " + fileId));
                 this.progress?.removeFileFromOperation(fileId);
                 delete this.runningRequests[fileId];
                 res(this.getUnknownTexture());
@@ -374,7 +367,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         this.runningRequests[fileId] = req;
         const texture = await req;
         if (texture instanceof Error) {
-            this.errorHandler?.(DataProcessingErrorType, texture);
+            this.errorHandler?.(DataProcessingErrorType, "TEXTURE-" + fileId, texture);
             return null;
         }
         return texture;
@@ -464,7 +457,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         this.progress?.removeFileFromOperation(key);
 
         if (data instanceof Error) {
-            this.errorHandler?.(DataLoadingErrorType, data);
+            this.errorHandler?.(DataLoadingErrorType, key, data);
             return null;  
         }
         cache.store(key, data);
