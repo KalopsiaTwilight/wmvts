@@ -52,8 +52,10 @@ export class TestModel extends WorldPositionedObject {
         this.indices = engine.graphics.createVertexIndexBuffer(false);
         this.indices.setData(this.getVertexIndices());
 
-        // TODO: Support multiple buffers?
-        this.dataBuffers = engine.graphics.createDataBuffers(this.vertices, this.indices);
+        this.dataBuffers = engine.graphics.createDataBuffers();
+        this.dataBuffers.setIndexBuffer(this.indices);
+        this.dataBuffers.addVertexDataBuffer(this.vertices);
+        this.dataBuffers.addVertexDataBuffer(this.colors);
 
         this.viewProjectionMatrix = Float44.identity();
         this.uniforms = {

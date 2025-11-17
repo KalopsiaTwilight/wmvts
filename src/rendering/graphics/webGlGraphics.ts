@@ -221,11 +221,15 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
         return new WebGLShaderProgram(this.gl, vertexShader, fragmentShader);
     }
 
-    createDataBuffers(vb: IVertexDataBuffer, ib: IVertexDataBuffer): IDataBuffers {
+    createDataBuffers(ib?: IVertexIndexBuffer, vb?: IVertexDataBuffer): IDataBuffers {
         const vao = new WebGlNativeVertexArrayObject(this.gl, this.glVaoExt);
-        vao.addVertexDataBuffer(vb);
-        vao.setIndexBuffer(ib);
-        return new WebGlDataBuffers(vao);
+        if (ib) {
+            vao.setIndexBuffer(ib);
+        }
+        if (vb) {
+            vao.addVertexDataBuffer(vb);
+        }
+        return vao;
     }
 
     createFrameBuffer(width: number, height: number): IFrameBuffer {
@@ -506,14 +510,14 @@ export class WebGLShaderProgram implements IShaderProgram
         this.gl = null;
     }
 }
-export class WebGlNativeVertexArrayObject {
+export class WebGlNativeVertexArrayObject implements IDataBuffers {
     gl: WebGLRenderingContext;
 
     glVaoExt: OES_vertex_array_object;
     webGlVAO: WebGLVertexArrayObjectOES;
     isDisposing: boolean;
 
-    vertexDataBuffer: IVertexDataBuffer;
+    vertexDataBuffers: IVertexDataBuffer[];
     vertexIndexBuffer: IVertexIndexBuffer;
 
     constructor(gl: WebGLRenderingContext, glVaoExt: OES_vertex_array_object) {
@@ -522,6 +526,7 @@ export class WebGlNativeVertexArrayObject {
         this.glVaoExt = glVaoExt;
         this.webGlVAO = glVaoExt.createVertexArrayOES();
         this.isDisposing = false;
+        this.vertexDataBuffers = [];
     }
 
     setIndexBuffer(buffer: IVertexIndexBuffer): void {
@@ -541,7 +546,7 @@ export class WebGlNativeVertexArrayObject {
         this.bind();
         buffer.bind();
         this.unbind();
-        this.vertexDataBuffer = buffer;
+        this.vertexDataBuffers.push(buffer);
     }
 
     bind(): void {
@@ -563,9 +568,12 @@ export class WebGlNativeVertexArrayObject {
             return;
         }
         this.isDisposing = true;
-        this.glVaoExt.deleteVertexArrayOES(this.webGlVAO);
-        this.vertexDataBuffer.dispose();
         this.vertexIndexBuffer.dispose();
+        this.glVaoExt.deleteVertexArrayOES(this.webGlVAO);
+        for(const buffer of this.vertexDataBuffers) {
+            buffer.dispose();
+        }
+        this.vertexDataBuffers = null;
         this.webGlVAO = null;
         this.glVaoExt = null;
         this.gl = null;
@@ -610,32 +618,5 @@ export class WebGlFrameBuffer implements IFrameBuffer {
         this.gl.deleteFramebuffer(this.glFrameBuffer);
         this.glFrameBuffer = null;
         this.gl = null;
-    }
-}
-
-export class WebGlDataBuffers implements IDataBuffers {
-    vao: WebGlNativeVertexArrayObject;
-    isDisposing: boolean;
-
-    constructor(vao: WebGlNativeVertexArrayObject) {
-        this.vao = vao;
-        this.isDisposing = false;
-    }
-
-    bind(): void {
-        this.vao.bind();
-    }
-
-    unbind(): void {
-        this.vao.unbind();
-    }
-
-    dispose(): void {
-        if (this.isDisposing) {
-            return;
-        }
-        
-        this.isDisposing = true;
-        this.vao.dispose();
     }
 }

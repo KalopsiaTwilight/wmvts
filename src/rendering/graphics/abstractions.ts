@@ -107,6 +107,8 @@ export interface ITextureOptions {
 }
 
 export interface IDataBuffers extends IBindable {
+    setIndexBuffer(ib: IVertexIndexBuffer): void;
+    addVertexDataBuffer(vb: IVertexDataBuffer): void;
 }
 
 export interface IGraphics {
@@ -140,7 +142,7 @@ export interface IGraphics {
     createVertexDataBuffer(pointers: IVertexAttributePointer[], dynamic: boolean): IVertexDataBuffer;
     createShaderProgram(vertexShader: string, fragmentShader: string): IShaderProgram;
     createFrameBuffer(width: number, height: number): IFrameBuffer;
-    createDataBuffers(vb: IVertexDataBuffer, ib: IVertexIndexBuffer): IDataBuffers;
+    createDataBuffers(indexBuffer?: IVertexIndexBuffer, dataBuffer?: IVertexDataBuffer): IDataBuffers;
 
     copyFrameToTexture(texture: ITexture, x: number, y: number, width: number, height: number): void;
 }

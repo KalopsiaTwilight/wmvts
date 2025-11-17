@@ -170,7 +170,7 @@ export abstract class CachedGraphics implements IGraphics {
 
     abstract createVertexIndexBuffer(dynamic: boolean): IVertexIndexBuffer
     abstract createVertexDataBuffer(pointers: IVertexAttributePointer[], dynamic: boolean): IVertexDataBuffer
-    abstract createDataBuffers(vb: IVertexDataBuffer, ib: IVertexIndexBuffer): IDataBuffers;
+    abstract createDataBuffers(indexBuffer?: IVertexIndexBuffer, dataBuffer?: IVertexDataBuffer): IDataBuffers;
     abstract createShaderProgram(vertexShader: string, fragmentShader: string): IShaderProgram
     abstract createFrameBuffer(width: number, height: number): IFrameBuffer;
 
