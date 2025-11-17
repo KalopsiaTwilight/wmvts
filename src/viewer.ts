@@ -24,6 +24,11 @@ export interface WoWModelViewerOptions {
         lightDirection?: Float3;
         lightColor?: Float4;
         ambientColor?: Float4;
+        oceanCloseColor?: Float4;
+        oceanFarColor?: Float4;
+        riverCloseColor?: Float4;
+        riverFarColor?: Float4;
+        waterAlphas?: Float4;
         camera?: Camera;
         objects?: IRenderObject[];
         disableLighting?: boolean;
@@ -101,6 +106,26 @@ export class WoWModelViewer {
 
     useClearColor(color: Float4) {
         Float4.copy(color, this.renderEngine.clearColor);
+    }
+
+    useOceanCloseColor(color: Float4) {
+        Float4.copy(color, this.renderEngine.oceanCloseColor);
+    }
+
+    useOceanFarColor(color: Float4) {
+        Float4.copy(color, this.renderEngine.oceanFarColor);
+    }
+
+    useRiverCloseColor(color: Float4) {
+        Float4.copy(color, this.renderEngine.riverCloseColor);
+    }
+    
+    useRiverFarColor(color: Float4) {
+        Float4.copy(color, this.renderEngine.riverFarColor);
+    }
+    
+    useWaterAlphas(color: Float4) {
+        Float4.copy(color, this.renderEngine.waterAlphas);
     }
 
     showDebug() {

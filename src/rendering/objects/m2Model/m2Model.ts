@@ -789,7 +789,7 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
     private createTextureUnitData(i: number) {
         const texUnit = this.modelData.textureUnits[i];
 
-        let renderMaterial = new RenderMaterial();
+        let renderMaterial = this.engine.getBaseMaterial();
 
         const texUnitData: TextureUnitData = {
             color: Float4.one(),
@@ -837,7 +837,6 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
             "u_textureWeights": texUnitData.textureWeights
         })
 
-        this.engine.addEngineMaterialParams(renderMaterial);
         this.textureUnitData[i] = texUnitData;
     }
 }

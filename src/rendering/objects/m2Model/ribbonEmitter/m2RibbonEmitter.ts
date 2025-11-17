@@ -522,7 +522,7 @@ export class M2RibbonEmitter implements IDisposable {
                 blendMode = GxBlend.GxBlend_Alpha;
             }
 
-            let renderMaterial = new RenderMaterial();
+            let renderMaterial = this.engine.getBaseMaterial();
             renderMaterial.useShaderProgram(this.shaderProgram);
             renderMaterial.useBackFaceCulling(false);
             renderMaterial.useCounterClockWiseFrontFaces(!this.parent.isMirrored);
@@ -534,7 +534,6 @@ export class M2RibbonEmitter implements IDisposable {
                 "u_texture": texture
             });
 
-            this.engine.addEngineMaterialParams(renderMaterial)
             this.materials.push(renderMaterial);
         }
     }

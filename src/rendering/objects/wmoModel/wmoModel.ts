@@ -749,7 +749,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
             const unlit = (material.flags & WoWWorldModelMaterialMaterialFlags.Unlit) ? true : false
             const doubleSided = (material.flags & WoWWorldModelMaterialMaterialFlags.Unculled) != 0;
 
-            const renderMaterial = new RenderMaterial();
+            const renderMaterial = this.engine.getBaseMaterial();
             renderMaterial.useCounterClockWiseFrontFaces(true);
             renderMaterial.useBackFaceCulling(!doubleSided);
             renderMaterial.useBlendMode(blendMode)
@@ -768,12 +768,11 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
                 "u_texture2": this.loadedTextures[material.texture2],
                 "u_texture3": this.loadedTextures[material.texture3]
             });
-            this.engine.addEngineMaterialParams(renderMaterial);
             this.groupMaterials[i] = renderMaterial;
         }
 
         // Portal material
-        const renderMaterial = new RenderMaterial();
+        const renderMaterial = this.engine.getBaseMaterial();
         renderMaterial.useCounterClockWiseFrontFaces(false);
         renderMaterial.useBackFaceCulling(false);
         renderMaterial.useBlendMode(GxBlend.GxBlend_Alpha)
@@ -785,7 +784,6 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
             "u_modelMatrix": this.worldModelMatrix,
             "u_color": Float4.create(0.8, 0.1, 0.1, 0.25)
         });
-        this.engine.addEngineMaterialParams(renderMaterial);
         this.portalMaterial = renderMaterial;
     }
 

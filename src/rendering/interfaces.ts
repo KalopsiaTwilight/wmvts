@@ -39,6 +39,7 @@ export interface IRenderingEngine {
     getShaderProgram(key: string, vertexShader: string, fragmentShader: string): IShaderProgram;
     getDataBuffers(key: string, createFn: (graphics: IGraphics) => IDataBuffers): IDataBuffers;
 
+    getBaseMaterial(): RenderMaterial;
     getM2ModelFile(fileId: FileIdentifier): Promise<WoWModelData | null>;
     getWMOModelFile(fileId: FileIdentifier): Promise<WoWWorldModelData | null>;
     getLiquidTypeMetadata(liquidId: RecordIdentifier): Promise<LiquidTypeMetadata | null>;
@@ -46,8 +47,6 @@ export interface IRenderingEngine {
     getItemMetadata(displayInfoId: RecordIdentifier): Promise<ItemMetadata | null>;
     getTextureVariationsMetadata(fileId: FileIdentifier): Promise<TextureVariationsMetadata | null>;
     getBoneFileData(fileId: FileIdentifier): Promise<WoWBoneFileData | null>;
-    
-    addEngineMaterialParams(material: RenderMaterial): void;
 
     getRandomNumberGenerator(seed?: number | string): IPseudoRandomNumberGenerator;
     getCallbackManager<TKeys extends string, T extends IImmediateCallbackable<TKeys>>(obj: T): ICallbackManager<TKeys, T>;

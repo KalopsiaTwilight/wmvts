@@ -947,7 +947,7 @@ export class M2ParticleEmitter implements IDisposable {
             }
         }
         
-        this.material = new RenderMaterial();
+        this.material = this.engine.getBaseMaterial();
         this.material.useShaderProgram(this.shaderProgram);
         let blendMode = this.m2data.blendingType;
         let alphaTreshold;
@@ -976,7 +976,5 @@ export class M2ParticleEmitter implements IDisposable {
             "u_alphaMult": this.exp2Data ? this.exp2Data.alphaMult : 1,
             "u_colorMult": this.exp2Data ? this.exp2Data.colorMult : 1
         });
-
-        this.engine.addEngineMaterialParams(this.material);
     }
 }

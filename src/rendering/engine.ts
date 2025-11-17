@@ -32,14 +32,21 @@ export interface RenderingEngineOptions {
     container?: HTMLElement,
     errorHandler?: ErrorHandlerFn,
     cameraFov?: number;
+
+    clearColor?: Float4;
+
     lightDirection?: Float3;
     lightColor?: Float4;
     ambientColor?: Float4;
-    clearColor?: Float4;
-    cacheTtl?: number;
-    disableLighting?: boolean
-}
 
+    oceanCloseColor?: Float4;
+    oceanFarColor?: Float4;
+    riverCloseColor?: Float4;
+    riverFarColor?: Float4;
+    waterAlphas?: Float4;
+
+    cacheTtl?: number;
+}
 export class RenderingEngine implements IRenderingEngine, IDisposable {
     // Options / Configurables
     graphics: IGraphics;
@@ -64,6 +71,13 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
     ambientColor: Float4;
     lightColor: Float4;
     lightDir: Float3;
+
+    // Water settings
+    oceanCloseColor: Float4;
+    oceanFarColor: Float4;
+    riverCloseColor: Float4;
+    riverFarColor: Float4;
+    waterAlphas: Float4;
 
     // Working data
     isDisposing: boolean;
@@ -164,6 +178,12 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         this.lightColor = options.lightColor ? options.lightColor : Float4.one()
         this.lightDir = Float3.normalize(options.lightDirection ? options.lightDirection : [0, 0, 1]);
 
+        this.oceanCloseColor = options.oceanCloseColor ? options.oceanCloseColor : Float4.create(17 / 255, 75 / 255, 89 / 255, 1);
+        this.oceanFarColor = options.oceanFarColor ? options.oceanFarColor : Float4.create(0, 29 / 255, 41 / 255, 1);
+        this.riverCloseColor = options.riverCloseColor ? options.riverCloseColor : Float4.create(41 / 255, 76 / 255, 81 / 255, 1);
+        this.riverFarColor = options.riverFarColor ? options.riverFarColor :  Float4.create(26 / 255, 46 / 255, 51 / 255, 1),
+        this.waterAlphas = options.waterAlphas ? options.waterAlphas : Float4.create(0.3, 0.8, 0.5, 1)
+
         this.framesDrawn = 0;
         this.timeElapsed = 0;
         this.maxFpsCounterSize = 100;
@@ -239,7 +259,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
                 const avgFps = this.fpsCounter.reduce((acc, next) => acc + next, 0) / this.fpsCounter.length;
                 this.fpsElement.textContent = "FPS: " + Math.floor(avgFps);
             }
-            
+
             if (this.batchesElement) {
                 this.batchesElement.textContent = "Batches: " + drawOrderRequests.length;
             }
@@ -488,14 +508,23 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         return data;
     }
 
-    addEngineMaterialParams(material: RenderMaterial) {
+    getBaseMaterial() {
+        const material = new RenderMaterial();
         material.useUniforms({
+            "u_viewMatrix": this.viewMatrix,
+            "u_projectionMatrix": this.projectionMatrix,
+
             "u_ambientColor": this.ambientColor,
             "u_lightColor": this.lightColor,
             "u_lightDir": this.lightDir,
-            "u_viewMatrix": this.viewMatrix,
-            "u_projectionMatrix": this.projectionMatrix,
+
+            "u_oceanCloseColor": this.oceanCloseColor,
+            "u_oceanFarColor": this.oceanFarColor,
+            "u_riverCloseColor": this.riverCloseColor,
+            "u_riverFarColor": this.riverFarColor,
+            "u_waterAlphas": this.waterAlphas
         });
+        return material;
     }
 
     getRandomNumberGenerator(seed?: number | string) {
