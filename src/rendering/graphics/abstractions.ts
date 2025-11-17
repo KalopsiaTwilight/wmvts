@@ -1,3 +1,4 @@
+import { IDisposable } from "@app/interfaces";
 import { Float4 } from "@app/math";
 
 export enum BufferDataType {
@@ -53,7 +54,7 @@ export const M2BlendModeToEGxBlend = (blendMode: number) => {
 }
 
 
-export interface IBindable {
+export interface IBindable extends IDisposable {
     bind(): void;
     unbind(): void;
 }
