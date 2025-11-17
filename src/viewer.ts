@@ -2,6 +2,7 @@ import { IDataLoader, IProgressReporter,  RequestFrameFunction, ErrorHandlerFn  
 import { RenderingEngine, IRenderObject, WebGlGraphics, M2Model, WMOModel } from "./rendering";
 import { Camera } from "./cameras";
 import { Float4, Float3 } from "./math";
+import { FileIdentifier } from "./metadata";
 
 export type CanvasCreationFunction = () => HTMLCanvasElement;
 
@@ -57,13 +58,13 @@ export class WoWModelViewer {
         this.initialize();
     }
 
-    addM2Model(fileId: number) {
+    addM2Model(fileId: FileIdentifier) {
         const model = new M2Model(fileId);
         this.addSceneObject(model);
         return model;
     }
 
-    addWMOModel(fileId: number) {
+    addWMOModel(fileId: FileIdentifier) {
         const model = new WMOModel(fileId);
         this.addSceneObject(model);
         return model;
@@ -73,7 +74,7 @@ export class WoWModelViewer {
         this.renderEngine.addSceneObject(object, 0);
     }
 
-    removeModelByFileId(fileId: number) {
+    removeModelByFileId(fileId: FileIdentifier) {
         const model = this.renderEngine.sceneObjects.find(x => x.fileId === fileId);
         if (model) {
             this.removeSceneObject(model);

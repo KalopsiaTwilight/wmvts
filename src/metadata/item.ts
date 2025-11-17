@@ -1,15 +1,15 @@
-import { ModelFileData, TextureFileData } from "./shared";
+import { ModelFileData, RecordIdentifier, TextureFileData } from "./shared";
 
 export interface ItemMetadata
 {
     flags: ItemFeatureFlag;
     inventoryType: InventoryType;
-    classId: number;
+    classId: RecordIdentifier;
     subclassId: number;
     geosetGroup: number[];
     attachmentGeosetGroup: number[];
     geosetGroupOverride: number;
-    itemVisual: number;
+    itemVisual: RecordIdentifier;
     componentSections: ComponentSectionData[];
     particleColor?: ItemParticleColorOverrideData;
     hideGeoset1?: ItemHideGeosetData[];
@@ -97,14 +97,14 @@ export interface ItemComponentData
 
 export interface ItemHideGeosetData
 {
-    raceId: number;
+    raceId: RecordIdentifier;
     geosetGroup: number;
     raceBitSelection?: number;
 }
 
 export interface ItemParticleColorOverrideData
 {
-    id: number;
+    id: RecordIdentifier;
     start: number[];
     mid: number[];
     end: number[];

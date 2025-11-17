@@ -938,19 +938,12 @@ export class M2ParticleEmitter implements IDisposable {
             multiTextureIds[2] = (textureId >> 10) & 31;
             for (let i = 0; i < multiTextureIds.length; i++) {
                 const textureId = multiTextureIds[i];
-                const textureData = this.parent.modelData.textures[textureId];
-                if (textureData.textureId > -1) {
-                    textures[i] = this.parent.textureObjects[textureId]
-                }
-                textures[i]
+                textures[i] = this.parent.textureObjects[textureId]
             }
         }
         else {
             if (textureId > -1) {
-                const textureData = this.parent.modelData.textures[textureId];
-                if (textureData.textureId > -1) {
-                    textures[0] = this.parent.textureObjects[textureId]
-                }
+                textures[0] = this.parent.textureObjects[textureId]
             }
         }
         

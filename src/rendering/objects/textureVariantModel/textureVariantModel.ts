@@ -1,5 +1,5 @@
 
-import { TextureVariationsMetadata } from "@app/metadata";
+import { FileIdentifier, TextureVariationsMetadata } from "@app/metadata";
 import { WoWTextureType } from "@app/modeldata";
 import { ICallbackManager } from "@app/utils";
 import { ITexture } from "@app/rendering/graphics";
@@ -15,7 +15,7 @@ export class TextureVariantModel extends M2Model implements ITextureVariantModel
 
     loadedTextures: ITexture[]
 
-    constructor(fileId: number) {
+    constructor(fileId: FileIdentifier) {
         super(fileId);
     }
     

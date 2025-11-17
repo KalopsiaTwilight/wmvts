@@ -1,9 +1,10 @@
 import { CallbackFn, ICallbackManager } from "@app/utils";
+import { FileIdentifier } from "@app/metadata";
+
 import { ITexture } from "@app/rendering/graphics";
 import { IRenderingEngine } from "@app/rendering/interfaces";
 
 import { M2Model, IM2Model, ISkinnedObject, ParticleColorOverrides } from "../m2Model";
-
 import { WorldPositionedObject } from "../worldPositionedObject";
 
 import { IM2Proxy } from "./interfaces";
@@ -11,8 +12,6 @@ import { IM2Proxy } from "./interfaces";
 export type M2ProxyCallbackType = "modelCreated" | "modelDataLoaded" | "modelTexturesLoaded" ;
 
 export class M2Proxy extends WorldPositionedObject implements IM2Proxy  {
-    fileId: number;
-
     get isLoaded(): boolean {
         return this.m2Model && this.m2Model.isLoaded;
     }
@@ -35,7 +34,7 @@ export class M2Proxy extends WorldPositionedObject implements IM2Proxy  {
     }
 
 
-    protected createM2Model(fileId: number, configureFn?: (model: IM2Model) => void) {
+    protected createM2Model(fileId: FileIdentifier, configureFn?: (model: IM2Model) => void) {
         if (this.m2Model) {
             if (this.m2Model.fileId == fileId) {
                 return;
@@ -75,7 +74,7 @@ export class M2Proxy extends WorldPositionedObject implements IM2Proxy  {
         if (this.isDisposing) {
             return;
         }
-        
+
         super.dispose();
         if (this.m2Model) {
             this.m2Model.dispose();
@@ -157,7 +156,7 @@ export class M2Proxy extends WorldPositionedObject implements IM2Proxy  {
         });
     }
 
-    loadBoneFile(id: number) {
+    loadBoneFile(id: FileIdentifier) {
         this.on("modelCreated", () => {
             this.m2Model.loadBoneFile(id);
         });

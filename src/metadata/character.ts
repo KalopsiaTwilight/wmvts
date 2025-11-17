@@ -1,11 +1,11 @@
-import { TextureFileData } from "./shared";
+import { FileIdentifier, RecordIdentifier, TextureFileData } from "./shared";
 export interface CharacterMetadata
 {
-    fileDataId: number;
+    fileDataId: FileIdentifier;
     flags: number;
-    raceId: number;
+    raceId: RecordIdentifier;
     genderId: number;
-    chrModelId: number;
+    chrModelId: RecordIdentifier;
     characterCustomizationData: CharacterCustomizationMetadata;
 }
 
@@ -27,7 +27,7 @@ export interface CharacterCustomizationMaterialsData
 
 export interface CharacterCustomizationOptionData
 {
-    id: number;
+    id: RecordIdentifier;
     name: string;
     orderIndex: number;
     choices: CharacterCustomizationChoiceData[];
@@ -35,7 +35,7 @@ export interface CharacterCustomizationOptionData
 
 export interface CharacterCustomizationChoiceData
 {
-    id: number;
+    id: RecordIdentifier;
     name: string;
     orderIndex: number;
     elements: CharacterCustomizationElementData[];
@@ -43,8 +43,8 @@ export interface CharacterCustomizationChoiceData
 
 export interface CharacterCustomizationElementData
 {
-    id: number;
-    conditionalModelFileDataId: number;
+    id: RecordIdentifier;
+    conditionalModelFileDataId: FileIdentifier;
     relationChoiceID: number;
     relationIndex: number;
     boneSet?: CharacterCustomizationBoneSetData;
@@ -56,13 +56,13 @@ export interface CharacterCustomizationElementData
 
 export interface CharacterCustomizationBoneSetData
 {
-    boneFileDataId: number;
-    modelFileDataId: number;
+    boneFileDataId: FileIdentifier;
+    modelFileDataId: FileIdentifier;
 }
 
 export interface CharacterCustomizationElementMaterialData
 {
-    chrModelTextureTargetId: number;
+    chrModelTextureTargetId: RecordIdentifier;
     textureFiles: TextureFileData[];
 }
 export interface CharacterCustomizationGeosetData
@@ -73,7 +73,7 @@ export interface CharacterCustomizationGeosetData
 }
 export interface CharacterCustomizationSkinnedModelData
 {
-    collectionsFileDataId: number;
+    collectionsFileDataId: FileIdentifier;
     geosetType: number;
     geosetId: number;
     modifier: number;

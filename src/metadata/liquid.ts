@@ -1,7 +1,9 @@
 import { Float3 } from "@app/math";
 
+import { FileIdentifier, RecordIdentifier } from "./shared";
+
 export interface LiquidTypeMetadata {
-    id: number,
+    id: RecordIdentifier,
     flags: number
     name: string,
     color0: Float3,
@@ -14,8 +16,8 @@ export interface LiquidTypeMetadata {
 }
 
 export interface LiquidTypeTexture {
-    id: number,
-    fileDataId: number,
+    id: RecordIdentifier,
+    fileDataId: FileIdentifier,
     orderIndex: number,
     type: number
 }

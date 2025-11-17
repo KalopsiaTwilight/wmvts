@@ -242,7 +242,7 @@ export class WMOLiquid extends WorldPositionedObject {
         this.textures = new Array(metadata.textures.length);
         for (let i = 0; i < this.textures.length; i++) {
             const fileId = metadata.textures[i].fileDataId;
-            if (fileId > 0) {
+            if (fileId) {
                 const promise = this.engine.getTexture(fileId).then((tex) => {
                     this.textures[i] = tex;
                 });

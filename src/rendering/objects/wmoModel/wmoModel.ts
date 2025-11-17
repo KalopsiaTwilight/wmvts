@@ -4,6 +4,7 @@ import {
     WoWWorldModelBspNode, WoWWorldModelData, WowWorldModelGroupFlags, 
     WoWWorldModelMaterialMaterialFlags, WoWWorldModelPortalRef 
 } from "@app/modeldata";
+import { FileIdentifier } from "@app/metadata";
 
 import {
     BufferDataType, ColorMask, DrawingBatchRequest, GxBlend, IDataBuffers, IShaderProgram, 
@@ -44,7 +45,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
     isModelDataLoaded: boolean;
     isTexturesLoaded: boolean;
 
-    fileId: number;
+    fileId: FileIdentifier;
     modelData: WoWWorldModelData;
     doodadSetId: number;
     loadedTextures: { [key: number]: ITexture }
@@ -73,7 +74,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
     localCameraFrustrum: Frustrum;
     transposeInvModelMatrix: Float44;
 
-    constructor(fileId: number) {
+    constructor(fileId: FileIdentifier) {
         super();
         this.isModelDataLoaded = false;
         this.isTexturesLoaded = false;

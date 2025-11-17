@@ -1,7 +1,9 @@
 import { 
     CharacterCustomizationChoiceData, CharacterCustomizationElementData,
     CharacterCustomizationtItemGeoModifyData,
-    CharacterMetadata 
+    CharacterMetadata, 
+    FileIdentifier,
+    RecordIdentifier
 } from "@app/metadata";
 import { ICallbackManager, CallbackFn } from "@app/utils";
 import { ITexture } from "@app/rendering/graphics";
@@ -24,8 +26,8 @@ interface TextureSectionTextureData {
 }
 
 export class CharacterModel extends M2Proxy implements ICharacterModel {
-    fileId: number;
-    modelId: number;
+    fileId: FileIdentifier;
+    modelId: RecordIdentifier;
     race: number;
     gender: number;
     class: number;
@@ -39,11 +41,11 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     private textureLayerBaseTextures: { [key: string]: [ITexture, ITexture, ITexture] }
     private textureLayerCombiners: { [key: string]: SkinLayerTextureCombiner }
     private textureSectionTextures: { [key: number]: TextureSectionTextureData[] }
-    private skinnedModels: { [key: number]: M2Model }
+    private skinnedModels: { [key: FileIdentifier]: M2Model }
     private inventory: CharacterInventory
     override callbackMgr: ICallbackManager<CharacterModelCallbackType, CharacterModel>;
 
-    constructor(modelId: number) {
+    constructor(modelId: RecordIdentifier) {
         super();
         this.modelId = modelId;
         this.gender = (modelId-1) % 2;
@@ -69,7 +71,7 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
         if (this.isDisposing) {
             return;
         }
-        
+
         super.dispose();
         this.characterMetadata = null;
         this.customizationChoices = null;
@@ -280,7 +282,7 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
         }
 
         this.itemGeoModifyData = [];
-        let boneFileId = 0;
+        let boneFileId: FileIdentifier = 0;
         let modelFileId = this.characterMetadata.fileDataId;
 
         const elemApplicable = (elem: CharacterCustomizationElementData) => 

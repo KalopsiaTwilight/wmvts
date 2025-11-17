@@ -1,4 +1,5 @@
 import { AABB, Plane, Float2, Float3, Float4 } from "@app/math";
+import { FileIdentifier } from "@app/metadata";
 
 export type Color = [number, number, number, number];
 export type Int2 = [number, number];
@@ -28,7 +29,7 @@ export interface WoWWorldModelData {
     materials: WoWWorldModelMaterial[];
     groupInfo: WoWWorldModelGroupInfo[];
     doodadDefs: WoWWorldModelDoodadDef[];
-    doodadIds: number[];
+    doodadIds: FileIdentifier[];
     fogs: WoWWorldModelFog[];
     doodadSets: WoWWorldModelDoodadSet[];
     portalRefs: WoWWorldModelPortalRef[];
@@ -88,7 +89,7 @@ export enum WowWorldModelGroupFlags2 {
 }
 
 export interface WoWWorldModelGroup {
-    fileDataID: number;
+    fileDataID: FileIdentifier;
     lod: number;
     flags: WowWorldModelGroupFlags;
     boundingBox: AABB;

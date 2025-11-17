@@ -1,26 +1,26 @@
 export interface SpellVisualKitData
 {
-    Effects: SpellVisualKitEffectData[];
+    effects: SpellVisualKitEffectData[];
 };
 
 export interface SpellVisualKitEffectData
 {
-    EffectType: number;
-    ProceduralEffectType: number;
-    Value?: number[];
-    Offset?: number[];
-    OffsetVariation?: number[];
-    AttachmentId: number;
-    Yaw: number;
-    Pitch: number;
-    Roll: number;
-    Scale: number;
-    AnimID: number;
-    PositionerId: number;
-    Colors0: number[];
-    Colors1: number[];
-    Colors2: number[];
-    Alpha: number[];
-    EdgeColor: number[];
-    GradientFlags: number;
+    effectType: number;
+    proceduralEffectType: number;
+    value?: number[];
+    offset?: number[];
+    offsetVariation?: number[];
+    attachmentId: number;
+    yaw: number;
+    pitch: number;
+    roll: number;
+    scale: number;
+    animID: number;
+    positionerId: number;
+    colors0: number[];
+    colors1: number[];
+    colors2: number[];
+    alpha: number[];
+    edgeColor: number[];
+    gradientFlags: number;
 }

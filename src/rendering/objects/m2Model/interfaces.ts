@@ -2,6 +2,7 @@ import { Float44, Float3 } from "@app/math";
 import { IImmediateCallbackable, ISupportCallbacks } from "@app/utils";
 import { ITexture, IWorldPositionedObject } from "@app/rendering";
 import { WoWModelData } from "@app/modeldata";
+import { FileIdentifier } from "@app/metadata";
 
 export interface IBoneData {
     hasUpdatedThisTick: boolean;
@@ -43,5 +44,5 @@ extends IWorldPositionedObject, ISkinnedObject, ISupportCallbacks<Ct>, IImmediat
     toggleGeoset(geosetId: number, show: boolean): void;
     toggleGeosets(start: number, end: number, show: boolean): void;
 
-    loadBoneFile(id: number): void;
+    loadBoneFile(id: FileIdentifier): void;
 }

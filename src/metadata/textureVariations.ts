@@ -1,3 +1,5 @@
+import { FileIdentifier, RecordIdentifier } from "./shared";
+
 export enum TextureVariationDisplayType {
     Item,
     Creature
@@ -5,9 +7,9 @@ export enum TextureVariationDisplayType {
 
 export interface TextureVariation
 {
-    displayId: number;
+    displayId: RecordIdentifier;
     displayType: TextureVariationDisplayType
-    textureIds: number[];
+    textureIds: FileIdentifier[];
 }
 
 export interface TextureVariationsMetadata

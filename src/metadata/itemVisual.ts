@@ -1,16 +1,17 @@
+import { FileIdentifier } from "./shared";
 import { SpellVisualKitData } from "./spellVisualKit";
 
 export interface ItemVisualMetadata
 {
-    ModelFileIds: number[];
-    Effects?: ItemVisualEffectsData[];
+    modelFileIds: FileIdentifier[];
+    effects?: ItemVisualEffectsData[];
 }
 
 export interface ItemVisualEffectsData
 {
-    AttachmentId: number;
-    SubClassId: number;
-    ModelFileDataId: number;
-    SpellVisualKit?: SpellVisualKitData;
-    Scale: number;
+    attachmentId: number;
+    subClassId: number;
+    modelFileDataId: FileIdentifier;
+    spellVisualKit?: SpellVisualKitData;
+    scale: number;
 }

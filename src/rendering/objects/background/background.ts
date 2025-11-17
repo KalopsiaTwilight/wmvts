@@ -13,7 +13,7 @@ const BATCH_IDENTIFIER = "BACKGROUND"
 const BACKGROUND_LAYER_ID = -100;
 
 export class Background implements IBackground {
-    fileId: number;
+    fileId: number
     isLoaded: boolean;
     isDisposing: boolean;
 

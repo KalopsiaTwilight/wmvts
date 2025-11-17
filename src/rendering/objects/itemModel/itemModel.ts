@@ -1,5 +1,5 @@
 import { AABB, Float3 } from "@app/math"; 
-import { InventoryType, ItemMetadata } from "@app/metadata";
+import { InventoryType, ItemMetadata, RecordIdentifier } from "@app/metadata";
 import { CallbackFn, ICallbackManager } from "@app/utils";
 import { ITexture } from "@app/rendering/graphics";
 import { IRenderingEngine } from "@app/rendering/interfaces";
@@ -14,8 +14,7 @@ function parseIntToColor(val: number, dest: Float3) {
     return Float3.set(dest, ((val >> 16) & 255), ((val >> 8) & 255), ((val >> 0) & 255));
 }
 export class ItemModel extends WorldPositionedObject implements IItemModel{
-    fileId: number;
-    displayInfoId: number;
+    displayInfoId: RecordIdentifier;
     itemMetadata: ItemMetadata
 
     componentsLoaded: boolean;
@@ -34,7 +33,7 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
 
     private isInitialized: boolean;
 
-    constructor(displayInfoId: number) {
+    constructor(displayInfoId: RecordIdentifier) {
         super();
         this.displayInfoId = displayInfoId;
         this.sectionTextures = { };

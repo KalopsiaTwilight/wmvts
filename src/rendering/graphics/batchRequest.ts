@@ -5,11 +5,11 @@ import {
 export type BatchRequestGraphicsFn = (graphics: IGraphics) => void;
 export class BatchRequestKey {
     ownerIdentifier: string;
-    ownerId: number;
+    ownerId: string | number;
     materialId: number;
     batchIdentifier: number;
 
-    constructor(ownerIdentifier: string, ownerId: number, materialId: number, batchIdentifier: number = 0) {
+    constructor(ownerIdentifier: string, ownerId: string | number, materialId: number, batchIdentifier: number = 0) {
         this.ownerIdentifier = ownerIdentifier;
         this.ownerId = ownerId;
         this.materialId = materialId;
@@ -22,9 +22,8 @@ export class BatchRequestKey {
             return ownerIdentDiff;
         }
 
-        const ownerDiff = this.ownerId - other.ownerId;
-        if (ownerDiff != 0) {
-            return ownerDiff;
+        if (this.ownerId !== other.ownerId) {
+            return (this.ownerId < other.ownerId) ? -1 : 1;
         }
 
         const ownerTypeDiff = this.materialId - other.materialId;
@@ -98,7 +97,7 @@ export abstract class RenderingBatchRequest {
     key: BatchRequestKey
     abstract type: BatchRequestType;
 
-    constructor(ownerIdentifier: string, ownerId: number, ownerType: number, batchIdentifier: number = 0) {
+    constructor(ownerIdentifier: string, ownerId: string | number, ownerType: number, batchIdentifier: number = 0) {
         this.key = new BatchRequestKey(ownerIdentifier, ownerId, ownerType, batchIdentifier);
     }
 

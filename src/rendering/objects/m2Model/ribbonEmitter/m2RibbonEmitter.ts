@@ -508,10 +508,6 @@ export class M2RibbonEmitter implements IDisposable {
                 continue;
             }
 
-            const textureData = this.parent.modelData.textures[textureId];
-            if (textureData.textureId <= -1) {
-                continue;
-            }
             const texture = this.parent.textureObjects[textureId]
 
             let materialIndex = i;

@@ -1,6 +1,7 @@
 import { IRenderingEngine } from "@app/rendering";
 import { IDisposable } from "@app/interfaces";
 import { AABB, Float3, Float4, Float44 } from "@app/math";
+import { FileIdentifier } from "@app/metadata";
 
 export interface IRenderObject extends IDisposable {
     engine?: IRenderingEngine;
@@ -9,7 +10,7 @@ export interface IRenderObject extends IDisposable {
     update(deltaTime: number): void;
     draw(): void;
 
-    fileId: number;
+    fileId: FileIdentifier;
     isLoaded: boolean;
 }
 

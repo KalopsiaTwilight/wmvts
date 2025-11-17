@@ -1,4 +1,5 @@
 import { AABB, Float2, Float3, Float4  } from "@app/math"
+import { FileIdentifier } from "@app/metadata";
 
 export interface WoWModelData {
     flags: number;
@@ -210,7 +211,7 @@ export interface WoWTextureData
 {
     type: WoWTextureType;
     flags: WoWTextureFlags;
-    textureId: number;
+    textureId: FileIdentifier;
 }
 
 export interface WoWTextureTransformData

@@ -1,6 +1,9 @@
+export type FileIdentifier = number | string;
+export type RecordIdentifier = number;
+
 export interface TextureFileData
 {
-    fileDataId: number;
+    fileDataId: FileIdentifier;
     classId: number;
     genderId: number;
     raceId: number;
@@ -9,7 +12,7 @@ export interface TextureFileData
 
 export interface ModelFileData
 {
-    fileDataId: number;
+    fileDataId: FileIdentifier;
     classId: number;
     genderId: number;
     raceId: number;

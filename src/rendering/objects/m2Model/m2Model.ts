@@ -1,12 +1,14 @@
 import { WoWBoneData, WoWBoneFileData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureUnitData } from "@app/modeldata";
 import { Float4, Float3, Float44, AABB } from "@app/math"
 import { BinaryWriter, CallbackFn, distinct, ICallbackManager } from "@app/utils";
+import { FileIdentifier } from "@app/metadata";
 
 import { 
     ColorMask, ITexture, IShaderProgram, M2BlendModeToEGxBlend,
     RenderMaterial, DrawingBatchRequest, IDataBuffers, BufferDataType
 } from "@app/rendering/graphics";
 import { IRenderingEngine } from "@app/rendering/interfaces";
+
 import { WorldPositionedObject } from "../worldPositionedObject";
 
 import { IBoneData, IM2Model, ISkinnedObject, M2ModelCallbackType, ParticleColorOverrides } from "./interfaces";
@@ -33,9 +35,8 @@ interface TextureUnitData {
 const BATCH_IDENTIFIER = "M2";
 
 export class M2Model extends WorldPositionedObject implements IM2Model {
-    fileId: number;
     modelData: WoWModelData;
-    boneFileId?: number;
+    boneFileId?: FileIdentifier;
     boneFileData?: WoWBoneFileData;
 
     isModelDataLoaded: boolean;
@@ -52,7 +53,7 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
     dataBuffers: IDataBuffers;
 
     animationState: AnimationState;
-    textureObjects: { [key: number]: ITexture };
+    textureObjects: { [key: FileIdentifier]: ITexture };
 
     textureUnitData: TextureUnitData[]
     boneData: IBoneData[];
@@ -65,7 +66,7 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
     callbackMgr: ICallbackManager<M2ModelCallbackType, M2Model>
 
 
-    constructor(fileId: number) {
+    constructor(fileId: FileIdentifier) {
         super();
         this.fileId = fileId;
         this.isModelDataLoaded = false;
@@ -210,7 +211,7 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
     }
 
     // TODO: Deprecate
-    setTexture(index: number, fileId: number) {
+    setTexture(index: number, fileId: FileIdentifier) {
         if (!this.isModelDataLoaded) {
             this.on("texturesLoadStart", (model) => {
                 model.modelData.textures[index].textureId = fileId;
@@ -309,13 +310,19 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
         return !!dataNeeded;
     }
 
-    loadBoneFile(id: number) {
-        if (this.boneFileId === id || id <= 0) {
+    loadBoneFile(id: FileIdentifier) {
+        if (this.boneFileId === id) {
             return;
         }
 
         this.boneFileId = id;
-        this.engine.getBoneFileData(id).then(this.onBoneFileLoaded.bind(this));
+
+        if (!id) {
+            this.boneData = null;
+            this.resetBoneFileData();
+        } else {
+            this.engine.getBoneFileData(id).then(this.onBoneFileLoaded.bind(this));
+        }
     }
 
     setParticleColorOverride(overrides: ParticleColorOverrides) {
@@ -702,7 +709,7 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
         const loadingPromises: Promise<void>[] = []
         for (let i = 0; i < this.modelData.textures.length; i++) {
             const textureId = this.modelData.textures[i].textureId
-            if (textureId > 0) {
+            if (textureId) {
                 const promise = this.engine.getTexture(textureId).then((texture) => {
                     if (!this.isDisposing) {
                         this.textureObjects[i] = texture
@@ -751,12 +758,14 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
     }
 
     private onBoneFileLoaded(data: WoWBoneFileData | null) {
-        if (!data) {
-            return;
-        }
-
         this.boneFileData = data;
-        this.processBoneFileData();
+
+        if (!data) {
+            this.resetBoneFileData;
+        } else {
+
+            this.processBoneFileData();
+        }
     }
 
     private processBoneFileData() {
@@ -767,6 +776,12 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
 
         for(let i = 0; i < data.boneIds.length; i++) {
             Float44.copy(data.boneOffsetMatrices[i], this.boneData[data.boneIds[i]].boneOffsetMatrix);
+        }
+    }
+
+    private resetBoneFileData() {
+        for(let i = 0; i < this.boneData.length; i++) {
+            Float44.identity(this.boneData[i].boneOffsetMatrix);
         }
     }
 
