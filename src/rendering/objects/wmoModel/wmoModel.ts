@@ -454,7 +454,15 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
         for(const group of this.activeGroups) {
             const groupData = this.modelData.groupInfo[group];
             
-            for (const doodad of this.groupDoodads[group]) {
+            for(let i = 0; i < this.groupDoodads[group].length; i++) {
+                const doodad = this.groupDoodads[group][i];
+                // TODO: This should probably be handled elsewhere. Perhaps an on("dispose")?
+                if (doodad.isDisposing) {
+                    this.groupDoodads[group].splice(i, 1);
+                    i--;
+                    continue;
+                }
+                
                 const distance = AABB.distanceToPointIgnoreAxis(doodad.worldBoundingBox, this.localCamera, Axis.Z);
                 if (distance > this.engine.doodadRenderDistance) {
                     continue;
