@@ -8,6 +8,10 @@ export interface IDisposable {
     dispose(): void;
 }
 
+export function isDisposable(obj: any): obj is IDisposable {
+    return obj && typeof(obj.dispose) === 'function';
+}
+
 export type RequestFrameFunction = (callback: Function) => void;
 
 export type ErrorType = "dataFetching" | "dataProcessing" | "rendering";

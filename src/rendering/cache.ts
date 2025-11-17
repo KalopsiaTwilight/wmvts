@@ -1,12 +1,13 @@
-import { IDisposable } from "@app/interfaces";
+import { IDisposable, isDisposable } from "@app/interfaces";
 
 interface CacheEntry<TValue> {
     value: TValue
     ttl: number
 }
 
+export type CacheKey = number | string;
 export class SimpleCache<TValue> implements IDisposable {
-    items: { [index: number|string]: CacheEntry<TValue> };
+    items: { [index: CacheKey]: CacheEntry<TValue> };
     maxTtl: number
 
     constructor(maxTtl: number = 300000) {
@@ -24,33 +25,43 @@ export class SimpleCache<TValue> implements IDisposable {
         const keys = this.getKeys();
         for(const key of keys) {
             const entry = this.items[key];
-            if (entry.ttl != -1) {
-                entry.ttl -= deltaTime;
-                if (entry.ttl < 0) {
-                    delete this.items[key];
-                }
+            // Persist entry
+            if (entry.ttl == -1) {
+                continue;
+            }
+            entry.ttl -= deltaTime;
+            if (entry.ttl < 0) {
+                this.delete(key);
             }
         }
     }
 
-    contains(id: number|string): boolean {
+    delete(key: CacheKey) {
+        const obj = this.items[key];
+        if (isDisposable(obj)) {
+            obj.dispose();
+        }
+        delete this.items[key];
+    }
+
+    contains(key: CacheKey): boolean {
         if (this.isDisposing) {
             return false;
         }
 
-        const entry = this.items[id];
+        const entry = this.items[key];
         if (!entry) {
             return false;
         }
         return true;
     }
 
-    get(id: number|string): TValue|null {
+    get(key: CacheKey): TValue|null {
         if (this.isDisposing) {
             return null;
         }
 
-        const entry = this.items[id];
+        const entry = this.items[key];
         if (!entry) {
             return null;
         }
@@ -58,8 +69,8 @@ export class SimpleCache<TValue> implements IDisposable {
         return entry.value;
     }
 
-    store(id: number|string, value: TValue, ttl: number = this.maxTtl) {
-        this.items[id] = {
+    store(key: CacheKey, value: TValue, ttl: number = this.maxTtl) {
+        this.items[key] = {
             ttl,
             value
         }
