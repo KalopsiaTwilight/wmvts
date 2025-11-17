@@ -100,21 +100,19 @@ export interface IUniformsData {
 }
 
 
-export interface IVertexArrayObject extends IBindable {
-    setIndexBuffer(buffer: IVertexIndexBuffer): void;
-    addVertexDataBuffer(buffer: IVertexDataBuffer): void;
-}
-
-
 export interface ITextureOptions {
     preMultiplyAlpha?: number,
     clampS?: boolean,
     clampT?: boolean,
 }
 
+export interface IDataBuffers extends IBindable {
+}
+
 export interface IGraphics {
     startFrame(width: number, height: number): void;
     clearFrame(color?: Float4): void;
+    endFrame(): void;
 
     useBlendMode(blendMode: GxBlend): void 
     useDepthWrite(val: boolean): void;
@@ -125,8 +123,8 @@ export interface IGraphics {
 
     useVertexIndexBuffer(buffer?: IVertexIndexBuffer): void;
     useVertexDataBuffer(buffer?: IVertexDataBuffer): void;
+    useDataBuffers(buffer?: IDataBuffers): void;
     useShaderProgram(program?: IShaderProgram): void;
-    useVertexArrayObject(vao?: IVertexArrayObject): void;
     useFrameBuffer(frameBuffer?: IFrameBuffer): void;
     setColorBufferToTexture(texture?: ITexture): void;
 
@@ -138,18 +136,12 @@ export interface IGraphics {
     createSolidColorTexture(color: Float4): ITexture;
     createEmptyTexture(width: number, height: number): ITexture;
 
-    createVertexArrayObject(): IVertexArrayObject;
     createVertexIndexBuffer(dynamic: boolean): IVertexIndexBuffer;
     createVertexDataBuffer(pointers: IVertexAttributePointer[], dynamic: boolean): IVertexDataBuffer;
     createShaderProgram(vertexShader: string, fragmentShader: string): IShaderProgram;
     createFrameBuffer(width: number, height: number): IFrameBuffer;
+    createDataBuffers(vb: IVertexDataBuffer, ib: IVertexIndexBuffer): IDataBuffers;
 
     copyFrameToTexture(texture: ITexture, x: number, y: number, width: number, height: number): void;
 }
 
-
-export interface IDataBuffers {
-    vertexDataBuffer: IVertexDataBuffer;
-    vertexIndexBuffer: IVertexIndexBuffer;
-    vao?: IVertexArrayObject;
-}

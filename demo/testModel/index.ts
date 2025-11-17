@@ -1,4 +1,4 @@
-import { WorldPositionedObject, BufferDataType, Float44, GxBlend, IShaderProgram, IVertexArrayObject, 
+import { WorldPositionedObject, BufferDataType, Float44, GxBlend, IShaderProgram, IDataBuffers, 
     IVertexDataBuffer, IVertexIndexBuffer, RenderingEngine, RenderMaterial, DrawingBatchRequest
 } from "@app/index";
 
@@ -18,7 +18,7 @@ export class TestModel extends WorldPositionedObject {
 
 
     fileId: number;
-    vao: IVertexArrayObject;
+    dataBuffers: IDataBuffers;
 
     uniforms: {
         u_matrix: Float44
@@ -52,10 +52,8 @@ export class TestModel extends WorldPositionedObject {
         this.indices = engine.graphics.createVertexIndexBuffer(false);
         this.indices.setData(this.getVertexIndices());
 
-        this.vao = engine.graphics.createVertexArrayObject();
-        this.vao.setIndexBuffer(this.indices);
-        this.vao.addVertexDataBuffer(this.colors);
-        this.vao.addVertexDataBuffer(this.vertices);
+        // TODO: Support multiple buffers?
+        this.dataBuffers = engine.graphics.createDataBuffers(this.vertices, this.indices);
 
         this.viewProjectionMatrix = Float44.identity();
         this.uniforms = {
@@ -78,9 +76,8 @@ export class TestModel extends WorldPositionedObject {
 
         const batchRequest = new DrawingBatchRequest(BATCH_IDENTIFIER, -1, 0);
         batchRequest.useMaterial(material);
-        batchRequest.useVertexArrayObject(this.vao);
+        batchRequest.useDataBuffers(this.dataBuffers);
         batchRequest.drawIndexedTriangles(0, 16 * 6);
-        batchRequest.useVertexArrayObject();
 
         this.engine.submitDrawRequest(batchRequest);
     }

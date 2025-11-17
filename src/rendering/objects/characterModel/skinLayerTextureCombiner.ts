@@ -55,10 +55,7 @@ export class SkinLayerTextureCombiner {
             const vertexIndexBuffer = graphics.createVertexIndexBuffer(true);
             vertexIndexBuffer.setData(new Uint16Array([0, 1, 2, 1, 3, 2]));
 
-            return {
-                vertexDataBuffer,
-                vertexIndexBuffer
-            }
+            return graphics.createDataBuffers(vertexDataBuffer, vertexIndexBuffer);
         })
 
 

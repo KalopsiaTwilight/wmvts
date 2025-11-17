@@ -3,7 +3,7 @@ import { Float2, Float3, Float33, Float4, Float44, IPseudoRandomNumberGenerator 
 import { IDisposable } from "@app/interfaces";
 
 import { 
-    BufferDataType, ColorMask, DrawingBatchRequest,  GxBlend, IShaderProgram, ITexture, IVertexArrayObject, IVertexDataBuffer, 
+    BufferDataType, ColorMask, DrawingBatchRequest,  GxBlend, IDataBuffers, IShaderProgram, ITexture, IVertexDataBuffer, 
     IVertexIndexBuffer, RenderMaterial
 } from "@app/rendering/graphics";
 import { IRenderingEngine } from "@app/rendering/interfaces";
@@ -94,7 +94,7 @@ export class M2ParticleEmitter implements IDisposable {
     shaderProgram: IShaderProgram;
     indexBuffer: IVertexIndexBuffer
     vertexBuffer: IVertexDataBuffer;
-    vao: IVertexArrayObject;
+    databuffers: IDataBuffers;
     material: RenderMaterial;
 
     // Operating data derivatives
@@ -196,7 +196,7 @@ export class M2ParticleEmitter implements IDisposable {
         this.shaderProgram = null
         this.indexBuffer = null;
         this.vertexBuffer = null;
-        this.vao = null;
+        this.databuffers = null;
         this.material = null;
         this.particleColorOverride = null;
 
@@ -339,7 +339,7 @@ export class M2ParticleEmitter implements IDisposable {
 
         const batchRequest = new DrawingBatchRequest(BATCH_IDENTIFIER, this.parent.fileId, this.index);
         batchRequest.useMaterial(this.material)
-            .useVertexArrayObject(this.vao)
+            .useDataBuffers(this.databuffers)
             .drawIndexedTriangles(0, (6 * this.nrQuads) >> 0);
         this.engine.submitDrawRequest(batchRequest);
     }
@@ -916,9 +916,7 @@ export class M2ParticleEmitter implements IDisposable {
             indexBufferData[i * 6 + 5] = (4 * i + 1);
         }
         this.indexBuffer.setData(indexBufferData)
-        this.vao = this.engine.graphics.createVertexArrayObject();
-        this.vao.addVertexDataBuffer(this.vertexBuffer);
-        this.vao.setIndexBuffer(this.indexBuffer);
+        this.databuffers = this.engine.graphics.createDataBuffers(this.vertexBuffer, this.indexBuffer);
 
         // Set up material
         const textureId = this.m2data.texture

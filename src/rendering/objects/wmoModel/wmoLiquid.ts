@@ -4,7 +4,7 @@ import { BinaryWriter } from "@app/utils";
 import { LiquidTypeMetadata } from "@app/metadata";
 
 import { 
-    ITexture, GxBlend, ColorMask, IShaderProgram, IVertexArrayObject, 
+    ITexture, GxBlend, ColorMask, IShaderProgram, IDataBuffers, 
     BufferDataType, RenderMaterial, DrawingBatchRequest
 } from "@app/rendering/graphics";
 import { 
@@ -60,7 +60,7 @@ export class WMOLiquid extends WorldPositionedObject {
 
 
     shaderProgram: IShaderProgram;
-    vao: IVertexArrayObject;
+    dataBuffers: IDataBuffers;
     vertices: WMOLiquidVertexData[] = [];
     indices: number[] = [];
     materials: RenderMaterial[];
@@ -170,9 +170,7 @@ export class WMOLiquid extends WorldPositionedObject {
         const indexBuffer = this.engine.graphics.createVertexIndexBuffer(true);
         indexBuffer.setData(new Uint16Array(this.indices));
         
-        this.vao = this.engine.graphics.createVertexArrayObject();
-        this.vao.addVertexDataBuffer(vertexBuffer);
-        this.vao.setIndexBuffer(indexBuffer);
+        this.dataBuffers = this.engine.graphics.createDataBuffers(vertexBuffer, indexBuffer);
 
         this.liquidType = this.getLiquidType(tempLiquidtype);
         this.engine.getLiquidTypeMetadata(this.liquidType).then(this.onMetadataLoaded.bind(this))
@@ -190,7 +188,7 @@ export class WMOLiquid extends WorldPositionedObject {
 
         const batchRequest = new DrawingBatchRequest(BATCH_IDENTIFIER, this.liquidTypeMetadata.id, materialIndex);
         batchRequest.useMaterial(material);
-        batchRequest.useVertexArrayObject(this.vao);
+        batchRequest.useDataBuffers(this.dataBuffers);
         batchRequest.drawIndexedTriangles(0, this.indices.length);
         this.engine.submitDrawRequest(batchRequest);
     }

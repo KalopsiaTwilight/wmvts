@@ -3,7 +3,7 @@ import { Float2, Float3, Float4, Float44 } from "@app/math";
 import { IDisposable } from "@app/interfaces";
 
 import { 
-    BufferDataType, ColorMask, DrawingBatchRequest, GxBlend, IShaderProgram, IVertexArrayObject, 
+    BufferDataType, ColorMask, DrawingBatchRequest, GxBlend, IShaderProgram, IDataBuffers, 
     IVertexDataBuffer, IVertexIndexBuffer, M2BlendModeToEGxBlend, RenderMaterial
 } from "@app/rendering/graphics";
 import { IRenderingEngine } from "@app/rendering/interfaces";
@@ -44,7 +44,7 @@ export class M2RibbonEmitter implements IDisposable {
     materials: RenderMaterial[];
     indexBuffer: IVertexIndexBuffer;
     vertexBuffer: IVertexDataBuffer;
-    vao: IVertexArrayObject;
+    dataBuffers: IDataBuffers;
     shaderProgram: IShaderProgram;
 
     vertices: RibbonVertex[];
@@ -297,7 +297,7 @@ export class M2RibbonEmitter implements IDisposable {
 
             const batchRequest = new DrawingBatchRequest(BATCH_IDENTIFIER, this.parent.fileId, this.index, i);
             batchRequest.useMaterial(this.materials[i])
-                .useVertexArrayObject(this.vao)
+                .useDataBuffers(this.dataBuffers)
                 .drawIndexedTriangleStrip(2 * this.edgeStart * 2, count);
             this.engine.submitDrawRequest(batchRequest);
         }
@@ -466,9 +466,7 @@ export class M2RibbonEmitter implements IDisposable {
         }
         this.indexBuffer.setData(indexBufferData)
 
-        this.vao = this.engine.graphics.createVertexArrayObject();
-        this.vao.addVertexDataBuffer(this.vertexBuffer);
-        this.vao.setIndexBuffer(this.indexBuffer);
+        this.dataBuffers = this.engine.graphics.createDataBuffers(this.vertexBuffer, this.indexBuffer);
 
         // Set up materials
         this.materials = [];

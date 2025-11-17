@@ -647,7 +647,6 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
 
     private setupDataBuffers() {
         this.dataBuffers = this.engine.getDataBuffers("M2-" + this.fileId, (graphics) => {
-            const vao = graphics.createVertexArrayObject();
             const vertexIndexBuffer = graphics.createVertexIndexBuffer(true);
             const vertexDataBuffer = graphics.createVertexDataBuffer([
                 { index: this.shaderProgram.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: 48, offset: 0 },
@@ -686,14 +685,8 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
             }
             vertexDataBuffer.setData(buffer);
             vertexIndexBuffer.setData(new Uint16Array(this.modelData.skinTriangles));
-            vao.setIndexBuffer(vertexIndexBuffer);
-            vao.addVertexDataBuffer(vertexDataBuffer);
 
-            return {
-                vao,
-                vertexDataBuffer,
-                vertexIndexBuffer
-            }
+            return graphics.createDataBuffers(vertexDataBuffer, vertexIndexBuffer);
         });
     }
 

@@ -1,15 +1,16 @@
 import { Float4 } from "@app/math";
 
 import { 
-    IGraphics, IShaderProgram, ITexture, IVertexArrayObject, IVertexAttributePointer, IVertexDataBuffer, 
-    IVertexIndexBuffer, ColorMask, GxBlend, ITextureOptions, IFrameBuffer 
+    IGraphics, IShaderProgram, ITexture, IVertexAttributePointer, IVertexDataBuffer, 
+    IVertexIndexBuffer, ColorMask, GxBlend, ITextureOptions, IFrameBuffer, 
+    IDataBuffers
 } from "./abstractions";
 
 export abstract class CachedGraphics implements IGraphics {
     lastUsedVertexDataBuffer?: IVertexDataBuffer;
     lastUsedVertexIndexBuffer?: IVertexIndexBuffer;
     lastUsedShaderProgram?: IShaderProgram;
-    lastUsedVertexArrayObject?: IVertexArrayObject;
+    lastUsedDatabuffers?: IDataBuffers;
     lastUsedFrameBuffer?: IFrameBuffer;
 
     lastUsedBlendMode?: GxBlend;
@@ -26,7 +27,7 @@ export abstract class CachedGraphics implements IGraphics {
         this.lastUsedShaderProgram = undefined;
         this.lastUsedVertexDataBuffer = undefined;
         this.lastUsedVertexIndexBuffer = undefined;
-        this.lastUsedVertexArrayObject = undefined;
+        this.lastUsedDatabuffers = undefined;
 
         this.lastUsedBlendMode = undefined;
         this.lastUsedDepthWrite = undefined;
@@ -36,7 +37,10 @@ export abstract class CachedGraphics implements IGraphics {
         this.lastUsedCounterClockWiseFrontFaces = undefined;
         this.lastUsedFrameBuffer = undefined;
     }
+
     abstract clearFrame(color: Float4): void;
+
+    abstract endFrame(): void;
 
 
     useBlendMode(blendMode: GxBlend): void {
@@ -127,18 +131,18 @@ export abstract class CachedGraphics implements IGraphics {
         this.lastUsedShaderProgram = program;
     }
 
-    useVertexArrayObject(vao?: IVertexArrayObject): void {
-        if (vao == this.lastUsedVertexArrayObject) {
+    useDataBuffers(db?: IDataBuffers): void {
+        if (db == this.lastUsedDatabuffers) {
             return;
         }
 
-        if (vao) {
-            vao.bind();
+        if (db) {
+            db.bind();
         } else {
-            this.lastUsedVertexArrayObject.unbind();
+            this.lastUsedDatabuffers.unbind();
         }
 
-        this.lastUsedVertexArrayObject = vao;
+        this.lastUsedDatabuffers = db;
     }
 
     useFrameBuffer(frameBuffer?: IFrameBuffer): void {
@@ -164,9 +168,9 @@ export abstract class CachedGraphics implements IGraphics {
     abstract createEmptyTexture(width: number, height: number): ITexture;
     abstract setColorBufferToTexture(texture: ITexture): void;
 
-    abstract createVertexArrayObject(): IVertexArrayObject;
     abstract createVertexIndexBuffer(dynamic: boolean): IVertexIndexBuffer
     abstract createVertexDataBuffer(pointers: IVertexAttributePointer[], dynamic: boolean): IVertexDataBuffer
+    abstract createDataBuffers(vb: IVertexDataBuffer, ib: IVertexIndexBuffer): IDataBuffers;
     abstract createShaderProgram(vertexShader: string, fragmentShader: string): IShaderProgram
     abstract createFrameBuffer(width: number, height: number): IFrameBuffer;
 

@@ -7,7 +7,7 @@ import {
 
 import {
     BufferDataType, ColorMask, DrawingBatchRequest, GxBlend, IDataBuffers, IShaderProgram, 
-    ITexture, IVertexArrayObject, M2BlendModeToEGxBlend, RenderMaterial
+    ITexture, M2BlendModeToEGxBlend, RenderMaterial
 } from "@app/rendering/graphics";
 import { IRenderingEngine } from "@app/rendering/interfaces"
 
@@ -64,7 +64,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
     groupViews: { [key: number]: Frustrum[] }
 
     portalShader: IShaderProgram;
-    portalVao: IVertexArrayObject;
+    portalDataBuffers: IDataBuffers;
     portalCount: number;
     portalData: PortalMapData[];
     portalMaterial: RenderMaterial;
@@ -203,6 +203,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
         this.loadLiquids();
 
         this.setupDataBuffers();
+        // TODO: Only do this on debug
         this.setupPortalGraphics();
 
         this.isModelDataLoaded = true;
@@ -605,7 +606,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
 
             const batchRequest = new DrawingBatchRequest(PORTAL_BATCH_IDENTIFIER, this.fileId, i);
             batchRequest.useMaterial(this.portalMaterial)
-                .useVertexArrayObject(this.portalVao)
+                .useDataBuffers(this.portalDataBuffers)
                 .drawIndexedTriangles(portalData.startVertex * 1.5 * 2, portalData.vertexCount * 1.5);
             this.engine.submitDrawRequest(batchRequest);
         }
@@ -628,7 +629,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
                 }
 
                 const vertexDataSize = 56;
-                const vertexDataBuffer = this.engine.graphics.createVertexDataBuffer([
+                const vertexDataBuffer = graphics.createVertexDataBuffer([
                     { index: this.shaderProgram.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 0 },
                     { index: this.shaderProgram.getAttribLocation('a_normal'), size: 3, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 12 },
                     { index: this.shaderProgram.getAttribLocation('a_color1'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: vertexDataSize, offset: 24 },
@@ -668,18 +669,10 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
                 }
                 vertexDataBuffer.setData(buffer);
 
-                const vertexIndexBuffer = this.engine.graphics.createVertexIndexBuffer(true);
+                const vertexIndexBuffer = graphics.createVertexIndexBuffer(true);
                 vertexIndexBuffer.setData(new Uint16Array(group.indices));
 
-                const vao = this.engine.graphics.createVertexArrayObject();
-                vao.setIndexBuffer(vertexIndexBuffer);
-                vao.addVertexDataBuffer(vertexDataBuffer);
-
-                return { 
-                    vao,
-                    vertexDataBuffer,
-                    vertexIndexBuffer
-                }
+                return graphics.createDataBuffers(vertexIndexBuffer, vertexDataBuffer);
             });
         }
     }
@@ -712,9 +705,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
         }
         portalIB.setData(new Uint16Array(portalBuffer));
 
-        this.portalVao = this.engine.graphics.createVertexArrayObject();
-        this.portalVao.addVertexDataBuffer(portalVB);
-        this.portalVao.setIndexBuffer(portalIB);
+        this.portalDataBuffers = this.engine.graphics.createDataBuffers(portalVB, portalIB);
     }
 
     private setupMaterials() {

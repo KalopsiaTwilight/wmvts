@@ -229,7 +229,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
             for (const batch of drawOrderRequests) {
                 batch.submit(this.graphics);
             }
-            this.graphics.useVertexArrayObject(undefined);
+            this.graphics.endFrame();
 
             if (this.fpsElement) {
                 this.fpsCounter.push(1 / (deltaTime / 1000));

@@ -40,7 +40,6 @@ export class Background implements IBackground {
                 { index: this.program.getAttribLocation('a_position'), size: 2, type: BufferDataType.Float, normalized: false, stride: 16, offset: 8 },
             ], true);
 
-            // 
             vertexDataBuffer.setData(new Float32Array([
                 0, 0, 1, 1, 
                 1, 0, -1, 1, 
@@ -48,15 +47,10 @@ export class Background implements IBackground {
                 1, 1, -1, -1
             ]));
             
-            // vertexDataBuffer.setData(new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]));
-
             const vertexIndexBuffer = graphics.createVertexIndexBuffer(true);
             vertexIndexBuffer.setData(new Uint16Array([0, 1, 2, 1, 3, 2]));
 
-            return {
-                vertexDataBuffer,
-                vertexIndexBuffer
-            }
+            return graphics.createDataBuffers(vertexDataBuffer, vertexIndexBuffer);
         })
         this.texture = this.engine.getSolidColorTexture([1,0,0,1]);
         this.createMaterial();

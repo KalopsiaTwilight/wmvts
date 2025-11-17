@@ -1,19 +1,6 @@
 import { 
     ColorMask, GxBlend, IDataBuffers, IFrameBuffer, IGraphics, IShaderProgram, ITexture, IUniformsData, 
-    IVertexArrayObject, IVertexDataBuffer, IVertexIndexBuffer 
 } from "./abstractions";
-
-export enum DrawInstructionType {
-    Triangle,
-    TriangleStrip
-}
-
-export interface DrawInstruction {
-    indexed: boolean;
-    offset: number;
-    count: number;
-    type: DrawInstructionType
-}
 
 export type BatchRequestGraphicsFn = (graphics: IGraphics) => void;
 export class BatchRequestKey {
@@ -140,25 +127,16 @@ export abstract class RenderingBatchRequest {
 export class DrawingBatchRequest extends RenderingBatchRequest {
     type: "draw";
 
-    private drawInstruction?: DrawInstruction;
     private material?: RenderMaterial;
-    private vertexIndexBuffer?: IVertexIndexBuffer;
-    private vertexDataBuffer?: IVertexDataBuffer;
-    private vao?: IVertexArrayObject;
+    private dataBuffers?: IDataBuffers;
 
     protected override beforeMain(graphics: IGraphics): void {
         if (this.material) {
             this.material.bind(graphics);
         }
-        
-        if (this.vertexDataBuffer) {
-            graphics.useVertexDataBuffer(this.vertexDataBuffer);
-        }
-        if (this.vertexIndexBuffer) {
-            graphics.useVertexIndexBuffer(this.vertexIndexBuffer);
-        }
-        if (this.vao) {
-            graphics.useVertexArrayObject(this.vao);
+
+        if (this.dataBuffers) {
+            graphics.useDataBuffers(this.dataBuffers);
         }
     }
     
@@ -182,28 +160,8 @@ export class DrawingBatchRequest extends RenderingBatchRequest {
         return this;
     }
 
-    useVertexIndexBuffer(buffer?: IVertexIndexBuffer) {
-        this.vertexIndexBuffer = buffer;
-        return this;
-    }
-
-    useVertexDataBuffer(buffer?: IVertexDataBuffer) {
-        this.vertexDataBuffer = buffer;
-        return this;
-    }
-
-    useVertexArrayObject(vao?: IVertexArrayObject) {
-        this.vao = vao;
-        return this;
-    }
-
     useDataBuffers(dataBuffers: IDataBuffers) {
-        if (dataBuffers.vao) {
-            this.vao = dataBuffers.vao;
-        } else {
-            this.vertexDataBuffer = dataBuffers.vertexDataBuffer;
-            this.vertexIndexBuffer = dataBuffers.vertexIndexBuffer;
-        }
+        this.dataBuffers = dataBuffers;
         return this;
     }
 
@@ -240,9 +198,7 @@ export class OffMainDrawingRequest extends RenderingBatchRequest {
     private frameBuffer?: IFrameBuffer;
     private colorOutputTexture?: ITexture;
     private copyToTexture?: ITexture;
-    private vertexIndexBuffer?: IVertexIndexBuffer;
-    private vertexDataBuffer?: IVertexDataBuffer;
-    private vao?: IVertexArrayObject;
+    private dataBuffers?: IDataBuffers;
 
     protected override beforeMain(graphics: IGraphics) {
         if (this.frameBuffer) {
@@ -261,14 +217,8 @@ export class OffMainDrawingRequest extends RenderingBatchRequest {
             this.material.bind(graphics);
         }
         
-        if (this.vertexDataBuffer) {
-            graphics.useVertexDataBuffer(this.vertexDataBuffer);
-        }
-        if (this.vertexIndexBuffer) {
-            graphics.useVertexIndexBuffer(this.vertexIndexBuffer);
-        }
-        if (this.vao) {
-            graphics.useVertexArrayObject(this.vao);
+        if (this.dataBuffers) {
+            graphics.useDataBuffers(this.dataBuffers);
         }
     }
 
@@ -307,28 +257,9 @@ export class OffMainDrawingRequest extends RenderingBatchRequest {
         return this;
     }
 
-    useVertexIndexBuffer(buffer?: IVertexIndexBuffer) {
-        this.vertexIndexBuffer = buffer;
-        return this;
-    }
-
-    useVertexDataBuffer(buffer?: IVertexDataBuffer) {
-        this.vertexDataBuffer = buffer;
-        return this;
-    }
-
-    useVertexArrayObject(vao?: IVertexArrayObject) {
-        this.vao = vao;
-        return this;
-    }
     
     useDataBuffers(dataBuffers: IDataBuffers) {
-        if (dataBuffers.vao) {
-            this.vao = dataBuffers.vao;
-        } else {
-            this.vertexDataBuffer = dataBuffers.vertexDataBuffer;
-            this.vertexIndexBuffer = dataBuffers.vertexIndexBuffer;
-        }
+        this.dataBuffers = dataBuffers;
         return this;
     }
 }
