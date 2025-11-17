@@ -20,6 +20,10 @@ export class TextureVariantModel extends M2Model implements ITextureVariantModel
     }
     
     useTextureVariation(index: number) {
+        if (this.isDisposing) {
+            return;
+        }
+
         const data = this.textureVariations.textureVariations[index];
         if (!data) {
             return;
@@ -63,8 +67,13 @@ export class TextureVariantModel extends M2Model implements ITextureVariantModel
     }
 
     override dispose(): void {
+        if (this.isDisposing) {
+            return;
+        }
+        
         super.dispose();
         this.textureVariations = null;
+        this.callbackMgr = null;
     }
 
     private onTextureVariationsLoaded(data: TextureVariationsMetadata | null) {

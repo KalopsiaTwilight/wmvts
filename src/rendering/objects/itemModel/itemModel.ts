@@ -86,6 +86,10 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
     }
 
     equipTo(character: ICharacterModel) {
+        if (this.isDisposing) {
+            return;
+        }
+
         this.character = character;
         this.parent = character;
         this.character.children.push(this);
@@ -94,16 +98,40 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
     }
 
     override dispose(): void {
+        if (this.isDisposing) {
+            return;
+        }
+        
         super.dispose();
         this.itemMetadata = null;
         this.character = null;
+        if (this.component1) {
+            this.component1.dispose();
+        }
+        this.component1 = null;
+        if (this.component2) {
+            this.component2.dispose();
+        }
+        this.component2 = null;
+        this.sectionTextures = null;
+        this.component1Texture = null;
+        this.component2Texture = null;
+        this.callbackMgr = null;
     }
 
     on(type: ItemModelCallbackType, fn: CallbackFn<ItemModel>, persistent = false): void {
+        if (this.isDisposing) {
+            return;
+        }
+
         this.callbackMgr.addCallback(type, fn, persistent);
     }
 
     canExecuteCallback(type: ItemModelCallbackType): boolean {
+        if (this.isDisposing) {
+            return false;
+        }
+
         let dataNeeded: unknown;
         switch(type) {
             case "metadataLoaded": dataNeeded = this.itemMetadata; break;
@@ -117,6 +145,10 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
     private onItemMetadataLoaded(metadata: ItemMetadata) {
         if (!metadata) {
             this.dispose();
+            return;
+        }
+        
+        if (this.isDisposing) {
             return;
         }
 
@@ -215,6 +247,9 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
     }
 
     private onComponentLoaded() {
+        if (this.isDisposing) {
+            return;
+        }
         if (this.component1 && !this.component1.isLoaded) {
             return;
         }
@@ -237,6 +272,9 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
     }
 
     private onTexturesLoaded() {
+        if (this.isDisposing) {
+            return;
+        }
         this.texturesLoaded = true;
         this.callbackMgr.processCallbacks("sectionTexturesLoaded");
     }

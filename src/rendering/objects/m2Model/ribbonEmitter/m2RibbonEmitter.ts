@@ -170,9 +170,41 @@ export class M2RibbonEmitter implements IDisposable {
     }
 
     dispose(): void {
+        if (this.isDisposing) {
+            return;
+        }
+
         this.isDisposing = true;
+
+        this.parent = null;
+        this.m2data = null;
+        this.engine = null;
+
         this.materials = null;
-        // TODO: Dispose stuff?
+        this.dataBuffers.dispose();
+        this.dataBuffers = null;
+        this.indexBuffer = null;
+        this.vertexBuffer = null;
+        this.shaderProgram = null;
+
+        this.vertices = null;
+        this.edgeLifetimes = null;
+        this.texBox = null;
+        this.color = null;
+        this.prevPos = null;
+        this.prevDir = null;
+        this.prevVertical = null;
+        this.currPos = null;
+        this.currDir = null;
+        this.currVertical = null;
+        this.below0 = null;
+        this.below1 = null;
+        this.above0 = null;
+        this.above1 = null;
+        this.prevDirScaled = null;
+        this.currDirScaled = null;
+        this.minWorldBounds = null;
+        this.maxWorldBounds = null;
     }
 
     update(deltaTime: number): void {

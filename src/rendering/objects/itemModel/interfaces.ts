@@ -8,7 +8,8 @@ import { IM2Model } from "../m2Model";
 
 export type ItemModelCallbackType = "metadataLoaded" | "sectionTexturesLoaded" | "componentsLoaded" 
 
-export interface IItemModel<Ct extends string = ItemModelCallbackType> extends IImmediateCallbackable<Ct>, ISupportCallbacks<Ct>, IWorldPositionedObject  {
+export interface IItemModel<Ct extends string = ItemModelCallbackType> extends 
+    IImmediateCallbackable<Ct>, ISupportCallbacks<Ct>, IWorldPositionedObject  {
     // TODO: Deprecate property access
     itemMetadata: ItemMetadata
     component1?: IM2Model

@@ -51,9 +51,6 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
     bonePositionBuffer: Float32Array;
     dataBuffers: IDataBuffers;
 
-    localBoundingBox: AABB;
-    worldBoundingBox: AABB;
-
     animationState: AnimationState;
     textureObjects: { [key: number]: ITexture };
 
@@ -86,6 +83,43 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
 
     get isLoaded() {
         return this.isModelDataLoaded && this.isTexturesLoaded;
+    }
+
+    override dispose(): void {
+        if (this.isDisposing) {
+            return;
+        }
+
+        super.dispose();
+
+        this.modelData = null;
+        this.boneFileData = null;
+        if (this.particleEmitters) {
+            for (const emitter of this.particleEmitters) {
+                emitter.dispose();
+            }
+        }
+        this.particleEmitters = null;
+        this.particleColorOverrides = null;
+        if (this.ribbonEmitters) {
+            for (const emitter of this.ribbonEmitters) {
+                emitter.dispose();
+            }
+        }
+        this.ribbonEmitters = null;
+
+        this.bonePositionBuffer = null;
+        if (this.animationState) {
+            this.animationState.dispose();
+        }
+        this.animationState = null;
+        this.textureObjects = null;
+        this.textureUnitData = null;
+        this.boneData = null;
+        this.attachedToModel = null;
+        this.modelViewMatrix = null;
+        this.invModelViewMatrix = null;
+        this.callbackMgr = null;
     }
 
     override initialize(engine: IRenderingEngine): void {
@@ -287,36 +321,6 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
     setParticleColorOverride(overrides: ParticleColorOverrides) {
         this.particleColorOverrides = overrides;
         // TODO: Reload particle emitters if necessary
-    }
-
-    override dispose(): void {
-        super.dispose();
-        if (this.particleEmitters) {
-            for (const emitter of this.particleEmitters) {
-                emitter.dispose();
-            }
-            this.particleEmitters = null;
-        }
-        if (this.ribbonEmitters) {
-            for (const emitter of this.ribbonEmitters) {
-                emitter.dispose();
-            }
-            this, this.ribbonEmitters = null;
-        }
-        this.modelData = null;
-        this.shaderProgram = null;
-        this.dataBuffers = null;
-        this.bonePositionBuffer = null;
-        this.animationState = null;
-        this.textureObjects = null;
-        this.textureUnitData = null;
-        this.boneData = null;
-        this.worldModelMatrix = null;
-        this.modelViewMatrix = null;
-        this.invWorldModelMatrix = null;
-        this.invModelViewMatrix = null;
-        this.callbackMgr = null;
-        this.particleColorOverrides = null;
     }
 
     // Referenced from https://github.com/Deamon87/WebWowViewerCpp/blob/master/wowViewerLib/src/engine/managers/animationManager.cpp#L398

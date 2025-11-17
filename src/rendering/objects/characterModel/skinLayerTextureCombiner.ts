@@ -4,6 +4,7 @@ import {
     OffMainDrawingRequest, GenericBatchRequest, IDataBuffers
 } from "@app/rendering/graphics";
 import { IRenderingEngine } from "@app/rendering/interfaces";
+import { IDisposable } from "@app/interfaces";
 
 import { ICharacterModel } from "./interfaces";
 
@@ -12,7 +13,7 @@ import fsProgramText from "./skinLayerTextureCombiner.frag";
 
 const BATCH_IDENTIFIER  = "CHAR-SKIN"
 
-export class SkinLayerTextureCombiner {
+export class SkinLayerTextureCombiner implements IDisposable {
     engine: IRenderingEngine;
     width: number;
     height: number;
@@ -34,6 +35,8 @@ export class SkinLayerTextureCombiner {
 
     currentBatchId: number;
     resolution: Float32Array;
+
+    isDisposing: boolean;
 
     constructor(parent: ICharacterModel, textureType: number, width: number, height: number) {
         this.parentId = parent.modelId;
@@ -66,9 +69,30 @@ export class SkinLayerTextureCombiner {
 
         this.currentBatchId = 0;
         this.resolution = new Float32Array([this.width, this.height]);
+        this.isDisposing = false;
+    }
+    
+    dispose(): void {
+        this.isDisposing = true;
+        this.engine = null;
+        this.blackTexture.dispose();
+        this.blackTexture = null;
+        this.alphaTexture.dispose();
+        this.alphaTexture = null;
+        this.frameBuffer.dispose();
+        this.frameBuffer = null;
+        this.outputTexture.dispose();
+        this.outputTexture = null;
+        this.backgroundTexture.dispose();
+        this.backgroundTexture = null;
+        this.resolution = null;
     }
 
     clear() {
+        if (this.isDisposing) {
+            return;
+        }
+
         this.currentBatchId = 0;
         const clearRequest = new GenericBatchRequest(BATCH_IDENTIFIER, this.parentId, this.textureType, this.currentBatchId++)
         clearRequest.do((graphics) => {
@@ -83,6 +107,10 @@ export class SkinLayerTextureCombiner {
     }
 
     drawTextureSection(textures: [ITexture, ITexture, ITexture], x: number, y: number, width: number, height: number, blendMode: number) {
+        if (this.isDisposing) {
+            return;
+        }
+        
         const material = new RenderMaterial();
 
         const isUpscaled = textures[0].width < width || textures[0].height < height;

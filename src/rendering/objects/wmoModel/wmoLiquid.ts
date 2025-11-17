@@ -58,7 +58,6 @@ export class WMOLiquid extends WorldPositionedObject {
     groupData: WoWWorldModelGroup
     wmoFlags: WorldModelRootFlags;
 
-
     shaderProgram: IShaderProgram;
     dataBuffers: IDataBuffers;
     vertices: WMOLiquidVertexData[] = [];
@@ -72,7 +71,6 @@ export class WMOLiquid extends WorldPositionedObject {
     metadataLoaded: boolean;
     texturesLoaded: boolean;
 
-    currentTexture: ITexture;
     textures: ITexture[];
     animatingTextureCount: number;
 
@@ -194,10 +192,24 @@ export class WMOLiquid extends WorldPositionedObject {
     }
 
     override dispose() {
-        super.dispose();
-        // TODO: Dispose
+        if (this.isDisposing) {
+            return;
+        }
 
+        super.dispose();
+
+        this.data = null;
+        this.groupData = null;
+        this.wmoFlags = null;
+
+        this.dataBuffers.dispose();
+        this.dataBuffers = null;
+        this.vertices = null;
+        this.indices = null;
         this.materials = null;
+
+        this.liquidTypeMetadata = null;
+        this.textures = null;
     }
 
     get isLoaded(): boolean {
@@ -207,6 +219,10 @@ export class WMOLiquid extends WorldPositionedObject {
     onMetadataLoaded(metadata: LiquidTypeMetadata) {
         if (metadata == null) {
             this.dispose();
+            return;
+        }
+        
+        if (this.isDisposing) {
             return;
         }
 

@@ -72,10 +72,15 @@ export class M2Proxy extends WorldPositionedObject implements IM2Proxy  {
     }
 
     override dispose() {
+        if (this.isDisposing) {
+            return;
+        }
+        
         super.dispose();
         if (this.m2Model) {
             this.m2Model.dispose();
         }
+        this.m2Model = null;
     }
 
     draw(): void {

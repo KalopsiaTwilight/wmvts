@@ -1,5 +1,4 @@
-import { Float2, Float3, Float4, GxBlend } from "@app/index"
-import { AABB, Plane } from "@app/math";
+import { AABB, Plane, Float2, Float3, Float4 } from "@app/math";
 
 export type Color = [number, number, number, number];
 export type Int2 = [number, number];
@@ -200,7 +199,7 @@ export enum WMOShader {
 export interface WoWWorldModelMaterial {
     flags: WoWWorldModelMaterialMaterialFlags;
     shader: WMOShader;
-    blendMode: GxBlend;
+    blendMode: number;
     texture1: number;
     sidnColor: Color;
     frameSidnColor: Color;

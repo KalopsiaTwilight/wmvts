@@ -35,7 +35,6 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     itemGeoModifyData: CharacterCustomizationtItemGeoModifyData[]
     customizationGeosets: { [key: number]: number};
 
-
     private textureLayerBaseFileIds: { [key: string]: [number, number, number] }
     private textureLayerBaseTextures: { [key: string]: [ITexture, ITexture, ITexture] }
     private textureLayerCombiners: { [key: string]: SkinLayerTextureCombiner }
@@ -67,12 +66,38 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     }
 
     override dispose(): void {
+        if (this.isDisposing) {
+            return;
+        }
+        
         super.dispose();
         this.characterMetadata = null;
         this.customizationChoices = null;
+        this.itemGeoModifyData = null;
+        this.customizationGeosets = null;
         this.textureLayerBaseFileIds = null;
         this.textureLayerBaseTextures = null;
+        for(const key in this.textureLayerCombiners) {
+            this.textureLayerCombiners[key].dispose();
+        }
         this.textureLayerCombiners = null;
+        for(const key in this.textureSectionTextures) {
+            for(const data of this.textureSectionTextures[key]) {
+                for(const texture of data.textures) {
+                    texture.dispose();
+                }
+                data.textures = null;
+            }
+            delete this.textureSectionTextures[key];
+        }
+        this.textureSectionTextures =null;
+        for(const key in this.skinnedModels) {
+            this.skinnedModels[key].dispose();
+        }
+        this.skinnedModels = null;
+        this.inventory.dispose();
+        this.inventory = null;
+        this.callbackMgr = null;
     }
 
     override get isLoaded(): boolean {
@@ -100,6 +125,10 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     }
 
     override update(deltaTime: number) {
+        if (this.isDisposing) {
+            return;
+        }
+
         super.update(deltaTime);
 
         this.inventory.update(deltaTime);
@@ -110,6 +139,10 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     }
 
     override draw() {
+        if (this.isDisposing) {
+            return;
+        }
+
         super.draw();
 
         this.inventory.draw();
@@ -120,10 +153,16 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     }
     
     override on(type: CharacterModelCallbackType, fn: CallbackFn<CharacterModel>, persistent = false): void {
+        if (this.isDisposing) {
+            return;
+        }
         this.callbackMgr.addCallback(type, fn, persistent);
     }
 
     canExecuteCallback(type: CharacterModelCallbackType): boolean {
+        if (this.isDisposing) {
+            return false;
+        }
         switch(type) {
             case "characterMetadataLoaded": return this.characterMetadata != null;
             case "skinTexturesLoaded": return this.skinLayerTexturesLoaded;
@@ -136,6 +175,9 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     }
 
     setCustomizationChoice(optionId: number, choiceId: number) {
+        if (this.isDisposing) {
+            return;
+        }
         this.on("characterMetadataLoaded", () => {
             const optionIndex = this.characterMetadata.characterCustomizationData.options.findIndex(x => x.id === optionId);
             if (optionIndex < 0) {
@@ -154,14 +196,23 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     }
 
     equipItem(slot: EquipmentSlot, displayId1: number, displayId2?: number) {
+        if (this.isDisposing) {
+            return;
+        }
         this.inventory.equipItem(slot, displayId1, displayId2);
     }
 
     unequipItem(slot: EquipmentSlot) {
+        if (this.isDisposing) {
+            return;
+        }
         this.inventory.unequipItem(slot);
     }
 
     setTexturesForSection(section: number, slot: EquipmentSlot, priority: number, textures: [ITexture, ITexture, ITexture]) {
+        if (this.isDisposing) {
+            return;
+        }
         let data = this.textureSectionTextures[section];
         if (!data) {
             data = [];
@@ -174,6 +225,9 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     }
 
     clearTexturesForSlot(slot: EquipmentSlot) {
+        if (this.isDisposing) {
+            return;
+        }
         for(const section in this.textureSectionTextures) {
             this.textureSectionTextures[section] = this.textureSectionTextures[section].filter(x => x.slot !== slot);
         }
@@ -183,6 +237,9 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     }
 
     updateGeosets() {
+        if (this.isDisposing) {
+            return;
+        }
         this.on("modelTexturesLoaded", () => { 
             this.onGeosetUpdate();
         });
@@ -208,6 +265,9 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     }
 
     private setDefaultCustomizations() {
+        if (this.isDisposing) {
+            return;
+        }
         this.customizationChoices = [];
         for (const opt of this.customizationData.options) {
             this.customizationChoices.push(opt.choices[0]);
@@ -215,6 +275,10 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     }
 
     private applyCustomizations() {
+        if (this.isDisposing) {
+            return;
+        }
+
         this.itemGeoModifyData = [];
         let boneFileId = 0;
         let modelFileId = this.characterMetadata.fileDataId;
@@ -281,6 +345,10 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     }
 
     private loadSkinTextures(newSkinLayers: { [key: string]: [number, number, number] }) {
+        if (this.isDisposing) {
+            return;
+        }
+
         const toLoad: string[] = [];
         for(const key in newSkinLayers) {
             // TODO: Should this be inited somewhere else?
@@ -311,11 +379,19 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     }
 
     private onSkinTexturesLoaded() {
+        if (this.isDisposing) {
+            return;
+        }
+
         this.updateSkinTextures();
         this.callbackMgr.processCallbacks("skinTexturesLoaded")
     }
 
     private updateSkinTextures() {
+        if (this.isDisposing) {
+            return;
+        }
+
         if (!this.skinLayerTexturesLoaded) {
             return;
         }
@@ -401,6 +477,10 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     }
 
     private onGeosetUpdate() {
+        if (this.isDisposing) {
+            return;
+        }
+
         this.toggleGeosets(0, 5300, false);
         const geosetIds = [...DEFAULT_GEOSET_IDS];
         for(const geoSetType in this.customizationGeosets) {
@@ -430,6 +510,10 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     }
 
     private loadSkinnedModels() {
+        if (this.isDisposing) {
+            return;
+        }
+
         const skinnedModelFileIds = this.customizationData.options
             .reduce((acc, x) => acc.concat(x.choices
                 .reduce((acc2, y) => acc2.concat(y.elements

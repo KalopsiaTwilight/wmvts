@@ -152,30 +152,49 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
     }
 
     override dispose(): void {
+        if (this.isDisposing) {
+            return;
+        }
+
         super.dispose();
+
+        this.modelData = null;
+        this.loadedTextures = null;
         for (const group in this.groupDoodads) {
             for (const model of this.groupDoodads[group]) {
                 model.dispose();
             }
         }
         this.groupDoodads = null;
-        this.modelData = null;
-        if (this.groupDatabuffers) {
-            for (let i = 0; i < this.groupDatabuffers.length; i++) {
-                // TODO: Implement dispose
-                this.groupDatabuffers[i] = null;
+        for(const group in this.groupLiquids) {
+            for(const liquid of this.groupLiquids[group]) {
+                liquid.dispose();
             }
         }
-        this.groupDatabuffers = null;
-        this.shaderProgram = null;
+        this.groupLiquids = null;
+        this.groupMaterials = null;
 
-        this.groupDoodads = null;
-        this.portalsByGroup = null;
         this.activeGroups = null;
         this.activeDoodads = null;
-        this.transposeInvModelMatrix = null;
+        this.lodGroupMap = null;
+
+        this.shaderProgram = null;
+        this.groupDatabuffers = null;
+
+        this.portalsByGroup = null;
+        this.groupViews = null;
+
+        this.portalShader = null;
+        if (this.portalDataBuffers) {
+            this.portalDataBuffers.dispose();
+        }
+        this.portalDataBuffers = null;
+        this.portalData = null;
+        this.portalMaterial = null;
+
         this.localCamera = null;
         this.localCameraFrustrum = null;
+        this.transposeInvModelMatrix = null;
     }
 
     get isLoaded() {

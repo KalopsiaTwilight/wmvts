@@ -1,5 +1,6 @@
 import { WoWParticleEmitterData } from "@app/modeldata";
 import { Float2, Float3, IPseudoRandomNumberGenerator } from "@app/math";
+import { IDisposable } from "@app/interfaces";
 
 export interface ParticleData {
     position: Float3;
@@ -37,15 +38,30 @@ export class AnimatedParticleGeneratorProps {
     }
 }
 
-export abstract class BaseParticleGenerator {
+export abstract class BaseParticleGenerator implements IDisposable {
     rng: IPseudoRandomNumberGenerator;
     animatedProps: AnimatedParticleGeneratorProps;
     m2Data: WoWParticleEmitterData;
+
+    isDisposing: boolean;
     
     constructor(rng: IPseudoRandomNumberGenerator, generatorData: WoWParticleEmitterData) {
         this.rng = rng;
         this.m2Data = generatorData;
         this.animatedProps = new AnimatedParticleGeneratorProps();
+        this.isDisposing = false;
+    }
+
+
+    dispose(): void {
+        if (this.isDisposing) {
+            return;
+        }
+
+        this.isDisposing = true;
+        this.rng = null;
+        this.animatedProps = null;
+        this.m2Data = null;
     }
 
     getNextEmissionRate() {

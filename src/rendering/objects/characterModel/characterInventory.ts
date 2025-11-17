@@ -2,12 +2,13 @@
 import { InventoryType, ItemFeatureFlag } from "@app/metadata";
 import { WoWAttachmentData } from "@app/modeldata";
 import { Float44 } from "@app/math";
+import { IDisposable } from "@app/interfaces";
 
 import { ItemModel, IItemModel } from "../itemModel";
 import { IM2Model } from "../m2Model";
 
 import { EquipmentSlot, GeoSet } from "./interfaces";
-import { type CharacterModel } from "../characterModel";
+import { type CharacterModel } from "./characterModel";
 
 export interface EquippedItemData {
     displayId1: number;
@@ -67,9 +68,10 @@ const slotToPriorityMap: { [key in EquipmentSlot]: number } = {
     [EquipmentSlot.End]: 0,
 }
 
-export class CharacterInventory {
+export class CharacterInventory implements IDisposable {
     inventoryData: { [key in EquipmentSlot]?: EquippedItemData }
     parent: CharacterModel
+    isDisposing: boolean;
 
     get isLoaded() {
         for(const slot in this.inventoryData) {
@@ -84,9 +86,14 @@ export class CharacterInventory {
     constructor(parent: CharacterModel) {
         this.parent = parent;
         this.inventoryData = { };
+        this.isDisposing = false;
     }
 
     equipItem(slot: EquipmentSlot, displayId1: number, displayId2?: number) {
+        if (this.isDisposing) {
+            return;
+        }
+        
         this.unloadItem(slot);
 
         const model1 = new ItemModel(displayId1);
@@ -133,10 +140,17 @@ export class CharacterInventory {
     }
 
     unequipItem(slot: EquipmentSlot) {
+        if (this.isDisposing) {
+            return;
+        }
         this.unloadItem(slot);
     }
 
     update(deltaTime: number) {
+        if (this.isDisposing) {
+            return;
+        }
+
         for(const slot in this.inventoryData) {
             const data = this.inventoryData[slot as unknown as EquipmentSlot];
             if (!data) {
@@ -157,6 +171,10 @@ export class CharacterInventory {
     }
 
     draw() {
+        if (this.isDisposing) {
+            return;
+        }
+
         for(const slot in this.inventoryData) {
             const data = this.inventoryData[slot as unknown as EquipmentSlot];
             if (!data) {
@@ -170,16 +188,22 @@ export class CharacterInventory {
     }
 
     dispose() {
+        if (this.isDisposing) {
+            return;
+        }
+        
+        this.isDisposing = true;
         for(const slot in this.inventoryData) {
             this.unloadItem(slot as unknown as EquipmentSlot);
         }
+        this.inventoryData = null;
+        this.parent = null;
     }
 
     getGeosetToggles(): { [key in GeoSet]?: number }  {
-        if (!this.isLoaded) {
+        if (!this.isLoaded || this.isDisposing) {
             return { };
         }
-
         const geoSetMap: { [key in GeoSet]?: number } = {};
 
         const helmItem = this.inventoryData[EquipmentSlot.Head];
@@ -264,6 +288,10 @@ export class CharacterInventory {
     }
 
     private updateAttachmentGeosets(slot: EquipmentSlot, model: IItemModel) {
+        if (this.isDisposing) {
+            return;
+        }
+        
         const itemMeta = model.itemMetadata;
         const geoSets = equipmentSlotToGeosetsMap[slot];
         if (model.component1) {
@@ -275,6 +303,10 @@ export class CharacterInventory {
     }
 
     private updateAttachmentGeoSetsForComponent(component: IM2Model, geoSets: GeoSet[], geosetGroup: number[], attachmentGeosetGroup: number[]) {
+        if (this.isDisposing) {
+            return;
+        }
+
         component.toggleGeosets(1, 5300, false);
         for(let i = 0; i < geoSets.length; i++) {
             const groupVal = geoSets[i] * 100;
@@ -288,6 +320,10 @@ export class CharacterInventory {
     }
 
     private updateComponentAttachments(data: EquippedItemData, model: IItemModel) {
+        if (this.isDisposing) {
+            return;
+        }
+        
         const parentBoneData = this.parent.boneData;
         if (!parentBoneData) {
             return;
@@ -306,6 +342,10 @@ export class CharacterInventory {
     }
 
     private unloadItem(slot: EquipmentSlot) {
+        if (this.isDisposing) {
+            return;
+        }
+
         const data = this.inventoryData[slot];
         if (!data) {
             return;
@@ -320,6 +360,10 @@ export class CharacterInventory {
     }
 
     private getAttachmentIdsForSlot(slot: EquipmentSlot, type: InventoryType) : number[] {
+        if (this.isDisposing) {
+            return;
+        }
+        
         switch(slot) {
             case EquipmentSlot.Head: return [11];
             case EquipmentSlot.Shoulders: return [6,5];

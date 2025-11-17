@@ -61,7 +61,7 @@ export class Background implements IBackground {
     }
 
     draw(): void {
-        if (!this.isLoaded) {
+        if (!this.isLoaded || this.isDisposing) {
             return;
         }
 
@@ -73,37 +73,61 @@ export class Background implements IBackground {
     }
 
     dispose(): void {
+        if (this.isDisposing) {
+            return;
+        }
+        
+        this.isDisposing = true;
         this.material = null;
         this.program = null;
         this.dataBuffers = null;
         this.engine = null;
+        this.transform = null;
     }
 
     setOffset(offset: Float2) {
+        if (this.isDisposing) {
+            return;
+        }
         this.transform[0] = offset[0];
         this.transform[1] = offset[1];
     }
 
     setScale(scale: Float2) {
+        if (this.isDisposing) {
+            return;
+        }
         this.transform[2] = scale[0];
         this.transform[3] = scale[1];
     }
 
     setTransform(transform: Float4) {
+        if (this.isDisposing) {
+            return;
+        }
         Float4.copy(transform, this.transform);
     }
 
     useColor(color: Float4) {
+        if (this.isDisposing) {
+            return;
+        }
         this.texture = this.engine.getSolidColorTexture(color);
         this.createMaterial();
     }
 
     useTexture(texture: ITexture) {
+        if (this.isDisposing) {
+            return;
+        }
         this.texture = texture;
         this.createMaterial();
     }
 
     useImage(url: string, opts?: ITextureOptions) {
+        if (this.isDisposing) {
+            return;
+        }
         const img = new Image();
         img.onload = () => {
             const genericRequest = new GenericBatchRequest(BATCH_IDENTIFIER, BACKGROUND_LAYER_ID, 0, 0);

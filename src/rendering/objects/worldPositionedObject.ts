@@ -12,9 +12,9 @@ export abstract class WorldPositionedObject implements IWorldPositionedObject {
 
     localModelMatrix: Float44;
     worldModelMatrix: Float44;
+    invWorldModelMatrix: Float44;
     localBoundingBox: AABB;
     worldBoundingBox: AABB;
-    invWorldModelMatrix: Float44;
 
     engine: IRenderingEngine;
 
@@ -62,6 +62,8 @@ export abstract class WorldPositionedObject implements IWorldPositionedObject {
         this.engine = null;
         this.worldModelMatrix = null;
         this.invWorldModelMatrix = null;
+        this.localBoundingBox = null;
+        this.worldBoundingBox = null;
     }
 
     updateModelMatrixFromParent() {
