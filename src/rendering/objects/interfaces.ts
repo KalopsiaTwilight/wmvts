@@ -10,7 +10,6 @@ export interface IRenderObject extends IDisposable {
     update(deltaTime: number): void;
     draw(): void;
 
-    fileId: FileIdentifier;
     isLoaded: boolean;
 }
 

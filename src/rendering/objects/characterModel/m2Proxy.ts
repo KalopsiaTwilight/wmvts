@@ -12,6 +12,10 @@ import { IM2Proxy } from "./interfaces";
 export type M2ProxyCallbackType = "modelCreated" | "modelDataLoaded" | "modelTexturesLoaded" ;
 
 export class M2Proxy extends WorldPositionedObject implements IM2Proxy  {
+    get fileId(): FileIdentifier {
+        return this.m2Model && this.m2Model.fileId;
+    }
+
     get isLoaded(): boolean {
         return this.m2Model && this.m2Model.isLoaded;
     }

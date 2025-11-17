@@ -24,6 +24,7 @@ export type M2ModelCallbackType = "modelDataLoaded" | "texturesLoaded" | "textur
 export interface IM2Model<Ct extends string = M2ModelCallbackType> 
 extends IWorldPositionedObject, ISkinnedObject, ISupportCallbacks<Ct>, IImmediateCallbackable<Ct> 
 {
+    fileId: FileIdentifier;
     // TODO: Deprecate direct property access
     modelData: WoWModelData
 

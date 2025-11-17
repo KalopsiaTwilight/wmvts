@@ -74,13 +74,6 @@ export class WoWModelViewer {
         this.renderEngine.addSceneObject(object, 0);
     }
 
-    removeModelByFileId(fileId: FileIdentifier) {
-        const model = this.renderEngine.sceneObjects.find(x => x.fileId === fileId);
-        if (model) {
-            this.removeSceneObject(model);
-        }
-    }
-
     removeSceneObject(object: IRenderObject) {
         this.renderEngine.removeSceneObject(object);
     }

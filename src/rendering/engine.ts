@@ -239,6 +239,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
                 const avgFps = this.fpsCounter.reduce((acc, next) => acc + next, 0) / this.fpsCounter.length;
                 this.fpsElement.textContent = "FPS: " + Math.floor(avgFps);
             }
+            
             if (this.batchesElement) {
                 this.batchesElement.textContent = "Batches: " + drawOrderRequests.length;
             }

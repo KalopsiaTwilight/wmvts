@@ -1,12 +1,10 @@
 import { AABB, Float3, Float4, Float44 } from "@app/math";
-import { FileIdentifier } from "@app/metadata";
 
 import { IRenderingEngine } from "../interfaces";
 import { IWorldPositionedObject } from "./interfaces";
 
 export abstract class WorldPositionedObject implements IWorldPositionedObject {
     isDisposing: boolean;
-    fileId: FileIdentifier;
 
     parent?: IWorldPositionedObject;
     children: IWorldPositionedObject[];

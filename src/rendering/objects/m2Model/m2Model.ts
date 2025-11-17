@@ -35,6 +35,7 @@ interface TextureUnitData {
 const BATCH_IDENTIFIER = "M2";
 
 export class M2Model extends WorldPositionedObject implements IM2Model {
+    fileId: FileIdentifier;
     modelData: WoWModelData;
     boneFileId?: FileIdentifier;
     boneFileData?: WoWBoneFileData;

@@ -53,7 +53,6 @@ const LIQUID_WMO_WATER = 13;
 const LIQUID_WMO_SLIME = 20;
 
 export class WMOLiquid extends WorldPositionedObject {
-    fileId: number;
     data: WoWWorldModelLiquid
     groupData: WoWWorldModelGroup
     wmoFlags: WorldModelRootFlags;
@@ -76,7 +75,6 @@ export class WMOLiquid extends WorldPositionedObject {
 
     constructor(data: WoWWorldModelLiquid, groupData: WoWWorldModelGroup, wmoFlags: WorldModelRootFlags) {
         super();
-        this.fileId = -1;
         this.data = data;
         this.groupData = groupData;
         this.wmoFlags = wmoFlags;

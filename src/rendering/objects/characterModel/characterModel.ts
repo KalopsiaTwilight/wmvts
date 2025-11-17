@@ -26,7 +26,6 @@ interface TextureSectionTextureData {
 }
 
 export class CharacterModel extends M2Proxy implements ICharacterModel {
-    fileId: FileIdentifier;
     modelId: RecordIdentifier;
     race: number;
     gender: number;
