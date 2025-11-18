@@ -1,8 +1,8 @@
 import { IDataLoader, IProgressReporter,  RequestFrameFunction, ErrorHandlerFn  } from "./interfaces";
-import { RenderingEngine, IRenderObject, WebGlGraphics, M2Model, WMOModel } from "./rendering";
+import { RenderingEngine, IRenderObject, WebGlGraphics, M2Model, WMOModel, IWMOModel, IM2Model, ICharacterModel, IItemModel, ITextureVariantModel } from "./rendering";
 import { Camera } from "./cameras";
 import { Float4, Float3 } from "./math";
-import { FileIdentifier } from "./metadata";
+import { FileIdentifier, RecordIdentifier } from "./metadata";
 
 export type CanvasCreationFunction = () => HTMLCanvasElement;
 
@@ -63,14 +63,32 @@ export class WoWModelViewer {
         this.initialize();
     }
 
-    addM2Model(fileId: FileIdentifier) {
+    addM2Model(fileId: FileIdentifier): IM2Model {
         const model = new M2Model(fileId);
         this.addSceneObject(model);
         return model;
     }
 
-    addWMOModel(fileId: FileIdentifier) {
-        const model = new WMOModel(fileId);
+    addWMOModel(fileId: FileIdentifier): IWMOModel {
+        const model = this.renderEngine.createWMOModel(fileId);
+        this.addSceneObject(model);
+        return model;
+    }
+
+    addCharacterModel(modelId: RecordIdentifier): ICharacterModel {
+        const model = this.renderEngine.createCharacterModel(modelId);
+        this.addSceneObject(model);
+        return model;
+    }
+
+    addItemModel(modelId: RecordIdentifier): IItemModel {
+        const model = this.renderEngine.createItemModel(modelId);
+        this.addSceneObject(model);
+        return model;
+    }
+
+    addTextureVariantModel(fileId: FileIdentifier): ITextureVariantModel {
+        const model = this.renderEngine.createTextureVariantModel(fileId);
         this.addSceneObject(model);
         return model;
     }

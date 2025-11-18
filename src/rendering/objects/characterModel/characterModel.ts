@@ -9,7 +9,7 @@ import { ICallbackManager, CallbackFn } from "@app/utils";
 import { ITexture } from "@app/rendering/graphics";
 import { IRenderingEngine } from "@app/rendering/interfaces";
 
-import { M2Model } from "../m2Model";
+import { IM2Model } from "../m2Model";
 
 import { SkinLayerTextureCombiner } from "./skinLayerTextureCombiner";
 import { M2Proxy  } from "./m2Proxy";
@@ -40,7 +40,7 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     private textureLayerBaseTextures: { [key: string]: [ITexture, ITexture, ITexture] }
     private textureLayerCombiners: { [key: string]: SkinLayerTextureCombiner }
     private textureSectionTextures: { [key: number]: TextureSectionTextureData[] }
-    private skinnedModels: { [key: FileIdentifier]: M2Model }
+    private skinnedModels: { [key: FileIdentifier]: IM2Model }
     private inventory: CharacterInventory
     override callbackMgr: ICallbackManager<CharacterModelCallbackType, CharacterModel>;
 
@@ -524,7 +524,7 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
         const fileIds = new Set(skinnedModelFileIds);
         if (fileIds.size != 0) {
             for(const fileId of fileIds) {
-                const model = new M2Model(fileId);
+                const model = this.engine.createM2Model(fileId);
                 this.addChild(model);
                 model.attachTo(this);
                 model.toggleGeosets(0, 5300, false);

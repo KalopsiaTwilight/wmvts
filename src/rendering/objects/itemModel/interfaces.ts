@@ -9,13 +9,14 @@ import { IM2Model } from "../m2Model";
 export type ItemModelCallbackType = "metadataLoaded" | "sectionTexturesLoaded" | "componentsLoaded" 
 
 export interface IItemModel<Ct extends string = ItemModelCallbackType> extends 
-    IImmediateCallbackable<Ct>, ISupportCallbacks<Ct>, IWorldPositionedObject  {
+     ISupportCallbacks<Ct>, IImmediateCallbackable<Ct>, IWorldPositionedObject  {
     // TODO: Deprecate property access
     itemMetadata: ItemMetadata
     component1?: IM2Model
     component2?: IM2Model
     component1Texture?: ITexture;
     component2Texture?: ITexture;
+    sectionTextures: { [key: number]: [ITexture, ITexture, ITexture] };
 
     equipTo(character: ICharacterModel): void;
 }

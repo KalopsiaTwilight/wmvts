@@ -13,7 +13,7 @@ import {
 import { IRenderingEngine } from "@app/rendering/interfaces"
 
 import { WorldPositionedObject } from "../worldPositionedObject";
-import { M2Model } from "../m2Model";
+import { IM2Model } from "../m2Model";
 
 import { getWMOPixelShader, getWMOVertexShader } from "./wmoShaders";
 import fragmentShaderProgramText from "./wmoModel.frag";
@@ -50,12 +50,12 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
     doodadSetId: number;
     loadedTextures: { [key: number]: ITexture }
     // Used to cull / load doodads based on group
-    groupDoodads: { [key: number]: M2Model[] }
+    groupDoodads: { [key: number]: IM2Model[] }
     groupLiquids: { [key: number]: WMOLiquid[] }
     groupMaterials: { [key: number]: RenderMaterial }
     
     activeGroups: number[];
-    activeDoodads: M2Model[];
+    activeDoodads: IM2Model[];
     lodGroupMap: number[];
 
     shaderProgram: IShaderProgram;
@@ -244,7 +244,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
                         continue;
                     }
 
-                    const doodadModel = new M2Model(modelId);
+                    const doodadModel = this.engine.createM2Model(modelId);
                     this.addChild(doodadModel);
                     const scale = Float3.create(doodadDef.scale, doodadDef.scale, doodadDef.scale);
                     doodadModel.setModelMatrix(doodadDef.position, doodadDef.rotation, scale);

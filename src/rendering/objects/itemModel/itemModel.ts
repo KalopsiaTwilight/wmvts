@@ -6,7 +6,7 @@ import { IRenderingEngine } from "@app/rendering/interfaces";
 
 import { WorldPositionedObject } from "../worldPositionedObject";
 import { ICharacterModel } from "../characterModel";
-import { M2Model, IM2Model, ParticleColorOverride, ParticleColorOverrides } from "../m2Model";
+import { IM2Model, ParticleColorOverride, ParticleColorOverrides } from "../m2Model";
 
 import { IItemModel, ItemModelCallbackType } from "./interfaces";
 
@@ -31,23 +31,17 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
 
     callbackMgr: ICallbackManager<ItemModelCallbackType, ItemModel>
 
-    private isInitialized: boolean;
-
     constructor(displayInfoId: RecordIdentifier) {
         super();
         this.displayInfoId = displayInfoId;
         this.sectionTextures = { };
-        this.isInitialized = false;
     }
     
     override initialize(engine: IRenderingEngine): void {
-        if (!this.isInitialized) {
-            this.isInitialized = true;
-            super.initialize(engine);
-            this.engine.getItemMetadata(this.displayInfoId).then(this.onItemMetadataLoaded.bind(this));
+        super.initialize(engine);
+        this.engine.getItemMetadata(this.displayInfoId).then(this.onItemMetadataLoaded.bind(this));
 
-            this.callbackMgr = this.engine.getCallbackManager(this);
-        }
+        this.callbackMgr = this.engine.getCallbackManager(this);
     }
 
     override get isLoaded(): boolean {
@@ -93,7 +87,6 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
         this.parent = character;
         this.character.children.push(this);
         this.updateModelMatrixFromParent();
-        this.initialize(character.engine);
     }
 
     override dispose(): void {
@@ -186,7 +179,7 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
                 textureLoadingPromises.push(promise);
             }
             if (modelFileId) {
-                this.component1 = new M2Model(modelFileId);
+                this.component1 = this.engine.createM2Model(modelFileId);
                 this.addChild(this.component1);
                 this.component1.attachTo(this.character);
                 this.component1.on("texturesLoaded", this.onComponentLoaded.bind(this))
@@ -213,7 +206,7 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
                 textureLoadingPromises.push(promise);
             }
             if (modelFileId) {
-                this.component2 = new M2Model(modelFileId);
+                this.component2 = this.engine.createM2Model(modelFileId);
                 this.addChild(this.component2);
                 this.component2.attachTo(this.character);
                 this.component2.on("texturesLoaded", this.onComponentLoaded.bind(this))

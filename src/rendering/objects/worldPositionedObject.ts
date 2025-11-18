@@ -107,7 +107,6 @@ export abstract class WorldPositionedObject implements IWorldPositionedObject {
     protected addChild(obj: IWorldPositionedObject) {
         obj.parent = this;
         this.children.push(obj);
-        obj.initialize(this.engine);
     }
 
     protected setBoundingBox(boundingBox: AABB) {

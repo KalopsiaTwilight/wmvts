@@ -6,15 +6,11 @@ import { ICallbackManager, IImmediateCallbackable } from "@app/utils";
 
 import { DrawingBatchRequest, IDataBuffers, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest, RenderMaterial } from "./graphics";
 import { IModelPickingStrategy, ITexturePickingStrategy } from "./strategies";
+import { ICharacterModel, IItemModel, IM2Model, ITextureVariantModel, IWMOModel } from "./objects";
 
 export interface IRenderingEngine {
     graphics: IGraphics;
-
-    // various
-    timeElapsed: number;
-    debugPortals: boolean;
-    doodadRenderDistance: number;
-
+    containerElement?: HTMLElement;
     // Camera data
     projectionMatrix: Float44;
     viewMatrix: Float44;
@@ -22,23 +18,24 @@ export interface IRenderingEngine {
     projViewMatrix: Float44;
     cameraFrustrum: Frustrum;
     cameraPosition: Float3;
+    // various
+    timeElapsed: number;
+    debugPortals: boolean;
+    doodadRenderDistance: number;
 
-    containerElement?: HTMLElement;
-
+    // Rendering methods
     processNewBoundingBox(boundingBox: AABB): void;
-
-    texturePickingStrategy: ITexturePickingStrategy;
-    modelPickingStrategy: IModelPickingStrategy;
-
     submitDrawRequest(request: DrawingBatchRequest): void;
     submitOtherGraphicsRequest(request: RenderingBatchRequest): void;
 
+    // Managing webgl resources
     getTexture(fileId: FileIdentifier, opts?: ITextureOptions): Promise<ITexture>;
     getSolidColorTexture(color: Float4): ITexture;
     getUnknownTexture(): ITexture;
     getShaderProgram(key: string, vertexShader: string, fragmentShader: string): IShaderProgram;
     getDataBuffers(key: string, createFn: (graphics: IGraphics) => IDataBuffers): IDataBuffers;
 
+    // Caching/unifying data management
     getBaseMaterial(): RenderMaterial;
     getM2ModelFile(fileId: FileIdentifier): Promise<WoWModelData | null>;
     getWMOModelFile(fileId: FileIdentifier): Promise<WoWWorldModelData | null>;
@@ -48,6 +45,14 @@ export interface IRenderingEngine {
     getTextureVariationsMetadata(fileId: FileIdentifier): Promise<TextureVariationsMetadata | null>;
     getBoneFileData(fileId: FileIdentifier): Promise<WoWBoneFileData | null>;
 
-    getRandomNumberGenerator(seed?: number | string): IPseudoRandomNumberGenerator;
+    // factory / DI
     getCallbackManager<TKeys extends string, T extends IImmediateCallbackable<TKeys>>(obj: T): ICallbackManager<TKeys, T>;
+    getRandomNumberGenerator(seed?: number | string): IPseudoRandomNumberGenerator;
+    texturePickingStrategy: ITexturePickingStrategy;
+    modelPickingStrategy: IModelPickingStrategy;
+    createM2Model(fileId: FileIdentifier): IM2Model;
+    createWMOModel(fileId: FileIdentifier): IWMOModel;
+    createItemModel(displayId: RecordIdentifier): IItemModel;
+    createCharacterModel(displayId: RecordIdentifier): ICharacterModel;
+    createTextureVariantModel(fileId: FileIdentifier): ITextureVariantModel;
 }

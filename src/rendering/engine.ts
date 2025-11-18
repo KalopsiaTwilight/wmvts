@@ -1,11 +1,11 @@
 import { Camera } from "@app/cameras";
-import { TextureVariationsMetadata, LiquidTypeMetadata, CharacterMetadata, ItemMetadata } from "@app/metadata";
+import { TextureVariationsMetadata, LiquidTypeMetadata, CharacterMetadata, ItemMetadata, FileIdentifier, RecordIdentifier } from "@app/metadata";
 import { AABB, AleaPrngGenerator, Float3, Float4, Float44, Frustrum } from "@app/math";
 import { IDisposable, IProgressReporter, IDataLoader, RequestFrameFunction, ErrorHandlerFn, ErrorType } from "@app/interfaces";
 import { CallbackManager, IImmediateCallbackable } from "@app/utils";
 import { WoWModelData, WoWWorldModelData, WoWBoneFileData } from "@app/modeldata";
 
-import { IRenderObject, isWorldPositionedObject } from "./objects";
+import { CharacterModel, IRenderObject, isWorldPositionedObject, ItemModel, M2Model, TextureVariantModel, WMOModel } from "./objects";
 import { 
     DrawingBatchRequest, IDataBuffers, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest, 
     RenderMaterial 
@@ -573,5 +573,35 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
             this.debugContainer.remove()
             this.debugContainer = null;
         }
+    }
+
+    createM2Model(fileId: FileIdentifier) {
+        const model = new M2Model(fileId);
+        model.initialize(this);
+        return model;
+    }
+
+    createWMOModel(fileId: FileIdentifier) {
+        const model = new WMOModel(fileId);
+        model.initialize(this);
+        return model;
+    }
+
+    createItemModel(displayId: RecordIdentifier) {
+        const model = new ItemModel(displayId);
+        model.initialize(this);
+        return model;
+    }
+
+    createCharacterModel(modelId: RecordIdentifier) {
+        const model = new CharacterModel(modelId);
+        model.initialize(this);
+        return model;
+    }
+
+    createTextureVariantModel(id: FileIdentifier) {
+        const model = new TextureVariantModel(id);
+        model.initialize(this);
+        return model;
     }
 }

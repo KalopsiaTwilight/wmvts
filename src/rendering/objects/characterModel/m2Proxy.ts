@@ -4,7 +4,7 @@ import { FileIdentifier } from "@app/metadata";
 import { ITexture } from "@app/rendering/graphics";
 import { IRenderingEngine } from "@app/rendering/interfaces";
 
-import { M2Model, IM2Model, ISkinnedObject, ParticleColorOverrides } from "../m2Model";
+import { IM2Model, ISkinnedObject, ParticleColorOverrides } from "../m2Model";
 import { WorldPositionedObject } from "../worldPositionedObject";
 
 import { IM2Proxy } from "./interfaces";
@@ -46,7 +46,7 @@ export class M2Proxy extends WorldPositionedObject implements IM2Proxy  {
             this.m2Model.dispose();
         }
 
-        this.m2Model = new M2Model(fileId);
+        this.m2Model = this.engine.createM2Model(fileId);
         this.addChild(this.m2Model);
 
         this.m2Model.on("modelDataLoaded", () => {

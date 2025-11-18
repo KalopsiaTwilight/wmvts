@@ -4,7 +4,7 @@ import { WoWAttachmentData } from "@app/modeldata";
 import { Float44 } from "@app/math";
 import { IDisposable } from "@app/interfaces";
 
-import { ItemModel, IItemModel } from "../itemModel";
+import { IItemModel } from "../itemModel";
 import { IM2Model } from "../m2Model";
 
 import { EquipmentSlot, GeoSet } from "./interfaces";
@@ -96,9 +96,9 @@ export class CharacterInventory implements IDisposable {
         
         this.unloadItem(slot);
 
-        const model1 = new ItemModel(displayId1);
+        const model1 = this.parent.engine.createItemModel(displayId1);
         model1.equipTo(this.parent);
-        model1.on("metadataLoaded", (model) => {
+        model1.on("metadataLoaded", (model: IItemModel) => {
             const attachments = this.getAttachmentIdsForSlot(slot, model.itemMetadata.inventoryType);
             this.inventoryData[slot].attachmentIds = attachments;
             this.inventoryData[slot].attachmentMatrices = attachments.map(() => Float44.identity());
@@ -107,10 +107,10 @@ export class CharacterInventory implements IDisposable {
                 data.attachments = data.attachmentIds.map(i => this.parent.modelData.attachments.find(x => x.id === i));
             })
         })
-        model1.on("componentsLoaded", (model) => {
+        model1.on("componentsLoaded", (model: IItemModel) => {
             this.updateAttachmentGeosets(slot, model);
         })
-        model1.on("sectionTexturesLoaded", (model) => {
+        model1.on("sectionTexturesLoaded", (model: IItemModel) => {
             for(const section in model.sectionTextures) {
                 const sectionNr = parseInt(section, 10);
                 let priority = slotToPriorityMap[slot];
@@ -122,9 +122,9 @@ export class CharacterInventory implements IDisposable {
             }
         });
 
-        let model2: ItemModel;
+        let model2: IItemModel;
         if (displayId2) {
-            model2 = new ItemModel(displayId2);
+            model2 = this.parent.engine.createItemModel(displayId2);
             model2.equipTo(this.parent);
         }
 
