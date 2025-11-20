@@ -225,6 +225,9 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
             this.textureSectionTextures[section] = data;
         }
         data.push({ priority, slot, textures });
+    }
+
+    reloadSkinTextures() {
         if (this.skinLayerTexturesLoaded) {
             this.updateSkinTextures();
         }

@@ -122,6 +122,7 @@ export class CharacterInventory implements IDisposable {
                 }
                 this.parent.setTexturesForSection(sectionNr, slot, priority, model.sectionTextures[section]);
             }
+            this.parent.reloadSkinTextures();
             this.parent.updateGeosets();
         });
 
