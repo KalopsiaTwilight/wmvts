@@ -28,7 +28,6 @@ interface TextureUnitData {
     color: Float4;
     material: RenderMaterial,
     textureWeights: Float4;
-    textures: ITexture[];
     textureMatrices: Float44[];
 }
 
@@ -234,7 +233,11 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
         }
 
         this.on("texturesLoaded", () => {
-            this.textureObjects[index].swapFor(texture);
+            this.textureObjects[index] = texture;
+            // Recreate materials for new texture(s)
+            for (let i = 0; i < this.modelData.textureUnits.length; i++) {
+                this.createMaterialForTexUnit(i);
+            }
         })
     }
 
@@ -795,22 +798,31 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
         const texUnit = this.modelData.textureUnits[i];
 
         let renderMaterial = this.renderer.getBaseMaterial();
-
-        const texUnitData: TextureUnitData = {
+        this.textureUnitData[i] = {
             color: Float4.one(),
             textureMatrices: [Float44.identity(), Float44.identity()],
             textureWeights: Float4.one(),
-            textures: [this.renderer.getUnknownTexture(), this.renderer.getUnknownTexture(), this.renderer.getUnknownTexture(), this.renderer.getUnknownTexture()],
             material: renderMaterial,
             geoSetId: this.modelData.submeshes[texUnit.skinSectionIndex].submeshId,
             show: true
-        }
+        };
 
+        this.createMaterialForTexUnit(i);
+    }
+
+    private createMaterialForTexUnit(i: number) {
+        const texUnit = this.modelData.textureUnits[i];
+        const texUnitData = this.textureUnitData[i];
+        const renderMaterial = texUnitData.material;
+
+        const unkTexture = this.renderer.getUnknownTexture();
+        const textures = [unkTexture, unkTexture, unkTexture, unkTexture];
+           
         if (!(texUnit.textureComboIndex < 0 || texUnit.textureComboIndex > this.modelData.textureCombos.length)) {
             for (let j = 0; j < texUnit.textureCount; j++) {
                 const textureIndex = this.modelData.textureCombos[texUnit.textureComboIndex + j];
                 if (textureIndex > -1 && textureIndex < this.modelData.textures.length) {
-                    texUnitData.textures[j] = this.textureObjects[textureIndex]
+                    textures[j] = this.textureObjects[textureIndex]
                 }
             }
         }
@@ -835,13 +847,12 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
             "u_blendMode": blendMode,
             "u_pixelShader": getM2PixelShaderId(texUnit.shaderId, texUnit.textureCount),
             "u_unlit": 0 != (WoWMaterialFlags.Unlit & material.flags),
-            "u_texture1": texUnitData.textures[0],
-            "u_texture2": texUnitData.textures[1],
-            "u_texture3": texUnitData.textures[2],
-            "u_texture4": texUnitData.textures[3],
+            "u_texture1": textures[0],
+            "u_texture2": textures[1],
+            "u_texture3": textures[2],
+            "u_texture4": textures[3],
             "u_textureWeights": texUnitData.textureWeights
         })
 
-        this.textureUnitData[i] = texUnitData;
     }
 }

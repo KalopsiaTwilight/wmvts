@@ -36,9 +36,7 @@ export class TextureVariantModel extends M2Model implements ITextureVariantModel
             }
 
             this.renderer.getTexture(data.textureIds[i]).then((texture) => {
-                this.on("texturesLoaded", () => {
-                    this.textureObjects[this.modelData.textureCombos[i]].swapFor(texture)
-                })
+                this.swapTexture(i, texture);
             })
         }
     }

@@ -179,7 +179,7 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
             if (textureFileId) {
                 this.component1Texture = this.renderer.getUnknownTexture();
                 const promise = this.renderer.getTexture(textureFileId).then((texture) => {
-                    this.component1Texture.swapFor(texture);
+                    this.component1Texture = texture;
                     if (this.component1) {
                         // TODO: Test if it's always index 0 or type: 2 or w/e
                         this.component1.swapTextureType(2, texture);
@@ -206,7 +206,7 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
             if (textureFileId) {
                 this.component2Texture = this.renderer.getUnknownTexture();
                 const promise = this.renderer.getTexture(textureFileId).then((texture) => {
-                    this.component2Texture.swapFor(texture);
+                    this.component2Texture = texture;
                     if (this.component2) {
                         // TODO: Test if it's always index 0 or type: 2 or w/e
                         this.component2.swapTextureType(2, texture);
