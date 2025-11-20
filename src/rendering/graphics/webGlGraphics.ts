@@ -47,6 +47,12 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
         if (this.lastUsedDatabuffers) {
             this.lastUsedDatabuffers.unbind();
         }
+        // Ensure no frame buffer is bound after drawing
+        if (this.lastUsedFrameBuffer) {
+            this.lastUsedFrameBuffer.unbind();
+        }
+        // Ensure no texture is bound after done drawing
+        this.gl.bindTexture(this.gl.TEXTURE_2D, null);
     }
     
     activateBlendMode(blendMode: GxBlend) 

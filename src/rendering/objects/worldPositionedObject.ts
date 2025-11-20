@@ -113,7 +113,7 @@ export abstract class WorldPositionedObject implements IWorldPositionedObject {
         }
     }
 
-    protected addChild(obj: IWorldPositionedObject) {
+    addChild(obj: IWorldPositionedObject) {
         obj.parent = this;
         this.children.push(obj);
         if (this.isAttachedToRenderer) {

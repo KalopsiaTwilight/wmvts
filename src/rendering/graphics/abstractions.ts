@@ -64,8 +64,6 @@ export interface ITexture extends IBindable {
     width: number;
     height: number;
     fileId: FileIdentifier;
-
-    swapFor(other?: ITexture): void;
 }
 
 export interface IFrameBuffer extends IBindable {

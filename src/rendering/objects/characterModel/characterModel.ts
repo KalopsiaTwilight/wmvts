@@ -16,6 +16,7 @@ import { SkinLayerTextureCombiner } from "./skinLayerTextureCombiner";
 import { M2Proxy  } from "./m2Proxy";
 import { CharacterModelCallbackType, EquipmentSlot, GeoSet, ICharacterModel } from "./interfaces"
 import { CharacterInventory } from "./characterInventory";
+import { Background } from "../background";
 
 
 const DEFAULT_GEOSET_IDS = [1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 2, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
@@ -144,7 +145,7 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     }
 
     override draw() {
-        if (this.isDisposing) {
+        if (this.isDisposing || !this.isLoaded) {
             return;
         }
 

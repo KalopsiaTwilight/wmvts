@@ -25,6 +25,7 @@ export interface IWorldPositionedObject extends IRenderObject {
     updateModelMatrixFromParent(): void;
     setModelMatrix(position: Float3|null, rotation: Float4|null, scale: Float3|null): void;
     setModelMatrixFromMatrix(matrix: Float44): void;
+    addChild(obj: IWorldPositionedObject): void;
 }
 
 export function isWorldPositionedObject(obj: any): obj is IWorldPositionedObject {

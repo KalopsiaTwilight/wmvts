@@ -94,7 +94,7 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
 
         this.character = character;
         this.parent = character;
-        this.character.children.push(this);
+        this.character.addChild(this);
         this.updateModelMatrixFromParent();
     }
 
@@ -226,9 +226,8 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
         }
 
         if (metadata.componentSections) {
-            const unkTexture = this.renderer.getUnknownTexture();
             for(const section of metadata.componentSections) {
-                this.sectionTextures[section.section] = [unkTexture, unkTexture, unkTexture];
+                this.sectionTextures[section.section] = [null, null, null];
                 const textureIds = this.texturePickingStrategy(section.textures, race, gender, charClass);
 
                 for(let i = 0; i < 2; i++) {

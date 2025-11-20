@@ -121,8 +121,8 @@ export class CharacterInventory implements IDisposable {
                     priority -= 2;
                 }
                 this.parent.setTexturesForSection(sectionNr, slot, priority, model.sectionTextures[section]);
-                this.parent.updateGeosets();
             }
+            this.parent.updateGeosets();
         });
 
         let model2: IItemModel;

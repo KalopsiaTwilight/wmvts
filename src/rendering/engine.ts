@@ -206,7 +206,9 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
             for(const batch of otherGraphicsWork) {
                 batch.submit(this.graphics);
             }
+            this.graphics.endFrame();
             this.otherGraphicsRequests = [];
+
             
             for (const obj of this.sceneObjects) {
                 obj.draw();
@@ -216,8 +218,8 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
             const drawOrderRequests = this.drawRequests.sort((r1, r2) => r1.compareTo(r2))
                 
             // Draw new frame
-            this.graphics.startFrame(this.width, this.height);
             this.graphics.clearFrame(this.clearColor);
+            this.graphics.startFrame(this.width, this.height);
             for (const batch of drawOrderRequests) {
                 batch.submit(this.graphics);
             }
