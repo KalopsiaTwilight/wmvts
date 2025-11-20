@@ -8,7 +8,8 @@ import {
     BufferDataType, RenderMaterial, DrawingBatchRequest
 } from "@app/rendering/graphics";
 import { 
-    IRenderingEngine
+    IDataManager,
+    IRenderer
 } from "@app/rendering/interfaces";
 import { WorldPositionedObject } from "../worldPositionedObject"
 
@@ -73,7 +74,9 @@ export class WMOLiquid extends WorldPositionedObject {
     textures: ITexture[];
     animatingTextureCount: number;
 
-    constructor(data: WoWWorldModelLiquid, groupData: WoWWorldModelGroup, wmoFlags: WorldModelRootFlags) {
+    dataManager: IDataManager;
+
+    constructor(data: WoWWorldModelLiquid, groupData: WoWWorldModelGroup, wmoFlags: WorldModelRootFlags, dataManager: IDataManager) {
         super();
         this.data = data;
         this.groupData = groupData;
@@ -81,12 +84,13 @@ export class WMOLiquid extends WorldPositionedObject {
 
         this.metadataLoaded = false;
         this.texturesLoaded = false;
+        this.dataManager = dataManager;
     }
 
-    override initialize(engine: IRenderingEngine): void {
-        super.initialize(engine);
+    override attachToRenderer(renderer: IRenderer): void {
+        super.attachToRenderer(renderer);
 
-        this.shaderProgram = engine.getShaderProgram("WMOLiquid", vertexShaderProgramText, fragmentShaderProgramText);
+        this.shaderProgram = renderer.getShaderProgram("WMOLiquid", vertexShaderProgramText, fragmentShaderProgramText);
 
         const potentialVertices: WMOLiquidVertexData[] = [];
         const [width, height] = this.data.liquidTiles;
@@ -145,7 +149,7 @@ export class WMOLiquid extends WorldPositionedObject {
             }
         }
 
-        const vertexBuffer = this.engine.graphics.createVertexDataBuffer([
+        const vertexBuffer = this.renderer.graphics.createVertexDataBuffer([
             { index: this.shaderProgram.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: 24, offset: 0 },
             { index: this.shaderProgram.getAttribLocation('a_texCoord'), size: 2, type: BufferDataType.Float, normalized: false, stride: 24, offset: 12 },
             { index: this.shaderProgram.getAttribLocation('a_depth'),    size: 1, type: BufferDataType.Float, normalized: false, stride: 24, offset: 20 },
@@ -163,13 +167,13 @@ export class WMOLiquid extends WorldPositionedObject {
         }
         vertexBuffer.setData(buffer);
 
-        const indexBuffer = this.engine.graphics.createVertexIndexBuffer(true);
+        const indexBuffer = this.renderer.graphics.createVertexIndexBuffer(true);
         indexBuffer.setData(new Uint16Array(this.indices));
         
-        this.dataBuffers = this.engine.graphics.createDataBuffers(vertexBuffer, indexBuffer);
+        this.dataBuffers = this.renderer.graphics.createDataBuffers(vertexBuffer, indexBuffer);
 
         this.liquidType = this.getLiquidType(tempLiquidtype);
-        this.engine.getLiquidTypeMetadata(this.liquidType).then(this.onMetadataLoaded.bind(this))
+        this.dataManager.getLiquidTypeMetadata(this.liquidType).then(this.onMetadataLoaded.bind(this))
     }
 
     draw(): void {
@@ -179,14 +183,14 @@ export class WMOLiquid extends WorldPositionedObject {
 
         // Select material based upon time 
         const timePerTexture = 1000 / 10;
-        const materialIndex = Math.floor((this.engine.timeElapsed / timePerTexture) % this.animatingTextureCount);
+        const materialIndex = Math.floor((this.renderer.timeElapsed / timePerTexture) % this.animatingTextureCount);
         const material = this.materials[materialIndex];
 
         const batchRequest = new DrawingBatchRequest(BATCH_IDENTIFIER, this.liquidTypeMetadata.id, materialIndex);
         batchRequest.useMaterial(material);
         batchRequest.useDataBuffers(this.dataBuffers);
         batchRequest.drawIndexedTriangles(0, this.indices.length);
-        this.engine.submitDrawRequest(batchRequest);
+        this.renderer.submitDrawRequest(batchRequest);
     }
 
     override dispose() {
@@ -241,7 +245,7 @@ export class WMOLiquid extends WorldPositionedObject {
         for (let i = 0; i < this.textures.length; i++) {
             const fileId = metadata.textures[i].fileDataId;
             if (fileId) {
-                const promise = this.engine.getTexture(fileId).then((tex) => {
+                const promise = this.renderer.getTexture(fileId).then((tex) => {
                     this.textures[i] = tex;
                 });
                 texturePromises.push(promise);
@@ -318,7 +322,7 @@ export class WMOLiquid extends WorldPositionedObject {
         this.materials = new Array(this.textures.length);
         for (let i = 0; i < this.textures.length; i++) {
             const texture = this.textures[i];
-            const material = this.engine.getBaseMaterial();
+            const material = this.renderer.getBaseMaterial();
             material.useCounterClockWiseFrontFaces(true);
             material.useBackFaceCulling(false);
             material.useBlendMode(GxBlend.GxBlend_Alpha)

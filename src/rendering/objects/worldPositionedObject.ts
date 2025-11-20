@@ -15,7 +15,11 @@ export abstract class WorldPositionedObject implements IWorldPositionedObject {
     localBoundingBox: AABB;
     worldBoundingBox: AABB;
 
-    engine: IRenderingEngine;
+    renderer: IRenderingEngine;
+
+    get isAttachedToRenderer() {
+        return this.renderer != null;
+    }
 
     constructor() {
         this.children = [];
@@ -29,8 +33,13 @@ export abstract class WorldPositionedObject implements IWorldPositionedObject {
         this.isDisposing = false;
     }
 
-    initialize(engine: IRenderingEngine): void {
-        this.engine = engine;
+    attachToRenderer(engine: IRenderingEngine): void {
+        this.renderer = engine;
+        for(const child of this.children) {
+            if (!child.isAttachedToRenderer) {
+                child.attachToRenderer(engine);
+            }
+        }
     }
 
     update(deltaTime: number): void {
@@ -58,7 +67,7 @@ export abstract class WorldPositionedObject implements IWorldPositionedObject {
             };
         }
         this.children = null;
-        this.engine = null;
+        this.renderer = null;
         this.worldModelMatrix = null;
         this.invWorldModelMatrix = null;
         this.localBoundingBox = null;
@@ -107,11 +116,14 @@ export abstract class WorldPositionedObject implements IWorldPositionedObject {
     protected addChild(obj: IWorldPositionedObject) {
         obj.parent = this;
         this.children.push(obj);
+        if (this.isAttachedToRenderer) {
+            obj.attachToRenderer(this.renderer);
+        }
     }
 
     protected setBoundingBox(boundingBox: AABB) {
         this.localBoundingBox = boundingBox; 
         this.worldBoundingBox = AABB.transform(this.localBoundingBox, this.worldModelMatrix);
-        this.engine.processNewBoundingBox(this.worldBoundingBox);
+        this.renderer.processNewBoundingBox(this.worldBoundingBox);
     }
 }

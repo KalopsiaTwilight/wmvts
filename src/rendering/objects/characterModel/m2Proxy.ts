@@ -2,7 +2,7 @@ import { CallbackFn, ICallbackManager } from "@app/utils";
 import { FileIdentifier } from "@app/metadata";
 
 import { ITexture } from "@app/rendering/graphics";
-import { IRenderingEngine } from "@app/rendering/interfaces";
+import { IIoCContainer, IObjectFactory } from "@app/rendering/interfaces";
 
 import { IM2Model, ISkinnedObject, ParticleColorOverrides } from "../m2Model";
 import { WorldPositionedObject } from "../worldPositionedObject";
@@ -29,15 +29,15 @@ export class M2Proxy extends WorldPositionedObject implements IM2Proxy  {
     }
     
     private m2Model: IM2Model;
+    protected objectFactory: IObjectFactory
     protected callbackMgr: ICallbackManager<M2ProxyCallbackType, M2Proxy>;
-    
-    override initialize(engine: IRenderingEngine): void {
-        super.initialize(engine);
 
-        this.callbackMgr = engine.getCallbackManager(this);
+    constructor(iocContainer: IIoCContainer) {
+        super();
+        this.callbackMgr = iocContainer.getCallbackManager(this);
+        this.objectFactory = iocContainer.getObjectFactory();
     }
-
-
+    
     protected createM2Model(fileId: FileIdentifier, configureFn?: (model: IM2Model) => void) {
         if (this.m2Model) {
             if (this.m2Model.fileId == fileId) {
@@ -46,7 +46,7 @@ export class M2Proxy extends WorldPositionedObject implements IM2Proxy  {
             this.m2Model.dispose();
         }
 
-        this.m2Model = this.engine.createM2Model(fileId);
+        this.m2Model = this.objectFactory.createM2Model(fileId);
         this.addChild(this.m2Model);
 
         this.m2Model.on("modelDataLoaded", () => {

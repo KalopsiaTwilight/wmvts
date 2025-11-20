@@ -1,16 +1,16 @@
-import { IRenderingEngine } from "@app/rendering";
+import { IRenderer } from "@app/rendering";
 import { IDisposable } from "@app/interfaces";
 import { AABB, Float3, Float4, Float44 } from "@app/math";
-import { FileIdentifier } from "@app/metadata";
 
 export interface IRenderObject extends IDisposable {
-    engine?: IRenderingEngine;
+    renderer?: IRenderer;
 
-    initialize(engine: IRenderingEngine): void;
+    attachToRenderer(renderer: IRenderer): void;
     update(deltaTime: number): void;
     draw(): void;
 
-    isLoaded: boolean;
+    get isLoaded(): boolean;
+    get isAttachedToRenderer(): boolean;
 }
 
 export interface IWorldPositionedObject extends IRenderObject {

@@ -7,7 +7,7 @@ import {
     ColorMask, ITexture, IShaderProgram, M2BlendModeToEGxBlend,
     RenderMaterial, DrawingBatchRequest, IDataBuffers, BufferDataType
 } from "@app/rendering/graphics";
-import { IRenderingEngine } from "@app/rendering/interfaces";
+import { IDataManager, IIoCContainer, IRenderer } from "@app/rendering/interfaces";
 
 import { WorldPositionedObject } from "../worldPositionedObject";
 
@@ -35,6 +35,9 @@ interface TextureUnitData {
 const BATCH_IDENTIFIER = "M2";
 
 export class M2Model extends WorldPositionedObject implements IM2Model {
+    iocContainer: IIoCContainer;
+    dataManager: IDataManager;
+
     fileId: FileIdentifier;
     modelData: WoWModelData;
     boneFileId?: FileIdentifier;
@@ -67,7 +70,7 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
     callbackMgr: ICallbackManager<M2ModelCallbackType, M2Model>
 
 
-    constructor(fileId: FileIdentifier) {
+    constructor(fileId: FileIdentifier, iocContainer: IIoCContainer) {
         super();
         this.fileId = fileId;
         this.isModelDataLoaded = false;
@@ -81,6 +84,8 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
 
         this.children = [];
         this.particleColorOverrides = [null, null, null];
+        this.iocContainer = iocContainer;
+        this.dataManager = iocContainer.getDataManager();
     }
 
     get isLoaded() {
@@ -124,13 +129,13 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
         this.callbackMgr = null;
     }
 
-    override initialize(engine: IRenderingEngine): void {
-        super.initialize(engine);
-        this.shaderProgram = this.engine.getShaderProgram("M2", vertexShaderProgramText, fragmentShaderProgramText);
+    override attachToRenderer(renderer: IRenderer): void {
+        super.attachToRenderer(renderer);
+        this.shaderProgram = this.renderer.getShaderProgram("M2", vertexShaderProgramText, fragmentShaderProgramText);
 
 
-        this.callbackMgr = this.engine.getCallbackManager(this);
-        this.engine.getM2ModelFile(this.fileId).then(this.onModelLoaded.bind(this));
+        this.callbackMgr = this.iocContainer.getCallbackManager(this);
+        this.dataManager.getM2ModelFile(this.fileId).then(this.onModelLoaded.bind(this));
     }
 
     update(deltaTime: number): void {
@@ -141,7 +146,7 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
 
         this.animationState.update(deltaTime);
 
-        Float44.multiply(this.worldModelMatrix, this.engine.viewMatrix, this.modelViewMatrix);
+        Float44.multiply(this.worldModelMatrix, this.renderer.viewMatrix, this.modelViewMatrix);
         Float44.invert(this.modelViewMatrix, this.invModelViewMatrix);
 
         for (const data of this.boneData) {
@@ -322,7 +327,7 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
             this.boneData = null;
             this.resetBoneFileData();
         } else {
-            this.engine.getBoneFileData(id).then(this.onBoneFileLoaded.bind(this));
+            this.dataManager.getBoneFileData(id).then(this.onBoneFileLoaded.bind(this));
         }
     }
 
@@ -619,7 +624,7 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
         batchRequest.useMaterial(texUnitData.material)
             .useDataBuffers(this.dataBuffers)
             .drawIndexedTriangles(2 * (subMesh.triangleStart + 65536 * subMesh.level), subMesh.triangleCount);
-        this.engine.submitDrawRequest(batchRequest);
+        this.renderer.submitDrawRequest(batchRequest);
     }
 
     protected onModelLoaded(data: WoWModelData | null) {
@@ -658,7 +663,7 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
     }
 
     private setupDataBuffers() {
-        this.dataBuffers = this.engine.getDataBuffers("M2-" + this.fileId, (graphics) => {
+        this.dataBuffers = this.renderer.getDataBuffers("M2-" + this.fileId, (graphics) => {
             const vertexIndexBuffer = graphics.createVertexIndexBuffer(true);
             const vertexDataBuffer = graphics.createVertexDataBuffer([
                 { index: this.shaderProgram.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: 48, offset: 0 },
@@ -711,14 +716,14 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
         for (let i = 0; i < this.modelData.textures.length; i++) {
             const textureId = this.modelData.textures[i].textureId
             if (textureId) {
-                const promise = this.engine.getTexture(textureId).then((texture) => {
+                const promise = this.renderer.getTexture(textureId).then((texture) => {
                     if (!this.isDisposing) {
                         this.textureObjects[i] = texture
                     }
                 })
                 loadingPromises.push(promise);
             } else {
-                this.textureObjects[i] = this.engine.getSolidColorTexture([0,1,0,1]);
+                this.textureObjects[i] = this.renderer.getSolidColorTexture([0,1,0,1]);
                 this.textureObjects[i].fileId = i;
             }
         }
@@ -789,13 +794,13 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
     private createTextureUnitData(i: number) {
         const texUnit = this.modelData.textureUnits[i];
 
-        let renderMaterial = this.engine.getBaseMaterial();
+        let renderMaterial = this.renderer.getBaseMaterial();
 
         const texUnitData: TextureUnitData = {
             color: Float4.one(),
             textureMatrices: [Float44.identity(), Float44.identity()],
             textureWeights: Float4.one(),
-            textures: [this.engine.getUnknownTexture(), this.engine.getUnknownTexture(), this.engine.getUnknownTexture(), this.engine.getUnknownTexture()],
+            textures: [this.renderer.getUnknownTexture(), this.renderer.getUnknownTexture(), this.renderer.getUnknownTexture(), this.renderer.getUnknownTexture()],
             material: renderMaterial,
             geoSetId: this.modelData.submeshes[texUnit.skinSectionIndex].submeshId,
             show: true

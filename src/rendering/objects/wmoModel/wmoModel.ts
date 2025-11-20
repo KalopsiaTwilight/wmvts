@@ -10,7 +10,7 @@ import {
     BufferDataType, ColorMask, DrawingBatchRequest, GxBlend, IDataBuffers, IShaderProgram, 
     ITexture, M2BlendModeToEGxBlend, RenderMaterial
 } from "@app/rendering/graphics";
-import { IRenderingEngine } from "@app/rendering/interfaces"
+import { IDataManager, IIoCContainer, IObjectFactory, IRenderer } from "@app/rendering/interfaces"
 
 import { WorldPositionedObject } from "../worldPositionedObject";
 import { IM2Model } from "../m2Model";
@@ -74,7 +74,10 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
     localCameraFrustrum: Frustrum;
     transposeInvModelMatrix: Float44;
 
-    constructor(fileId: FileIdentifier) {
+    private objectFactory: IObjectFactory;
+    private dataManager: IDataManager;
+
+    constructor(fileId: FileIdentifier, iocContainer: IIoCContainer) {
         super();
         this.isModelDataLoaded = false;
         this.isTexturesLoaded = false;
@@ -94,14 +97,17 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
         this.transposeInvModelMatrix = Float44.identity();
         this.localCamera = Float3.zero();
         this.localCameraFrustrum = Frustrum.zero();
+
+        this.objectFactory = iocContainer.getObjectFactory();
+        this.dataManager = iocContainer.getDataManager();
     }
 
-    override initialize(engine: IRenderingEngine): void {
-        super.initialize(engine);
-        this.shaderProgram = this.engine.getShaderProgram("WMO", vertexShaderProgramText, fragmentShaderProgramText);
-        this.portalShader = this.engine.getShaderProgram("WMOPortal", portalVertexShaderProgramText, portalFragmentShaderProgramText);
+    override attachToRenderer(env: IRenderer): void {
+        super.attachToRenderer(env);
+        this.shaderProgram = this.renderer.getShaderProgram("WMO", vertexShaderProgramText, fragmentShaderProgramText);
+        this.portalShader = this.renderer.getShaderProgram("WMOPortal", portalVertexShaderProgramText, portalFragmentShaderProgramText);
 
-        this.engine.getWMOModelFile(this.fileId).then(this.onModelLoaded.bind(this))
+        this.dataManager.getWMOModelFile(this.fileId).then(this.onModelLoaded.bind(this))
     }
 
     update(deltaTime: number): void {
@@ -110,8 +116,8 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
             return;
         }
 
-        Float44.transformDirection3(this.engine.cameraPosition, this.invWorldModelMatrix, this.localCamera);
-        Frustrum.copy(this.engine.cameraFrustrum, this.localCameraFrustrum);
+        Float44.transformDirection3(this.renderer.cameraPosition, this.invWorldModelMatrix, this.localCamera);
+        Frustrum.copy(this.renderer.cameraFrustrum, this.localCameraFrustrum);
         Frustrum.transformSelf(this.localCameraFrustrum, this.invWorldModelMatrix);
 
         this.findVisibleGroupsAndDoodads();
@@ -147,7 +153,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
             this.activeDoodads[i].draw();
         }
 
-        if (this.engine.debugPortals) {
+        if (this.renderer.debugPortals) {
             this.drawPortals();
         }
     }
@@ -244,7 +250,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
                         continue;
                     }
 
-                    const doodadModel = this.engine.createM2Model(modelId);
+                    const doodadModel = this.objectFactory.createM2Model(modelId);
                     this.addChild(doodadModel);
                     const scale = Float3.create(doodadDef.scale, doodadDef.scale, doodadDef.scale);
                     doodadModel.setModelMatrix(doodadDef.position, doodadDef.rotation, scale);
@@ -256,7 +262,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
 
     private loadTextures() {
         const loadingPromises: Promise<void>[] = []
-        this.loadedTextures[0] = this.engine.getUnknownTexture();
+        this.loadedTextures[0] = this.renderer.getUnknownTexture();
         for (let i = 0; i < this.modelData.groups.length; i++) {
             const group = this.modelData.groups[i];
             for (let j = 0; j < group.batches.length; j++) {
@@ -266,7 +272,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
                     if (fileId !== 0) {
                         const clampS = (material.flags & WoWWorldModelMaterialMaterialFlags.ClampS) > 0;
                         const clampT = (material.flags & WoWWorldModelMaterialMaterialFlags.ClampT) > 0;
-                        const texturePromise = this.engine.getTexture(fileId, {
+                        const texturePromise = this.renderer.getTexture(fileId, {
                             clampS, clampT
                         }).then((texture) => {
                             if (!this.isDisposing) {
@@ -289,10 +295,10 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
             this.groupLiquids[i] = [];
             const groupData = this.modelData.groups[i];
             for(const liquidData of groupData.liquidData) {
-                const liquidWmo = new WMOLiquid(liquidData, groupData, this.modelData.flags);
+                const liquidWmo = new WMOLiquid(liquidData, groupData, this.modelData.flags, this.dataManager);
                 liquidWmo.parent = this;
                 liquidWmo.updateModelMatrixFromParent();
-                liquidWmo.initialize(this.engine);
+                liquidWmo.attachToRenderer(this.renderer);
                 this.children.push(liquidWmo);
                 this.groupLiquids[i].push(liquidWmo);
             }
@@ -465,7 +471,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
                 }
                 
                 const distance = AABB.distanceToPointIgnoreAxis(doodad.worldBoundingBox, this.localCamera, Axis.Z);
-                if (distance > this.engine.doodadRenderDistance) {
+                if (distance > this.renderer.doodadRenderDistance) {
                     continue;
                 }
 
@@ -621,14 +627,14 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
             batchRequest.useMaterial(this.groupMaterials[batchData.materialId])
                 .useDataBuffers(this.groupDatabuffers[i])
                 .drawIndexedTriangles(batchData.startIndex * 2, batchData.indexCount);
-            this.engine.submitDrawRequest(batchRequest);
+            this.renderer.submitDrawRequest(batchRequest);
         }
     }
 
     private drawPortals() {
         for (let i = 0; i < this.modelData.portals.length; i++) {
             const portalData = this.modelData.portals[i];
-            if (!AABB.visibleInFrustrum(this.portalData[i].boundingBox, this.engine.cameraFrustrum)) {
+            if (!AABB.visibleInFrustrum(this.portalData[i].boundingBox, this.renderer.cameraFrustrum)) {
                 continue;
             }
 
@@ -636,14 +642,14 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
             batchRequest.useMaterial(this.portalMaterial)
                 .useDataBuffers(this.portalDataBuffers)
                 .drawIndexedTriangles(portalData.startVertex * 1.5 * 2, portalData.vertexCount * 1.5);
-            this.engine.submitDrawRequest(batchRequest);
+            this.renderer.submitDrawRequest(batchRequest);
         }
     }
 
     private setupDataBuffers() {
         this.groupDatabuffers = new Array(this.modelData.groups.length);
         for (let i = 0; i < this.modelData.groups.length; i++) {
-            this.groupDatabuffers[i] = this.engine.getDataBuffers("WMO-" + this.fileId + "-" + i, (graphics) => {
+            this.groupDatabuffers[i] = this.renderer.getDataBuffers("WMO-" + this.fileId + "-" + i, (graphics) => {
                 const group = this.modelData.groups[i];
 
                 const numColors = group.vertexColors.length / group.vertices.length;
@@ -706,7 +712,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
     }
     
     private setupPortalGraphics() {
-        const portalVB = this.engine.graphics.createVertexDataBuffer([
+        const portalVB = this.renderer.graphics.createVertexDataBuffer([
             { index: this.portalShader.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: 12, offset: 0 },
         ], true);
         const buffer = new Uint8Array(this.modelData.portalVertices.length * 12);
@@ -718,7 +724,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
         }
         portalVB.setData(buffer);
 
-        const portalIB = this.engine.graphics.createVertexIndexBuffer(true);
+        const portalIB = this.renderer.graphics.createVertexIndexBuffer(true);
         const portalBuffer = [];
         for (let i = 0; i < this.modelData.portals.length; i++) {
             const portalData = this.modelData.portals[i];
@@ -733,7 +739,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
         }
         portalIB.setData(new Uint16Array(portalBuffer));
 
-        this.portalDataBuffers = this.engine.graphics.createDataBuffers(portalVB, portalIB);
+        this.portalDataBuffers = this.renderer.graphics.createDataBuffers(portalVB, portalIB);
     }
 
     private setupMaterials() {
@@ -749,7 +755,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
             const unlit = (material.flags & WoWWorldModelMaterialMaterialFlags.Unlit) ? true : false
             const doubleSided = (material.flags & WoWWorldModelMaterialMaterialFlags.Unculled) != 0;
 
-            const renderMaterial = this.engine.getBaseMaterial();
+            const renderMaterial = this.renderer.getBaseMaterial();
             renderMaterial.useCounterClockWiseFrontFaces(true);
             renderMaterial.useBackFaceCulling(!doubleSided);
             renderMaterial.useBlendMode(blendMode)
@@ -759,7 +765,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
             renderMaterial.useShaderProgram(this.shaderProgram);
             renderMaterial.useUniforms({
                 "u_modelMatrix": this.worldModelMatrix,
-                "u_cameraPos": this.engine.cameraPosition,
+                "u_cameraPos": this.renderer.cameraPosition,
                 "u_pixelShader": ps,
                 "u_vertexShader": vs,
                 "u_blendMode": material.blendMode,
@@ -772,7 +778,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
         }
 
         // Portal material
-        const renderMaterial = this.engine.getBaseMaterial();
+        const renderMaterial = this.renderer.getBaseMaterial();
         renderMaterial.useCounterClockWiseFrontFaces(false);
         renderMaterial.useBackFaceCulling(false);
         renderMaterial.useBlendMode(GxBlend.GxBlend_Alpha)

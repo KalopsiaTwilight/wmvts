@@ -3,7 +3,7 @@ import {
     BufferDataType, ColorMask, GxBlend, IFrameBuffer, IShaderProgram, ITexture, RenderMaterial, 
     OffMainDrawingRequest, GenericBatchRequest, IDataBuffers
 } from "@app/rendering/graphics";
-import { IRenderingEngine } from "@app/rendering/interfaces";
+import { IRenderer } from "@app/rendering/interfaces";
 import { IDisposable } from "@app/interfaces";
 
 import { ICharacterModel } from "./interfaces";
@@ -14,7 +14,7 @@ import fsProgramText from "./skinLayerTextureCombiner.frag";
 const BATCH_IDENTIFIER  = "CHAR-SKIN"
 
 export class SkinLayerTextureCombiner implements IDisposable {
-    engine: IRenderingEngine;
+    renderer: IRenderer;
     width: number;
     height: number;
     textureType: number;
@@ -40,16 +40,16 @@ export class SkinLayerTextureCombiner implements IDisposable {
 
     constructor(parent: ICharacterModel, textureType: number, width: number, height: number) {
         this.parentId = parent.modelId;
-        this.engine = parent.engine;
+        this.renderer = parent.renderer;
         this.textureType = textureType;
         this.width = width;
         this.height = height;
 
-        this.blackTexture = this.engine.getSolidColorTexture([0,0,0,0]);
-        this.alphaTexture = this.engine.getSolidColorTexture([0,0,0,1]);
+        this.blackTexture = this.renderer.getSolidColorTexture([0,0,0,0]);
+        this.alphaTexture = this.renderer.getSolidColorTexture([0,0,0,1]);
 
-        this.blendProgram = this.engine.getShaderProgram("SKIN_BLEND", vsProgramText, fsProgramText);
-        this.dataBuffers = this.engine.getDataBuffers("SKIN-RECT", (graphics) => {
+        this.blendProgram = this.renderer.getShaderProgram("SKIN_BLEND", vsProgramText, fsProgramText);
+        this.dataBuffers = this.renderer.getDataBuffers("SKIN-RECT", (graphics) => {
             const vertexDataBuffer = graphics.createVertexDataBuffer([
                 { index: this.blendProgram.getAttribLocation('a_texCoord'), size: 2, type: BufferDataType.Float, normalized: false, stride: 8, offset: 0 },
             ], true);
@@ -62,10 +62,10 @@ export class SkinLayerTextureCombiner implements IDisposable {
         })
 
 
-        this.frameBuffer = this.engine.graphics.createFrameBuffer(this.width, this.height);
+        this.frameBuffer = this.renderer.graphics.createFrameBuffer(this.width, this.height);
 
-        this.outputTexture = this.engine.graphics.createEmptyTexture(this.width, this.height);
-        this.backgroundTexture = this.engine.graphics.createEmptyTexture(this.width, this.height);
+        this.outputTexture = this.renderer.graphics.createEmptyTexture(this.width, this.height);
+        this.backgroundTexture = this.renderer.graphics.createEmptyTexture(this.width, this.height);
 
         this.currentBatchId = 0;
         this.resolution = new Float32Array([this.width, this.height]);
@@ -74,7 +74,7 @@ export class SkinLayerTextureCombiner implements IDisposable {
     
     dispose(): void {
         this.isDisposing = true;
-        this.engine = null;
+        this.renderer = null;
         this.blackTexture.dispose();
         this.blackTexture = null;
         this.alphaTexture.dispose();
@@ -103,7 +103,7 @@ export class SkinLayerTextureCombiner implements IDisposable {
             graphics.setColorBufferToTexture(this.backgroundTexture);
             graphics.clearFrame(blackColor);
         });
-        this.engine.submitOtherGraphicsRequest(clearRequest);
+        this.renderer.submitOtherGraphicsRequest(clearRequest);
     }
 
     drawTextureSection(textures: [ITexture, ITexture, ITexture], x: number, y: number, width: number, height: number, blendMode: number) {
@@ -145,6 +145,6 @@ export class SkinLayerTextureCombiner implements IDisposable {
             .writeColorOutputToTexture(this.outputTexture)
             .captureCurrentFrameToTexture(this.backgroundTexture)
             .drawIndexedTriangles(0, 6);
-        this.engine.submitOtherGraphicsRequest(batchRequest);
+        this.renderer.submitOtherGraphicsRequest(batchRequest);
     }
 }

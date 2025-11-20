@@ -1,5 +1,6 @@
 import { WorldPositionedObject, BufferDataType, Float44, GxBlend, IShaderProgram, IDataBuffers, 
-    IVertexDataBuffer, IVertexIndexBuffer, RenderingEngine, RenderMaterial, DrawingBatchRequest
+    IVertexDataBuffer, IVertexIndexBuffer, RenderMaterial, DrawingBatchRequest,
+    IRenderer
 } from "@app/index";
 
 import fs from "./testModel.frag";
@@ -31,28 +32,28 @@ export class TestModel extends WorldPositionedObject {
         this.fileId = -1;
     }
 
-    initialize(engine: RenderingEngine): void {
-        super.initialize(engine);
+    attachToRenderer(renderer: IRenderer): void {
+        super.attachToRenderer(renderer);
         this.isLoaded = true;
 
-        this.program = engine.graphics.createShaderProgram(vs, fs);
+        this.program = renderer.graphics.createShaderProgram(vs, fs);
 
-        this.colors = engine.graphics.createVertexDataBuffer([
+        this.colors = renderer.graphics.createVertexDataBuffer([
             { 
                 index: this.program.getAttribLocation('a_color'), 
                 size: 3, normalized: true, type: BufferDataType.UInt8
             }
         ], false);
         this.colors.setData(this.getColors());
-        this.vertices = engine.graphics.createVertexDataBuffer([{
+        this.vertices = renderer.graphics.createVertexDataBuffer([{
             index: this.program.getAttribLocation('a_position'),
             size: 3
         }], false);
         this.vertices.setData(this.getVertices());
-        this.indices = engine.graphics.createVertexIndexBuffer(false);
+        this.indices = renderer.graphics.createVertexIndexBuffer(false);
         this.indices.setData(this.getVertexIndices());
 
-        this.dataBuffers = engine.graphics.createDataBuffers();
+        this.dataBuffers = renderer.graphics.createDataBuffers();
         this.dataBuffers.setIndexBuffer(this.indices);
         this.dataBuffers.addVertexDataBuffer(this.vertices);
         this.dataBuffers.addVertexDataBuffer(this.colors);
@@ -64,7 +65,7 @@ export class TestModel extends WorldPositionedObject {
     }
 
     update(deltaTime: number): void {
-        Float44.multiply(this.engine.projectionMatrix, this.engine.viewMatrix, this.viewProjectionMatrix);
+        Float44.multiply(this.renderer.projectionMatrix, this.renderer.viewMatrix, this.viewProjectionMatrix);
     }
 
     draw() {
@@ -81,7 +82,7 @@ export class TestModel extends WorldPositionedObject {
         batchRequest.useDataBuffers(this.dataBuffers);
         batchRequest.drawIndexedTriangles(0, 16 * 6);
 
-        this.engine.submitDrawRequest(batchRequest);
+        this.renderer.submitDrawRequest(batchRequest);
     }
 
     

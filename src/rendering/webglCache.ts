@@ -1,20 +1,20 @@
-import { IDisposable, isDisposable } from "@app/interfaces";
+import { isDisposable } from "@app/interfaces";
+import { CacheKey, ICache } from "./interfaces";
 
 interface CacheEntry<TValue> {
     value: TValue
     ttl: number
 }
-
-export type CacheKey = number | string;
-export class SimpleCache<TValue> implements IDisposable {
-    items: { [index: CacheKey]: CacheEntry<TValue> };
+export class WebGlCache implements ICache {
+    isDisposing: boolean;    
+    items: { [index: CacheKey]: CacheEntry<unknown> };
     maxTtl: number
 
     constructor(maxTtl: number = 300000) {
         this.items = { };
         this.maxTtl = maxTtl
+        this.isDisposing = false;
     }
-    isDisposing: boolean;
 
     dispose(): void {
         this.isDisposing = true;
@@ -22,24 +22,13 @@ export class SimpleCache<TValue> implements IDisposable {
     }
 
     update(deltaTime: number) {
-        const keys = this.getKeys();
-        for(const key of keys) {
-            const entry = this.items[key];
-            // Persist entry
-            if (entry.ttl == -1) {
-                continue;
-            }
-            entry.ttl -= deltaTime;
-            if (entry.ttl < 0) {
-                this.delete(key);
-            }
-        }
+        // TODO: Update ttl and delete if no object 'owns' the resource.
     }
 
     delete(key: CacheKey) {
-        const obj = this.items[key];
-        if (isDisposable(obj)) {
-            obj.dispose();
+        const ref = this.items[key];
+        if (isDisposable(ref.value)) {
+            ref.value.dispose();
         }
         delete this.items[key];
     }
@@ -56,7 +45,7 @@ export class SimpleCache<TValue> implements IDisposable {
         return true;
     }
 
-    get(key: CacheKey): TValue|null {
+    get<TValue>(key: CacheKey): TValue|null {
         if (this.isDisposing) {
             return null;
         }
@@ -66,10 +55,10 @@ export class SimpleCache<TValue> implements IDisposable {
             return null;
         }
         entry.ttl = this.maxTtl;
-        return entry.value;
+        return entry.value as TValue;
     }
 
-    store(key: CacheKey, value: TValue, ttl: number = this.maxTtl) {
+    store<TValue>(key: CacheKey, value: TValue, ttl: number = this.maxTtl) {
         this.items[key] = {
             ttl,
             value
@@ -81,12 +70,5 @@ export class SimpleCache<TValue> implements IDisposable {
             return null;
         }
         return Object.keys(this.items);
-    }
-
-    getValues(): TValue[] | null {
-        if (this.isDisposing) {
-            return null;
-        }
-        return this.getKeys().map(key => this.items[key].value);
     }
 }

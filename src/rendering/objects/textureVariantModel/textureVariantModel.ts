@@ -3,20 +3,21 @@ import { FileIdentifier, TextureVariationsMetadata } from "@app/metadata";
 import { WoWTextureType } from "@app/modeldata";
 import { ICallbackManager } from "@app/utils";
 import { ITexture } from "@app/rendering/graphics";
-import { IRenderingEngine } from "@app/rendering/interfaces";
+import { IIoCContainer, IRenderer } from "@app/rendering/interfaces";
 
 import { M2Model } from "../m2Model";
 
 import { ITextureVariantModel, TextureVariantModelCallbackType } from "./interfaces";
 
 export class TextureVariantModel extends M2Model implements ITextureVariantModel{
+
     textureVariations: TextureVariationsMetadata;
     override callbackMgr: ICallbackManager<TextureVariantModelCallbackType, TextureVariantModel>;
 
     loadedTextures: ITexture[]
 
-    constructor(fileId: FileIdentifier) {
-        super(fileId);
+    constructor(fileId: FileIdentifier, iocContainer: IIoCContainer) {
+        super(fileId, iocContainer);
     }
     
     useTextureVariation(index: number) {
@@ -34,7 +35,7 @@ export class TextureVariantModel extends M2Model implements ITextureVariantModel
                 break;
             }
 
-            this.engine.getTexture(data.textureIds[i]).then((texture) => {
+            this.renderer.getTexture(data.textureIds[i]).then((texture) => {
                 this.on("texturesLoaded", () => {
                     this.textureObjects[this.modelData.textureCombos[i]].swapFor(texture)
                 })
@@ -42,11 +43,11 @@ export class TextureVariantModel extends M2Model implements ITextureVariantModel
         }
     }
 
-    override initialize(engine: IRenderingEngine): void {
-        super.initialize(engine);
+    override attachToRenderer(engine: IRenderer): void {
+        super.attachToRenderer(engine);
 
         this.on("modelDataLoaded", () => {
-            this.engine.getTextureVariationsMetadata(this.fileId).then(this.onTextureVariationsLoaded.bind(this));
+            this.dataManager.getTextureVariationsMetadata(this.fileId).then(this.onTextureVariationsLoaded.bind(this));
         })
     }
 

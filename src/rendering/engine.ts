@@ -1,21 +1,17 @@
 import { Camera } from "@app/cameras";
-import { TextureVariationsMetadata, LiquidTypeMetadata, CharacterMetadata, ItemMetadata, FileIdentifier, RecordIdentifier } from "@app/metadata";
-import { AABB, AleaPrngGenerator, Float3, Float4, Float44, Frustrum } from "@app/math";
+import { AABB, Float3, Float4, Float44, Frustrum } from "@app/math";
+import { FileIdentifier } from "@app/metadata";
 import { IDisposable, IProgressReporter, IDataLoader, RequestFrameFunction, ErrorHandlerFn, ErrorType } from "@app/interfaces";
-import { CallbackManager, IImmediateCallbackable } from "@app/utils";
-import { WoWModelData, WoWWorldModelData, WoWBoneFileData } from "@app/modeldata";
 
-import { CharacterModel, IRenderObject, isWorldPositionedObject, ItemModel, M2Model, TextureVariantModel, WMOModel } from "./objects";
+import { IRenderObject, isWorldPositionedObject } from "./objects";
 import { 
     DrawingBatchRequest, IDataBuffers, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest, 
     RenderMaterial 
 } from "./graphics";
-import { SimpleCache } from "./cache";
+import { WebGlCache } from "./webglCache";
+import { ICache, IDataManager, IIoCContainer, IObjectFactory, IRenderingEngine } from "./interfaces";
+import { DefaultIoCContainer } from "./iocContainer";
 
-import { defaultModelPickingStrategy, defaultTexturePickingStrategy, IModelPickingStrategy, ITexturePickingStrategy } from "./strategies";
-import { IRenderingEngine } from "./interfaces";
-
-const DataLoadingErrorType: ErrorType = "dataFetching";
 const DataProcessingErrorType: ErrorType = "dataProcessing";
 const RenderingErrorType: ErrorType = "rendering"
 
@@ -56,8 +52,6 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
     progress?: IProgressReporter;
     errorHandler?: ErrorHandlerFn;
     sceneCamera: Camera;
-    texturePickingStrategy: ITexturePickingStrategy
-    modelPickingStrategy: IModelPickingStrategy
 
     // Rendering settings
     fov: number;
@@ -92,18 +86,8 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
     cameraPosition: Float3;
 
     // Caching. TODO: Simplify into single united cache?
-    caches: SimpleCache<unknown>[];
-    textureCache: SimpleCache<ITexture>;
-    shaderCache: SimpleCache<IShaderProgram>;
-    wmoCache: SimpleCache<WoWWorldModelData>;
-    m2Cache: SimpleCache<WoWModelData>;
-    liquidCache: SimpleCache<LiquidTypeMetadata>;
-    dataBuffersCache: SimpleCache<IDataBuffers>;
-    materialCache: SimpleCache<RenderMaterial>;
-    textureVariationsCache: SimpleCache<TextureVariationsMetadata>;
-    characterMetadataCache: SimpleCache<CharacterMetadata>;
-    itemMetadataCache: SimpleCache<ItemMetadata>;
-    boneFileCache: SimpleCache<WoWBoneFileData>;
+    cache: ICache;
+    // TODO: Move this to datamanager?
     runningRequests: { [key: string]: Promise<unknown> }
 
     // Some stats
@@ -125,6 +109,12 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
     sceneObjects: IRenderObject[];
     sceneBoundingBox: AABB;
 
+
+    // IoC
+    iocContainer: IIoCContainer;
+    objectFactory: IObjectFactory;
+    dataManager: IDataManager;
+
     constructor(graphics: IGraphics, dataLoader: IDataLoader, requestFrame: RequestFrameFunction,
         options: RenderingEngineOptions) {
         this.graphics = graphics;
@@ -145,28 +135,8 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         this.cameraFrustrum = Frustrum.zero();
         this.cameraPosition = Float3.zero();
 
-        this.caches = [];
         const cacheTtl = options.cacheTtl ? options.cacheTtl : 1000 * 60 * 15;
-        this.textureCache = new SimpleCache(cacheTtl);
-        this.caches.push(this.textureCache);
-        this.shaderCache = new SimpleCache(cacheTtl);
-        this.caches.push(this.shaderCache);
-        this.wmoCache = new SimpleCache(cacheTtl);
-        this.caches.push(this.wmoCache);
-        this.m2Cache = new SimpleCache(cacheTtl);
-        this.caches.push(this.m2Cache);
-        this.liquidCache = new SimpleCache(cacheTtl);
-        this.caches.push(this.liquidCache);
-        this.dataBuffersCache = new SimpleCache(cacheTtl);
-        this.caches.push(this.dataBuffersCache);
-        this.textureVariationsCache = new SimpleCache(cacheTtl);
-        this.caches.push(this.textureVariationsCache);
-        this.characterMetadataCache = new SimpleCache(cacheTtl);
-        this.caches.push(this.characterMetadataCache);
-        this.itemMetadataCache = new SimpleCache(cacheTtl);
-        this.caches.push(this.itemMetadataCache);
-        this.boneFileCache = new SimpleCache(cacheTtl);
-        this.caches.push(this.boneFileCache);
+        this.cache = new WebGlCache(cacheTtl);
 
         this.runningRequests = {};
         this.drawRequests = [];
@@ -192,10 +162,11 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         // Set opts to defaults
         this.debugPortals = false;
         this.doodadRenderDistance = 300;
-
-        // TODO: make this configurable?
-        this.texturePickingStrategy = defaultTexturePickingStrategy;
-        this.modelPickingStrategy = defaultModelPickingStrategy;
+        
+        // TODO: Make this configurable
+        this.iocContainer = new DefaultIoCContainer(this.dataLoader, this.errorHandler, this.progress);
+        this.objectFactory = this.iocContainer.getObjectFactory();
+        this.dataManager = this.iocContainer.getDataManager();
     }
 
     dispose(): void {
@@ -223,13 +194,14 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
             Frustrum.fromViewMatrix(this.projViewMatrix, this.cameraFrustrum);
             Float44.getTranslation(this.invViewMatrix, this.cameraPosition);
 
-            for(const cache of this.caches) {
-                cache.update(deltaTime);
-            }
+            // Update objects
+            this.dataManager.update(deltaTime);
+            this.cache.update(deltaTime);
             for (const obj of this.sceneObjects) {
                 obj.update(deltaTime);
             }
 
+            // Do non drawing graphics work
             const otherGraphicsWork = this.otherGraphicsRequests.sort((a,b) => a.key.compareTo(b.key));
             for(const batch of otherGraphicsWork) {
                 batch.submit(this.graphics);
@@ -329,7 +301,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
     }
 
     addSceneObject(object: IRenderObject, priority: number) {
-        object.initialize(this);
+        object.attachToRenderer(this);
         this.sceneObjects.push(object);
     }
 
@@ -362,45 +334,39 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         this.otherGraphicsRequests.push(request);
     }
 
-    async getTexture(fileId: number, opts?: ITextureOptions): Promise<ITexture | null> {
-        if (this.runningRequests[fileId]) {
-            const texture = await this.runningRequests[fileId];
-            return texture as ITexture;
-        }
+    getSolidColorTexture(color: Float4) {
+        return this.graphics.createSolidColorTexture(color);
+    }
+
+    getUnknownTexture(): ITexture {
+        const unknownTexture = this.graphics.createSolidColorTexture(Float4.create(0, 1, 0, 1));
+        return unknownTexture;
+    } 
+
+    async getTexture(fileId: FileIdentifier, opts?: ITextureOptions): Promise<ITexture | null> {
+        const key = "TEXTURE-" + fileId;
 
         // Try to resolve from cache
-        if (this.textureCache.contains(fileId)) {
-            return this.textureCache.get(fileId);
+        if (this.cache.contains(key)) {
+            return this.cache.get(key);
         }
 
-        // Retrieve texture from dataloader & process into WebGL Texture
-        this.progress?.setOperation(LoadDataOperationText);
-        this.progress?.addFileToOperation(fileId);
-        const req = this.dataLoader.loadTexture(fileId)
-            .then(async (imgData) => {
-                if (imgData instanceof Error) {
-                    return imgData;
-                } else {
-                    return this.processTexture(fileId, imgData, opts)
-                }
-            });
-
-        this.runningRequests[fileId] = req;
-        const texture = await req;
-        if (texture instanceof Error) {
-            this.errorHandler?.(DataProcessingErrorType, "TEXTURE-" + fileId, texture);
+        const data = await this.dataManager.getTextureImageData(fileId);
+        if (!data) {
             return null;
         }
+
+        const texture = await this.processTexture(fileId, data, opts);
+        this.cache.store(key, texture);
         return texture;
     }
 
-    private async processTexture(fileId: number, imgData: string, opts?: ITextureOptions) {
+    private async processTexture(fileId: FileIdentifier, imgData: string, opts?: ITextureOptions) {
         return new Promise<ITexture>((res, rej) => {
             const img = new Image();
             img.onload = () => {
                 const texture = this.graphics.createTextureFromImg(img, opts);
                 texture.fileId = fileId;
-                this.textureCache.store(fileId, texture);
                 this.progress?.removeFileFromOperation(fileId);
                 delete this.runningRequests[fileId];
                 res(texture);
@@ -415,97 +381,26 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         });
     }
 
-    getSolidColorTexture(color: Float4) {
-        return this.graphics.createSolidColorTexture(color);
-    }
-
-    getUnknownTexture(): ITexture {
-        const unknownTexture = this.graphics.createSolidColorTexture(Float4.create(0, 1, 0, 1));
-        return unknownTexture;
-    }
-
     getShaderProgram(key: string, vertexShader: string, fragmentShader: string): IShaderProgram {
-        if (this.shaderCache.contains(key)) {
-            return this.shaderCache.get(key);
+        const cacheKey = "PROGRAM-" + key;
+        if (this.cache.contains(cacheKey)) {
+            return this.cache.get(cacheKey);
         }
 
         const program = this.graphics.createShaderProgram(vertexShader, fragmentShader);
-        this.shaderCache.store(key, program, -1);
+        this.cache.store(cacheKey, program, -1);
         return program;
     }
 
-    getM2ModelFile(fileId: number): Promise<WoWModelData | null> {
-        const key = "M2-" + fileId;
-        return this.getDataFromLoaderOrCache(this.m2Cache, key, (dl) => dl.loadModelFile(fileId))
-    }
-
-    getWMOModelFile(fileId: number): Promise<WoWWorldModelData | null> {
-        const key = "WMO-" + fileId;
-        return this.getDataFromLoaderOrCache(this.wmoCache, key, (dl) => dl.loadWorldModelFile(fileId))
-    }
-
-    getLiquidTypeMetadata(liquidId: number): Promise<LiquidTypeMetadata | null> {
-        const key = "LIQUID-" + liquidId;
-        return this.getDataFromLoaderOrCache(this.liquidCache, key, (dl) => dl.loadLiquidTypeMetadata(liquidId))
-    }
-
-    getCharacterMetadata(modelId: number): Promise<CharacterMetadata | null> {
-        const key = "CHARACTER-" + modelId;
-        return this.getDataFromLoaderOrCache(this.characterMetadataCache, key, (dl) => dl.loadCharacterMetadata(modelId));
-    }
-
-    getItemMetadata(displayInfoId: number): Promise<ItemMetadata | null> {
-        const key = "ITEM-" + displayInfoId;
-        return this.getDataFromLoaderOrCache(this.itemMetadataCache, key, (dl) => dl.loadItemMetadata(displayInfoId));
-    }
-
-    getTextureVariationsMetadata(fileId: number): Promise<TextureVariationsMetadata | null> {
-        const key = "TextureVariations-" + fileId;
-        return this.getDataFromLoaderOrCache(this.textureVariationsCache, key, (dl) => dl.loadTextureVariationsMetadata(fileId));
-    }
-
-    getBoneFileData(fileId: number): Promise<WoWBoneFileData | null> {
-        const key = "BoneFile-" + fileId;
-        return this.getDataFromLoaderOrCache(this.boneFileCache, key, (dl) => dl.loadBoneFile(fileId));
-    }
-
     getDataBuffers(key: string, createFn: (graphics: IGraphics) => IDataBuffers): IDataBuffers {
-        if (this.dataBuffersCache.contains(key)) {
-            return this.dataBuffersCache.get(key);
+        const cacheKey = "DATABUFFER-" + key;
+        if (this.cache.contains(cacheKey)) {
+            return this.cache.get(cacheKey);
         }
 
         const dataBuffers = createFn(this.graphics);
-        this.dataBuffersCache.store(key, dataBuffers);
+        this.cache.store(cacheKey, dataBuffers);
         return dataBuffers;
-    }
-
-    private async getDataFromLoaderOrCache<T>(cache: SimpleCache<T>, key: string, loadFn: (x: IDataLoader) => Promise<T|Error>): Promise<T|null> {
-        if (this.runningRequests[key]) {
-            const data = await this.runningRequests[key];
-            if (data instanceof Error) {
-                return null;  
-            }
-            return data as T;
-        }
-
-        if (cache.contains(key)) {
-            return cache.get(key);
-        }
-
-        this.progress?.setOperation(LoadDataOperationText);
-        this.progress?.addFileToOperation(key);
-        const req = loadFn(this.dataLoader);
-        this.runningRequests[key] = req;
-        const data = await req;
-        delete this.runningRequests[key];
-        this.progress?.removeFileFromOperation(key);
-
-        if (data instanceof Error) {
-            this.errorHandler?.(DataLoadingErrorType, key, data);
-            return null;  
-        }
-        cache.store(key, data);
-        return data;
     }
 
     getBaseMaterial() {
@@ -525,16 +420,6 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
             "u_waterAlphas": this.waterAlphas
         });
         return material;
-    }
-
-    getRandomNumberGenerator(seed?: number | string) {
-        return new AleaPrngGenerator(seed ? seed : 0xb00b1e5);
-    }
-
-    getCallbackManager<TKeys extends string, T extends IImmediateCallbackable<TKeys>>(obj: T) {
-        const mgr = new CallbackManager<TKeys, T>();
-        mgr.bind(obj);
-        return mgr;
     }
 
     private setupDebugElements() {
@@ -573,35 +458,5 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
             this.debugContainer.remove()
             this.debugContainer = null;
         }
-    }
-
-    createM2Model(fileId: FileIdentifier) {
-        const model = new M2Model(fileId);
-        model.initialize(this);
-        return model;
-    }
-
-    createWMOModel(fileId: FileIdentifier) {
-        const model = new WMOModel(fileId);
-        model.initialize(this);
-        return model;
-    }
-
-    createItemModel(displayId: RecordIdentifier) {
-        const model = new ItemModel(displayId);
-        model.initialize(this);
-        return model;
-    }
-
-    createCharacterModel(modelId: RecordIdentifier) {
-        const model = new CharacterModel(modelId);
-        model.initialize(this);
-        return model;
-    }
-
-    createTextureVariantModel(id: FileIdentifier) {
-        const model = new TextureVariantModel(id);
-        model.initialize(this);
-        return model;
     }
 }

@@ -1,5 +1,6 @@
 import { IDisposable } from "@app/interfaces";
 import { Float4 } from "@app/math";
+import { FileIdentifier } from "@app/metadata";
 
 export enum BufferDataType {
     Float,
@@ -62,7 +63,7 @@ export interface IBindable extends IDisposable {
 export interface ITexture extends IBindable {
     width: number;
     height: number;
-    fileId: number;
+    fileId: FileIdentifier;
 
     swapFor(other?: ITexture): void;
 }

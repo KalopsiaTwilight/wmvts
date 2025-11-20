@@ -6,7 +6,7 @@ import {
     BufferDataType, ColorMask, DrawingBatchRequest,  GxBlend, IDataBuffers, IShaderProgram, ITexture, IVertexDataBuffer, 
     IVertexIndexBuffer, RenderMaterial
 } from "@app/rendering/graphics";
-import { IRenderingEngine } from "@app/rendering/interfaces";
+import { IRenderer } from "@app/rendering/interfaces";
 
 import type { M2Model } from "../m2Model";
 
@@ -83,7 +83,7 @@ export class M2ParticleEmitter implements IDisposable {
     // References
     index: number;
     parent: M2Model;
-    engine: IRenderingEngine;
+    renderer: IRenderer;
     m2data: WoWParticleEmitterData;
     exp2Data: WoWExtendedParticleData;
     rng: IPseudoRandomNumberGenerator;
@@ -143,11 +143,11 @@ export class M2ParticleEmitter implements IDisposable {
 
     constructor(index: number, parent: M2Model, emitterData: WoWParticleEmitterData, exp2Data?: WoWExtendedParticleData) {
         this.index = index;
-        this.engine = parent.engine;
+        this.renderer = parent.renderer;
         this.parent = parent;
         this.m2data = emitterData;
         this.exp2Data = exp2Data;
-        this.rng = this.engine.getRandomNumberGenerator();
+        this.rng = parent.iocContainer.getRandomNumberGenerator();
         this.emitterModelMatrix = Float44.identity();
         this.previousPosition = Float3.zero();
         this.zOrder = 0;
@@ -190,7 +190,7 @@ export class M2ParticleEmitter implements IDisposable {
 
         this.isDisposing = true;
         this.parent = null;
-        this.engine = null;
+        this.renderer = null;
         this.m2data = null;
         this.exp2Data = null;
         this.rng = null;
@@ -351,7 +351,7 @@ export class M2ParticleEmitter implements IDisposable {
         batchRequest.useMaterial(this.material)
             .useDataBuffers(this.databuffers)
             .drawIndexedTriangles(0, (6 * this.nrQuads) >> 0);
-        this.engine.submitDrawRequest(batchRequest);
+        this.renderer.submitDrawRequest(batchRequest);
     }
 
     private updateParticles(deltaTime: number, currentModelMatrix: Float44) {
@@ -361,7 +361,7 @@ export class M2ParticleEmitter implements IDisposable {
         let currentBonePosition = Float4.zero();
         Float44.getTranslation(currentModelMatrix, currentBonePosition);
         currentBonePosition[3] = 1;
-        Float44.transformDirection4(currentBonePosition, this.engine.viewMatrix, currentBonePosition);
+        Float44.transformDirection4(currentBonePosition, this.renderer.viewMatrix, currentBonePosition);
         this.zOrder = currentBonePosition[2];
 
         Float44.copy(currentModelMatrix, this.emitterModelMatrix);
@@ -570,10 +570,10 @@ export class M2ParticleEmitter implements IDisposable {
     private calculateQuadToViewEtc() {
         // DO NOT TRAIL
         if (this.m2data.flags & 0x10) {
-            Float44.multiply(this.engine.viewMatrix, this.emitterModelMatrix, this.particleToView)
+            Float44.multiply(this.renderer.viewMatrix, this.emitterModelMatrix, this.particleToView)
         }
         else {
-            Float44.copy(this.engine.viewMatrix, this.particleToView)
+            Float44.copy(this.renderer.viewMatrix, this.particleToView)
         }
         // XY QUAD Particles
         if (0x1000 & this.m2data.flags) {
@@ -619,7 +619,7 @@ export class M2ParticleEmitter implements IDisposable {
 
     // This calculates the various trackstates
     private fillTimedParticleData(particle: ParticleData, preRenderData: ParticlePreRenderData) {
-        const rng = this.engine.getRandomNumberGenerator(particle.seed);
+        const rng = this.parent.iocContainer.getRandomNumberGenerator(particle.seed);
 
         let percentTime = particle.age / this.particleGenerator.getMaxLifespan();
         percentTime = Math.max(0, Math.min(1, percentTime));
@@ -800,7 +800,7 @@ export class M2ParticleEmitter implements IDisposable {
     }
 
     private calculateSpin(particle: ParticleData) {
-        const rng = this.engine.getRandomNumberGenerator(particle.seed);
+        const rng = this.parent.iocContainer.getRandomNumberGenerator(particle.seed);
         let baseSpin = this.m2data.baseSpin,
             deltaSpin = this.m2data.spin,
             spinVary = this.m2data.spinVary,
@@ -834,7 +834,7 @@ export class M2ParticleEmitter implements IDisposable {
             Float3.add(Float3.scale(yOffset, vys[i]), position, position);
             Float3.add(position, viewPos, position);
 
-            Float44.transformPoint(position, this.engine.invViewMatrix, position)
+            Float44.transformPoint(position, this.renderer.invViewMatrix, position)
 
             Float2.set(texCoord1,
                 txs[i] * this.texScaleX + texStartX,
@@ -903,9 +903,9 @@ export class M2ParticleEmitter implements IDisposable {
 
     private setupGraphics() {
         // Set up buffers;
-        this.shaderProgram = this.engine.getShaderProgram('M2ParticleEmitter', 
+        this.shaderProgram = this.renderer.getShaderProgram('M2ParticleEmitter', 
             vertexShaderProgramText, fragmentShaderProgramText);
-        this.vertexBuffer = this.engine.graphics.createVertexDataBuffer([
+        this.vertexBuffer = this.renderer.graphics.createVertexDataBuffer([
             { index: this.shaderProgram.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: 56, offset: 0 },
             { index: this.shaderProgram.getAttribLocation('a_color'), size: 4, type: BufferDataType.Float, normalized: false, stride: 56, offset: 12 },
             { index: this.shaderProgram.getAttribLocation('a_texCoord1'), size: 2, type: BufferDataType.Float, normalized: false, stride: 56, offset: 28 },
@@ -913,7 +913,7 @@ export class M2ParticleEmitter implements IDisposable {
             { index: this.shaderProgram.getAttribLocation('a_texCoord3'), size: 2, type: BufferDataType.Float, normalized: false, stride: 56, offset: 44 },
             { index: this.shaderProgram.getAttribLocation('a_alphaCutoff'), size: 1, type: BufferDataType.Float, normalized: false, stride: 56, offset: 52 },
         ], true);
-        this.indexBuffer = this.engine.graphics.createVertexIndexBuffer(true);
+        this.indexBuffer = this.renderer.graphics.createVertexIndexBuffer(true);
 
         let indexBufferData = new Uint16Array(6 * MAX_QUADS_PER_EMITTER);
         // Load quads
@@ -926,7 +926,7 @@ export class M2ParticleEmitter implements IDisposable {
             indexBufferData[i * 6 + 5] = (4 * i + 1);
         }
         this.indexBuffer.setData(indexBufferData)
-        this.databuffers = this.engine.graphics.createDataBuffers(this.vertexBuffer, this.indexBuffer);
+        this.databuffers = this.renderer.graphics.createDataBuffers(this.vertexBuffer, this.indexBuffer);
 
         // Set up material
         const textureId = this.m2data.texture
@@ -947,7 +947,7 @@ export class M2ParticleEmitter implements IDisposable {
             }
         }
         
-        this.material = this.engine.getBaseMaterial();
+        this.material = this.renderer.getBaseMaterial();
         this.material.useShaderProgram(this.shaderProgram);
         let blendMode = this.m2data.blendingType;
         let alphaTreshold;

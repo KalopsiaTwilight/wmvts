@@ -3,7 +3,7 @@ import {
     BufferDataType, ColorMask, DrawingBatchRequest, GenericBatchRequest, GxBlend, 
     IDataBuffers, IShaderProgram, ITexture, ITextureOptions, RenderMaterial 
 } from "@app/rendering/graphics";
-import { IRenderingEngine } from "@app/rendering/interfaces"
+import { IRenderer } from "@app/rendering/interfaces"
 
 import { IBackground } from "./interfaces";
 import vsProgramText from "./background.vert";
@@ -17,7 +17,7 @@ export class Background implements IBackground {
     isLoaded: boolean;
     isDisposing: boolean;
 
-    engine: IRenderingEngine;
+    renderer: IRenderer;
 
     private material: RenderMaterial;
     private program: IShaderProgram;
@@ -30,11 +30,15 @@ export class Background implements IBackground {
         this.transform = Float4.create(0, 0, 1, 1);
     }
 
-    initialize(engine: IRenderingEngine): void {
-        this.engine = engine;
+    get isAttachedToRenderer(): boolean {
+        return this.renderer != null;
+    }
+
+    attachToRenderer(renderer: IRenderer): void {
+        this.renderer = renderer;
         
-        this.program = this.engine.getShaderProgram("BG", vsProgramText, fsProgramText);
-        this.dataBuffers = this.engine.getDataBuffers("BG-RECT", (graphics) => {
+        this.program = this.renderer.getShaderProgram("BG", vsProgramText, fsProgramText);
+        this.dataBuffers = this.renderer.getDataBuffers("BG-RECT", (graphics) => {
             const vertexDataBuffer = graphics.createVertexDataBuffer([
                 { index: this.program.getAttribLocation('a_texCoord'), size: 2, type: BufferDataType.Float, normalized: false, stride: 16, offset: 0 },
                 { index: this.program.getAttribLocation('a_position'), size: 2, type: BufferDataType.Float, normalized: false, stride: 16, offset: 8 },
@@ -52,7 +56,7 @@ export class Background implements IBackground {
 
             return graphics.createDataBuffers(vertexDataBuffer, vertexIndexBuffer);
         })
-        this.texture = this.engine.getSolidColorTexture([1,0,0,1]);
+        this.texture = this.renderer.getSolidColorTexture([1,0,0,1]);
         this.createMaterial();
         this.isLoaded = true
     }
@@ -69,7 +73,7 @@ export class Background implements IBackground {
         batchRequest.useMaterial(this.material)
             .useDataBuffers(this.dataBuffers)
             .drawIndexedTriangles(0, 6);
-        this.engine.submitDrawRequest(batchRequest)
+        this.renderer.submitDrawRequest(batchRequest)
     }
 
     dispose(): void {
@@ -81,7 +85,7 @@ export class Background implements IBackground {
         this.material = null;
         this.program = null;
         this.dataBuffers = null;
-        this.engine = null;
+        this.renderer = null;
         this.transform = null;
     }
 
@@ -112,7 +116,7 @@ export class Background implements IBackground {
         if (this.isDisposing) {
             return;
         }
-        this.texture = this.engine.getSolidColorTexture(color);
+        this.texture = this.renderer.getSolidColorTexture(color);
         this.createMaterial();
     }
 
@@ -136,7 +140,7 @@ export class Background implements IBackground {
                 this.texture = texture;
                 this.createMaterial();
             })
-            this.engine.submitOtherGraphicsRequest(genericRequest);
+            this.renderer.submitOtherGraphicsRequest(genericRequest);
         }
         if (new URL(url, window.location.href).origin != window.location.origin) {
             img.crossOrigin = "";

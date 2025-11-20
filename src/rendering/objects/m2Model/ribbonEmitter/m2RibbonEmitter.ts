@@ -6,7 +6,7 @@ import {
     BufferDataType, ColorMask, DrawingBatchRequest, GxBlend, IShaderProgram, IDataBuffers, 
     IVertexDataBuffer, IVertexIndexBuffer, M2BlendModeToEGxBlend, RenderMaterial
 } from "@app/rendering/graphics";
-import { IRenderingEngine } from "@app/rendering/interfaces";
+import { IRenderer } from "@app/rendering/interfaces";
 
 import type { M2Model } from "../m2Model";
 import fragmentShaderProgramText from "./m2RibbonEmitter.frag";
@@ -39,7 +39,7 @@ export class M2RibbonEmitter implements IDisposable {
     isDisposing: boolean;
     parent: M2Model;
     m2data: WoWRibbonEmiterData;
-    engine: IRenderingEngine;
+    engine: IRenderer;
 
     materials: RenderMaterial[];
     indexBuffer: IVertexIndexBuffer;
@@ -93,7 +93,7 @@ export class M2RibbonEmitter implements IDisposable {
         this.isDisposing = false;
         this.parent = parent;
         this.m2data = emitterData;
-        this.engine = parent.engine;
+        this.engine = parent.renderer;
 
         this.initialize();
     }

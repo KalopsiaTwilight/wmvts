@@ -64,31 +64,31 @@ export class WoWModelViewer {
     }
 
     addM2Model(fileId: FileIdentifier): IM2Model {
-        const model = new M2Model(fileId);
+        const model = this.renderEngine.objectFactory.createM2Model(fileId);
         this.addSceneObject(model);
         return model;
     }
 
     addWMOModel(fileId: FileIdentifier): IWMOModel {
-        const model = this.renderEngine.createWMOModel(fileId);
+        const model = this.renderEngine.objectFactory.createWMOModel(fileId);
         this.addSceneObject(model);
         return model;
     }
 
     addCharacterModel(modelId: RecordIdentifier): ICharacterModel {
-        const model = this.renderEngine.createCharacterModel(modelId);
+        const model = this.renderEngine.objectFactory.createCharacterModel(modelId);
         this.addSceneObject(model);
         return model;
     }
 
     addItemModel(modelId: RecordIdentifier): IItemModel {
-        const model = this.renderEngine.createItemModel(modelId);
+        const model = this.renderEngine.objectFactory.createItemModel(modelId);
         this.addSceneObject(model);
         return model;
     }
 
     addTextureVariantModel(fileId: FileIdentifier): ITextureVariantModel {
-        const model = this.renderEngine.createTextureVariantModel(fileId);
+        const model = this.renderEngine.objectFactory.createTextureVariantModel(fileId);
         this.addSceneObject(model);
         return model;
     }

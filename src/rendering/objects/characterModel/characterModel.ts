@@ -7,7 +7,8 @@ import {
 } from "@app/metadata";
 import { ICallbackManager, CallbackFn } from "@app/utils";
 import { ITexture } from "@app/rendering/graphics";
-import { IRenderingEngine } from "@app/rendering/interfaces";
+import { IDataManager, IIoCContainer, IRenderer } from "@app/rendering/interfaces";
+import { ITexturePickingStrategy } from "@app/rendering/strategies";
 
 import { IM2Model } from "../m2Model";
 
@@ -41,11 +42,13 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     private textureLayerCombiners: { [key: string]: SkinLayerTextureCombiner }
     private textureSectionTextures: { [key: number]: TextureSectionTextureData[] }
     private skinnedModels: { [key: FileIdentifier]: IM2Model }
-    private inventory: CharacterInventory
+    private inventory: CharacterInventory;
+    private texturePickingStrategy: ITexturePickingStrategy;
+    private dataManager?: IDataManager;
     override callbackMgr: ICallbackManager<CharacterModelCallbackType, CharacterModel>;
 
-    constructor(modelId: RecordIdentifier) {
-        super();
+    constructor(modelId: RecordIdentifier, iocContainer: IIoCContainer) {
+        super(iocContainer);
         this.modelId = modelId;
         this.gender = (modelId-1) % 2;
         this.race = Math.ceil(modelId / 2);
@@ -56,14 +59,15 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
         this.textureLayerCombiners = {};
         this.textureSectionTextures = {};
         this.skinnedModels = {};
-        this.inventory = new CharacterInventory(this);
+        this.inventory = new CharacterInventory(this, iocContainer);
+        this.texturePickingStrategy = iocContainer.getTexturePickingStrategy();
+        this.dataManager = iocContainer.getDataManager();
     }
     
-    override initialize(engine: IRenderingEngine): void {
-        super.initialize(engine);
+    override attachToRenderer(renderer: IRenderer): void {
+        super.attachToRenderer(renderer);
 
-        this.callbackMgr = engine.getCallbackManager(this);
-        this.engine.getCharacterMetadata(this.modelId).then(this.onCharacterMetadataLoaded.bind(this));
+        this.dataManager.getCharacterMetadata(this.modelId).then(this.onCharacterMetadataLoaded.bind(this));
     }
 
     override dispose(): void {
@@ -299,7 +303,7 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
             const materialElements = applicableElements.filter(elem => elem.material)
             materialElements.sort((a,b) => b.relationChoiceID - a.relationChoiceID)
             for(const elem of materialElements) {
-                const textureIds = this.engine.texturePickingStrategy(elem.material.textureFiles, this.race, this.gender, this.class)
+                const textureIds = this.texturePickingStrategy(elem.material.textureFiles, this.race, this.gender, this.class)
                 if(!textureIds[0]) {
                     continue;
                 }
@@ -368,7 +372,7 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
             for(let j = 0; j < 3; j++) {
                 const fileId = newSkinLayers[key][j];
                 if (fileId) {
-                    promises.push(this.engine.getTexture(fileId).then((texture) => {
+                    promises.push(this.renderer.getTexture(fileId).then((texture) => {
                         if (this.textureLayerBaseFileIds[key][j] === texture.fileId) {
                             this.textureLayerBaseTextures[key][j] = texture;
                         }
@@ -524,7 +528,7 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
         const fileIds = new Set(skinnedModelFileIds);
         if (fileIds.size != 0) {
             for(const fileId of fileIds) {
-                const model = this.engine.createM2Model(fileId);
+                const model = this.objectFactory.createM2Model(fileId);
                 this.addChild(model);
                 model.attachTo(this);
                 model.toggleGeosets(0, 5300, false);

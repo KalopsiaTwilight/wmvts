@@ -2,7 +2,8 @@ import { AABB, Float3 } from "@app/math";
 import { InventoryType, ItemMetadata, RecordIdentifier } from "@app/metadata";
 import { CallbackFn, ICallbackManager } from "@app/utils";
 import { ITexture } from "@app/rendering/graphics";
-import { IRenderingEngine } from "@app/rendering/interfaces";
+import { IModelPickingStrategy, ITexturePickingStrategy } from "@app/rendering/strategies";
+import { IDataManager, IIoCContainer, IObjectFactory, IRenderer } from "@app/rendering/interfaces";
 
 import { WorldPositionedObject } from "../worldPositionedObject";
 import { ICharacterModel } from "../characterModel";
@@ -29,19 +30,27 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
     component1Texture?: ITexture;
     component2Texture?: ITexture;
 
-    callbackMgr: ICallbackManager<ItemModelCallbackType, ItemModel>
+    private callbackMgr: ICallbackManager<ItemModelCallbackType, ItemModel>
+    private texturePickingStrategy: ITexturePickingStrategy;
+    private modelPickingStrategy: IModelPickingStrategy;
+    private objectFactory: IObjectFactory;
+    private dataManager: IDataManager;
 
-    constructor(displayInfoId: RecordIdentifier) {
+    constructor(displayInfoId: RecordIdentifier, iocContainer: IIoCContainer) {
         super();
         this.displayInfoId = displayInfoId;
         this.sectionTextures = { };
+
+        this.callbackMgr = iocContainer.getCallbackManager(this);
+        this.texturePickingStrategy = iocContainer.getTexturePickingStrategy();
+        this.modelPickingStrategy = iocContainer.getModelPickingStrategy();
+        this.objectFactory = iocContainer.getObjectFactory();
+        this.dataManager = iocContainer.getDataManager();
     }
     
-    override initialize(engine: IRenderingEngine): void {
-        super.initialize(engine);
-        this.engine.getItemMetadata(this.displayInfoId).then(this.onItemMetadataLoaded.bind(this));
-
-        this.callbackMgr = this.engine.getCallbackManager(this);
+    override attachToRenderer(renderer: IRenderer): void {
+        super.attachToRenderer(renderer);
+        this.dataManager.getItemMetadata(this.displayInfoId).then(this.onItemMetadataLoaded.bind(this));
     }
 
     override get isLoaded(): boolean {
@@ -165,11 +174,11 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
         if (metadata.component1) {
             const position = this.itemMetadata.inventoryType === InventoryType.Shoulders ? 0 : -1;
 
-            const modelFileId = this.engine.modelPickingStrategy(metadata.component1.modelFiles, position, race, gender, charClass);
-            const textureFileId = this.engine.texturePickingStrategy(metadata.component1.textureFiles, race, gender, charClass)[0];
+            const modelFileId = this.modelPickingStrategy(metadata.component1.modelFiles, position, race, gender, charClass);
+            const textureFileId = this.texturePickingStrategy(metadata.component1.textureFiles, race, gender, charClass)[0];
             if (textureFileId) {
-                this.component1Texture = this.engine.getUnknownTexture();
-                const promise = this.engine.getTexture(textureFileId).then((texture) => {
+                this.component1Texture = this.renderer.getUnknownTexture();
+                const promise = this.renderer.getTexture(textureFileId).then((texture) => {
                     this.component1Texture.swapFor(texture);
                     if (this.component1) {
                         // TODO: Test if it's always index 0 or type: 2 or w/e
@@ -179,7 +188,7 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
                 textureLoadingPromises.push(promise);
             }
             if (modelFileId) {
-                this.component1 = this.engine.createM2Model(modelFileId);
+                this.component1 = this.objectFactory.createM2Model(modelFileId);
                 this.addChild(this.component1);
                 this.component1.attachTo(this.character);
                 this.component1.on("texturesLoaded", this.onComponentLoaded.bind(this))
@@ -192,11 +201,11 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
         if (metadata.component2) {
             const position = this.itemMetadata.inventoryType === InventoryType.Shoulders ? 1 : -1;
 
-            const modelFileId = this.engine.modelPickingStrategy(metadata.component1.modelFiles, position, race, gender, charClass);
-            const textureFileId = this.engine.texturePickingStrategy(metadata.component1.textureFiles, race, gender, charClass)[0];
+            const modelFileId = this.modelPickingStrategy(metadata.component1.modelFiles, position, race, gender, charClass);
+            const textureFileId = this.texturePickingStrategy(metadata.component1.textureFiles, race, gender, charClass)[0];
             if (textureFileId) {
-                this.component2Texture = this.engine.getUnknownTexture();
-                const promise = this.engine.getTexture(textureFileId).then((texture) => {
+                this.component2Texture = this.renderer.getUnknownTexture();
+                const promise = this.renderer.getTexture(textureFileId).then((texture) => {
                     this.component2Texture.swapFor(texture);
                     if (this.component2) {
                         // TODO: Test if it's always index 0 or type: 2 or w/e
@@ -206,7 +215,7 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
                 textureLoadingPromises.push(promise);
             }
             if (modelFileId) {
-                this.component2 = this.engine.createM2Model(modelFileId);
+                this.component2 = this.objectFactory.createM2Model(modelFileId);
                 this.addChild(this.component2);
                 this.component2.attachTo(this.character);
                 this.component2.on("texturesLoaded", this.onComponentLoaded.bind(this))
@@ -217,14 +226,14 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
         }
 
         if (metadata.componentSections) {
-            const unkTexture = this.engine.getUnknownTexture();
+            const unkTexture = this.renderer.getUnknownTexture();
             for(const section of metadata.componentSections) {
                 this.sectionTextures[section.section] = [unkTexture, unkTexture, unkTexture];
-                const textureIds = this.engine.texturePickingStrategy(section.textures, race, gender, charClass);
+                const textureIds = this.texturePickingStrategy(section.textures, race, gender, charClass);
 
                 for(let i = 0; i < 2; i++) {
                     if (textureIds[i]) {
-                        const promise = this.engine.getTexture(textureIds[i]).then((texture) => {
+                        const promise = this.renderer.getTexture(textureIds[i]).then((texture) => {
                             this.sectionTextures[section.section][i] = texture;
                         });
                         textureLoadingPromises.push(promise);

@@ -9,6 +9,7 @@ import { IM2Model } from "../m2Model";
 
 import { EquipmentSlot, GeoSet } from "./interfaces";
 import { type CharacterModel } from "./characterModel";
+import { IIoCContainer, IObjectFactory } from "@app/rendering/interfaces";
 
 export interface EquippedItemData {
     displayId1: number;
@@ -72,6 +73,7 @@ export class CharacterInventory implements IDisposable {
     inventoryData: { [key in EquipmentSlot]?: EquippedItemData }
     parent: CharacterModel
     isDisposing: boolean;
+    private objectFactory: IObjectFactory;
 
     get isLoaded() {
         for(const slot in this.inventoryData) {
@@ -83,10 +85,11 @@ export class CharacterInventory implements IDisposable {
         return true;
     }
 
-    constructor(parent: CharacterModel) {
+    constructor(parent: CharacterModel, iocContainer: IIoCContainer) {
         this.parent = parent;
         this.inventoryData = { };
         this.isDisposing = false;
+        this.objectFactory = iocContainer.getObjectFactory();
     }
 
     equipItem(slot: EquipmentSlot, displayId1: number, displayId2?: number) {
@@ -96,7 +99,7 @@ export class CharacterInventory implements IDisposable {
         
         this.unloadItem(slot);
 
-        const model1 = this.parent.engine.createItemModel(displayId1);
+        const model1 = this.objectFactory.createItemModel(displayId1);
         model1.equipTo(this.parent);
         model1.on("metadataLoaded", (model: IItemModel) => {
             const attachments = this.getAttachmentIdsForSlot(slot, model.itemMetadata.inventoryType);
@@ -124,7 +127,7 @@ export class CharacterInventory implements IDisposable {
 
         let model2: IItemModel;
         if (displayId2) {
-            model2 = this.parent.engine.createItemModel(displayId2);
+            model2 = this.objectFactory.createItemModel(displayId2);
             model2.equipTo(this.parent);
         }
 
