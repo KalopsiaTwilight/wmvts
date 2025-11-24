@@ -130,31 +130,21 @@ export class WoWModelServerDataProvider implements IDataLoader {
         }
     }
 
-    loadTexture(fileId: number): Promise<string|Error> {
-        return new Promise<string>((res, rej) => {
-            const url = `${this.rootPath}/modelviewer/textures/${fileId}.webp`;
-            const request = new XMLHttpRequest();
-            request.open("GET", url, true);
-            request.responseType = "arraybuffer"
-            request.onload = () => {
-                const blob = new Blob([request.response]);
-                res(window.URL.createObjectURL(blob));
+    async loadTexture(fileId: number): Promise<string|Error> {
+        const url = `${this.rootPath}/modelviewer/textures/${fileId}.webp`;
+        try {
+            const resp = await fetch(url);
+
+            if (!resp.ok) {
+                return new Error("Modelviewer Server returned responsecode: " + resp.status);
             }
-            request.onprogress = (evt) => {
-                if (this.progress) {
-                    this.progress.update(fileId, Math.floor(evt.loaded / evt.total * 100))
-                }
-            };
-            request.onloadstart = () => {
-                if (this.progress) {
-                    this.progress.update(fileId, 0);
-                }
-            }
-            request.onerror = (evt) => {
-                return new Error("Modelviewer Server returned responsecode: " + request.status);
-            }
-            request.send();
-        });
+
+            const data = await resp.blob();
+            
+            return window.URL.createObjectURL(data);
+        } catch(err) {
+            return err;
+        }
     }
 
     async loadItemvisualMetadata(visualId: number): Promise<ItemVisualMetadata|Error> {
