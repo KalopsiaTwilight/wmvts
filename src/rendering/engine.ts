@@ -88,7 +88,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
     // Caching. TODO: Simplify into single united cache?
     cache: ICache;
     // TODO: Move this to datamanager?
-    runningRequests: { [key: string]: Promise<unknown> }
+    textureRequests: { [key: string]: Promise<ITexture> }
 
     // Some stats
     framesDrawn: number;
@@ -138,7 +138,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         const cacheTtl = options.cacheTtl ? options.cacheTtl : 1000 * 60 * 15;
         this.cache = new WebGlCache(cacheTtl);
 
-        this.runningRequests = {};
+        this.textureRequests = {};
         this.drawRequests = [];
         this.otherGraphicsRequests = [];
 
@@ -353,13 +353,25 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
             return this.cache.get(key);
         }
 
-        const data = await this.dataManager.getTextureImageData(fileId);
-        if (!data) {
-            return null;
+        if (this.textureRequests[key]) {
+            const data = await this.textureRequests[key];
+            return data;
         }
 
-        const texture = await this.processTexture(fileId, data, opts);
-        this.cache.store(key, texture);
+        const promise = this.dataManager.getTextureImageData(fileId).then(async (data) => {
+            if (!data) {
+                return null;
+            }
+            const texture = await this.processTexture(fileId, data, opts);
+            return texture;
+        });
+        this.textureRequests[key] = promise;
+
+        const texture = await promise;
+        if (texture) {
+            this.cache.store(key, texture);
+        }
+        delete this.textureRequests[key];
         return texture;
     }
 
@@ -369,14 +381,10 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
             img.onload = () => {
                 const texture = this.graphics.createTextureFromImg(img, opts);
                 texture.fileId = fileId;
-                this.progress?.removeFileFromOperation(fileId);
-                delete this.runningRequests[fileId];
                 res(texture);
             }
             img.onerror = (evt, src, line, col, err) => {
                 this.errorHandler?.(DataProcessingErrorType, "TEXTURE-" + fileId, err ? err : new Error("Unable to process image data for file: " + fileId));
-                this.progress?.removeFileFromOperation(fileId);
-                delete this.runningRequests[fileId];
                 res(this.getUnknownTexture());
             }
             img.src = imgData;
