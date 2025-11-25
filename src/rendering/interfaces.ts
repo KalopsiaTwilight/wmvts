@@ -10,7 +10,6 @@ import { IModelPickingStrategy, ITexturePickingStrategy } from "./strategies";
 import { ICharacterModel, IItemModel, IM2Model, ITextureVariantModel, IWMOModel } from "./objects";
 
 export interface IRenderer {
-    // TODO: Deprecate direct access to graphics
     graphics: IGraphics;
     
     // Camera data
