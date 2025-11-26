@@ -8,11 +8,12 @@ import { IRenderer } from "@app/rendering/interfaces"
 import { IBackground } from "./interfaces";
 import vsProgramText from "./background.vert";
 import fsProgramText from "./background.frag";
+import { RenderObject } from "../renderObject";
 
 const BATCH_IDENTIFIER = "BACKGROUND"
 const BACKGROUND_LAYER_ID = -100;
 
-export class Background implements IBackground {
+export class Background extends RenderObject implements IBackground {
     fileId: number
     isLoaded: boolean;
     isDisposing: boolean;
@@ -26,12 +27,9 @@ export class Background implements IBackground {
     private transform: Float4;
 
     constructor() {
+        super();
         this.fileId = -1;
         this.transform = Float4.create(0, 0, 1, 1);
-    }
-
-    get isAttachedToRenderer(): boolean {
-        return this.renderer != null;
     }
 
     attachToRenderer(renderer: IRenderer): void {

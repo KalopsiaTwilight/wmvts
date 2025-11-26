@@ -11,7 +11,7 @@ import { IM2Proxy } from "./interfaces";
 
 export type M2ProxyCallbackType = "modelCreated" | "modelDataLoaded" | "modelTexturesLoaded" ;
 
-export class M2Proxy extends WorldPositionedObject implements IM2Proxy  {
+export class M2Proxy<TEvent extends M2ProxyCallbackType = M2ProxyCallbackType> extends WorldPositionedObject<TEvent> implements IM2Proxy<TEvent>  {
     get fileId(): FileIdentifier {
         return this.m2Model && this.m2Model.fileId;
     }
@@ -34,8 +34,8 @@ export class M2Proxy extends WorldPositionedObject implements IM2Proxy  {
 
     constructor(iocContainer: IIoCContainer) {
         super();
-        this.callbackMgr = iocContainer.getCallbackManager(this);
         this.objectFactory = iocContainer.getObjectFactory();
+        this.callbackMgr = iocContainer.getCallbackManager(this);
     }
     
     protected createM2Model(fileId: FileIdentifier, configureFn?: (model: IM2Model) => void) {
@@ -49,15 +49,18 @@ export class M2Proxy extends WorldPositionedObject implements IM2Proxy  {
         this.m2Model = this.objectFactory.createM2Model(fileId);
         this.addChild(this.m2Model);
 
-        this.m2Model.on("modelDataLoaded", () => {
+        this.m2Model.once("modelDataLoaded", () => {
             this.callbackMgr.processCallbacks("modelDataLoaded")
         });
-        this.m2Model.on("texturesLoaded", () => {
+        this.m2Model.once("texturesLoaded", () => {
             this.callbackMgr.processCallbacks("modelTexturesLoaded")
         });
         this.callbackMgr.processCallbacks("modelCreated");
-        this.m2Model.on("modelDataLoaded", () => {
+        this.m2Model.once("modelDataLoaded", () => {
             this.setBoundingBox(this.m2Model.localBoundingBox);
+        })
+        this.m2Model.once("loaded", () => {
+            this.processCallbacks("loaded");
         })
 
         if (configureFn) {
@@ -96,12 +99,6 @@ export class M2Proxy extends WorldPositionedObject implements IM2Proxy  {
 
     on(type: M2ProxyCallbackType, fn: CallbackFn<M2Proxy>, persistent = false): void {
         this.callbackMgr.addCallback(type, fn, persistent);
-    }
-
-    setTexture(index: number, fileId: number) {
-        this.on("modelCreated", () => {
-            this.m2Model.setTexture(index, fileId);
-        });
     }
 
     swapTexture(index: number, texture: ITexture) {
@@ -177,8 +174,8 @@ export class M2Proxy extends WorldPositionedObject implements IM2Proxy  {
     canExecuteCallback(type: M2ProxyCallbackType): boolean {
         switch(type) {
             case "modelCreated": return !!this.m2Model;
-            case "modelDataLoaded": return this.m2Model?.canExecuteCallback("modelDataLoaded") != null;
-            case "modelTexturesLoaded": return this.m2Model?.canExecuteCallback("texturesLoaded") != null;
+            case "modelDataLoaded": return this.m2Model?.canExecuteCallbackNow("modelDataLoaded") != null;
+            case "modelTexturesLoaded": return this.m2Model?.canExecuteCallbackNow("texturesLoaded") != null;
             default: return false;
         }
     }

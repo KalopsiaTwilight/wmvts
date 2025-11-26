@@ -1,5 +1,4 @@
 import { Float44, Float3 } from "@app/math";
-import { IImmediateCallbackable, ISupportCallbacks } from "@app/utils";
 import { ITexture, IWorldPositionedObject } from "@app/rendering";
 import { WoWModelData } from "@app/modeldata";
 import { FileIdentifier } from "@app/metadata";
@@ -19,10 +18,9 @@ export interface ISkinnedObject {
 export type ParticleColorOverride = [Float3, Float3, Float3] | null;
 export type ParticleColorOverrides = [ ParticleColorOverride, ParticleColorOverride, ParticleColorOverride];
 
-export type M2ModelCallbackType = "modelDataLoaded" | "texturesLoaded" | "texturesLoadStart"
+export type M2ModelEvents = "modelDataLoaded" | "texturesLoaded"
 
-export interface IM2Model<Ct extends string = M2ModelCallbackType> 
-extends IWorldPositionedObject, ISkinnedObject, ISupportCallbacks<Ct>, IImmediateCallbackable<Ct> 
+export interface IM2Model<TParentEvent extends string = M2ModelEvents> extends IWorldPositionedObject<TParentEvent | M2ModelEvents>, ISkinnedObject
 {
     fileId: FileIdentifier;
     // TODO: Deprecate direct property access
@@ -37,8 +35,6 @@ extends IWorldPositionedObject, ISkinnedObject, ISupportCallbacks<Ct>, IImmediat
     resumeAnimation(): void;
     setAnimationSpeed(speed: number): void;
 
-    // TODO: Deprecate
-    setTexture(index: number, fileId: number): void;
     swapTexture(index: number, texture: ITexture): void;
     swapTextureType(type: number, texture: ITexture): void;
 

@@ -191,7 +191,7 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
                 this.component1 = this.objectFactory.createM2Model(modelFileId);
                 this.addChild(this.component1);
                 this.component1.attachTo(this.character);
-                this.component1.on("texturesLoaded", this.onComponentLoaded.bind(this))
+                this.component1.once("texturesLoaded", this.onComponentLoaded.bind(this))
                 if (particleColorOverride) {
                     this.component1.setParticleColorOverride(particleColorOverride);
                 }
@@ -218,7 +218,7 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
                 this.component2 = this.objectFactory.createM2Model(modelFileId);
                 this.addChild(this.component2);
                 this.component2.attachTo(this.character);
-                this.component2.on("texturesLoaded", this.onComponentLoaded.bind(this))
+                this.component2.once("texturesLoaded", this.onComponentLoaded.bind(this))
                 if (particleColorOverride) {
                     this.component2.setParticleColorOverride(particleColorOverride);
                 }

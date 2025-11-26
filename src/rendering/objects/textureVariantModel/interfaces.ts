@@ -1,7 +1,7 @@
-import { IM2Model, M2ModelCallbackType } from "../m2Model";
+import { IM2Model, M2ModelEvents } from "../m2Model";
 
-export type TextureVariantModelCallbackType  = "textureVariationsLoaded" | M2ModelCallbackType;
+export type TextureVariantModelEvents  = "textureVariationsLoaded";
 
-export interface ITextureVariantModel extends IM2Model<TextureVariantModelCallbackType> {
+export interface ITextureVariantModel<TParentEvent extends string = TextureVariantModelEvents> extends IM2Model<TParentEvent | TextureVariantModelEvents> {
     useTextureVariation(index: number): void;
 }

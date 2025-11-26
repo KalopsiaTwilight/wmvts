@@ -1,9 +1,10 @@
 import { AABB, Float3, Float4, Float44 } from "@app/math";
 
 import { IRenderingEngine } from "../interfaces";
-import { IWorldPositionedObject } from "./interfaces";
+import { IWorldPositionedObject, RenderObjectEvents } from "./interfaces";
+import { RenderObject } from "./renderObject";
 
-export abstract class WorldPositionedObject implements IWorldPositionedObject {
+export abstract class WorldPositionedObject<TEvent extends string = RenderObjectEvents> extends RenderObject<TEvent> implements IWorldPositionedObject<TEvent> {
     isDisposing: boolean;
 
     parent?: IWorldPositionedObject;
@@ -22,6 +23,7 @@ export abstract class WorldPositionedObject implements IWorldPositionedObject {
     }
 
     constructor() {
+        super();
         this.children = [];
         this.worldModelMatrix = Float44.identity();
         this.localModelMatrix = Float44.identity();
@@ -30,11 +32,10 @@ export abstract class WorldPositionedObject implements IWorldPositionedObject {
         this.worldBoundingBox = AABB.create(Float3.zero(), Float3.zero());
 
         this.invWorldModelMatrix = Float44.invert(this.worldModelMatrix);
-        this.isDisposing = false;
     }
 
     attachToRenderer(engine: IRenderingEngine): void {
-        this.renderer = engine;
+        super.attachToRenderer(engine);
         for(const child of this.children) {
             if (!child.isAttachedToRenderer) {
                 child.attachToRenderer(engine);
@@ -113,7 +114,7 @@ export abstract class WorldPositionedObject implements IWorldPositionedObject {
         }
     }
 
-    addChild(obj: IWorldPositionedObject) {
+    addChild<TChild extends RenderObjectEvents>(obj: IWorldPositionedObject<TChild>) {
         obj.parent = this;
         this.children.push(obj);
         if (this.isAttachedToRenderer) {
@@ -124,6 +125,5 @@ export abstract class WorldPositionedObject implements IWorldPositionedObject {
     protected setBoundingBox(boundingBox: AABB) {
         this.localBoundingBox = boundingBox; 
         this.worldBoundingBox = AABB.transform(this.localBoundingBox, this.worldModelMatrix);
-        this.renderer.processNewBoundingBox(this.worldBoundingBox);
     }
 }

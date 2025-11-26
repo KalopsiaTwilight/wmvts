@@ -1,5 +1,7 @@
 import { IWorldPositionedObject } from "../interfaces";
 
-export interface IWMOModel extends IWorldPositionedObject {
+export type WMOModelEvents =  "modelDataLoaded" | "texturesLoaded"
+
+export interface IWMOModel<TParentEvent extends string = WMOModelEvents> extends IWorldPositionedObject<TParentEvent | WMOModelEvents> {
 
 }

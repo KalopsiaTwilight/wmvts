@@ -79,10 +79,10 @@ class ParticlePreRenderData {
 
 const M2ParticleEmitterRandomTable = [];
 
-export class M2ParticleEmitter implements IDisposable {
+export class M2ParticleEmitter<TParentEvent extends string> implements IDisposable {
     // References
     index: number;
-    parent: M2Model;
+    parent: M2Model<TParentEvent>;
     renderer: IRenderer;
     m2data: WoWParticleEmitterData;
     exp2Data: WoWExtendedParticleData;
@@ -141,7 +141,7 @@ export class M2ParticleEmitter implements IDisposable {
     // Functional
     show: boolean;
 
-    constructor(index: number, parent: M2Model, emitterData: WoWParticleEmitterData, exp2Data?: WoWExtendedParticleData) {
+    constructor(index: number, parent: M2Model<TParentEvent>, emitterData: WoWParticleEmitterData, exp2Data?: WoWExtendedParticleData) {
         this.index = index;
         this.renderer = parent.renderer;
         this.parent = parent;

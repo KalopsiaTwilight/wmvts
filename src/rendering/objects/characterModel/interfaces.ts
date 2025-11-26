@@ -4,11 +4,11 @@ import { IM2Model } from "@app/rendering";
 export type M2ProxyCallbackType = "modelCreated" | "modelDataLoaded" | "modelTexturesLoaded" ;
 export type CharacterModelCallbackType = "characterMetadataLoaded" | "skinTexturesLoaded" | M2ProxyCallbackType
 
-export interface IM2Proxy<Ct extends string = M2ProxyCallbackType>  extends IM2Model<Ct> {
+export interface IM2Proxy<TEvent extends string = M2ProxyCallbackType>  extends IM2Model<TEvent> {
 
 }
 
-export interface ICharacterModel<Ct extends string = CharacterModelCallbackType> extends IM2Proxy<Ct> {
+export interface ICharacterModel<TEvent extends string = CharacterModelCallbackType> extends IM2Proxy<TEvent> {
     modelId: RecordIdentifier;
     race: number;
     gender: number;

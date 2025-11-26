@@ -27,9 +27,6 @@ export interface IRenderer {
     submitDrawRequest(request: DrawingBatchRequest): void;
     submitOtherGraphicsRequest(request: RenderingBatchRequest): void;
 
-    // TODO: Should be supported by an on "loaded" event
-    processNewBoundingBox(boundingBox: AABB): void;
-
     getBaseMaterial(): RenderMaterial;
     getSolidColorTexture(color: Float4): ITexture;
     getUnknownTexture(): ITexture;

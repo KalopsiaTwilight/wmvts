@@ -304,6 +304,11 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
 
     addSceneObject(object: IRenderObject, priority: number) {
         object.attachToRenderer(this);
+        if (isWorldPositionedObject(object)) {
+            object.once("loaded", (obj) => {
+                this.processNewBoundingBox(obj.worldBoundingBox);
+            })
+        }
         this.sceneObjects.push(object);
     }
 

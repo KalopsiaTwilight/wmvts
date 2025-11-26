@@ -282,6 +282,7 @@ export class WMOLiquid extends WorldPositionedObject {
         Promise.all(texturePromises).then(() => {
             this.setupMaterials();
             this.texturesLoaded = true;
+            this.processCallbacks("loaded")
         })
         this.metadataLoaded = true;
     }

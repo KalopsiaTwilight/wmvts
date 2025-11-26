@@ -11,7 +11,7 @@ import { IDataManager, IIoCContainer, IRenderer } from "@app/rendering/interface
 
 import { WorldPositionedObject } from "../worldPositionedObject";
 
-import { IBoneData, IM2Model, ISkinnedObject, M2ModelCallbackType, ParticleColorOverrides } from "./interfaces";
+import { IBoneData, IM2Model, ISkinnedObject, M2ModelEvents, ParticleColorOverrides } from "./interfaces";
 import fragmentShaderProgramText from "./m2Model.frag";
 import vertexShaderProgramText from "./m2Model.vert";
 import { getM2PixelShaderId, getM2VertexShaderId } from "./m2Shaders";
@@ -33,7 +33,7 @@ interface TextureUnitData {
 
 const BATCH_IDENTIFIER = "M2";
 
-export class M2Model extends WorldPositionedObject implements IM2Model {
+export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldPositionedObject<TParentEvent | M2ModelEvents> implements IM2Model<TParentEvent> {
     iocContainer: IIoCContainer;
     dataManager: IDataManager;
 
@@ -45,10 +45,10 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
     isModelDataLoaded: boolean;
     isTexturesLoaded: boolean;
 
-    particleEmitters: M2ParticleEmitter[];
+    particleEmitters: M2ParticleEmitter<TParentEvent>[];
 
     particleColorOverrides: ParticleColorOverrides;
-    ribbonEmitters: M2RibbonEmitter[];
+    ribbonEmitters: M2RibbonEmitter<TParentEvent>[];
 
     // graphics data
     shaderProgram: IShaderProgram;
@@ -65,8 +65,6 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
     modelViewMatrix: Float44;
     invModelViewMatrix: Float44;
     isMirrored: boolean;
-
-    callbackMgr: ICallbackManager<M2ModelCallbackType, M2Model>
 
 
     constructor(fileId: FileIdentifier, iocContainer: IIoCContainer) {
@@ -125,15 +123,12 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
         this.attachedToModel = null;
         this.modelViewMatrix = null;
         this.invModelViewMatrix = null;
-        this.callbackMgr = null;
     }
 
     override attachToRenderer(renderer: IRenderer): void {
         super.attachToRenderer(renderer);
         this.shaderProgram = this.renderer.getShaderProgram("M2", vertexShaderProgramText, fragmentShaderProgramText);
 
-
-        this.callbackMgr = this.iocContainer.getCallbackManager(this);
         this.dataManager.getM2ModelFile(this.fileId).then(this.onModelLoaded.bind(this));
     }
 
@@ -215,24 +210,12 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
         }
     }
 
-    // TODO: Deprecate
-    setTexture(index: number, fileId: FileIdentifier) {
-        if (!this.isModelDataLoaded) {
-            this.on("texturesLoadStart", (model) => {
-                model.modelData.textures[index].textureId = fileId;
-            });
-            return;
-        }
-        this.modelData.textures[index].textureId = fileId;
-        this.loadTextures();
-    }
-
     swapTexture(index: number, texture: ITexture) {
         if (!texture) {
             return;
         }
 
-        this.on("texturesLoaded", () => {
+        this.once("texturesLoaded", () => {
             this.textureObjects[index] = texture;
             // Recreate materials for new texture(s)
             for (let i = 0; i < this.modelData.textureUnits.length; i++) {
@@ -246,7 +229,7 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
             return;
         }
 
-        this.on("modelDataLoaded", () => {
+        this.once("modelDataLoaded", () => {
             const textureIndex = this.modelData.textures.findIndex(x => x.type === type);
             if (textureIndex < 0) {
                 return;
@@ -254,10 +237,6 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
 
             this.swapTexture(textureIndex, texture);
         })
-    }
-
-    on(type: M2ModelCallbackType, fn: CallbackFn<M2Model>, persistent = false): void {
-        this.callbackMgr.addCallback(type, fn, persistent);
     }
     
     getAnimations(): number[] {
@@ -289,7 +268,7 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
     }
 
     toggleGeosets(start: number, end: number, show: boolean) {
-        this.on("texturesLoaded", () => {
+        this.once("texturesLoaded", () => {
             for (let i = 0; i < this.textureUnitData.length; i++) {
                 const texUnitData = this.textureUnitData[i];
                 if (texUnitData.geoSetId >= start && texUnitData.geoSetId <= end) {
@@ -306,17 +285,6 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
                 }
             }
         })
-    }
-
-    canExecuteCallback(type: M2ModelCallbackType): boolean {
-        let dataNeeded: unknown;
-        switch(type) {
-            case "modelDataLoaded": dataNeeded = this.modelData; break;
-            case "texturesLoadStart": dataNeeded = this.textureUnitData; break;
-            case "texturesLoaded": dataNeeded = this.textureUnitData; break;
-            default: dataNeeded = null; break;
-        }
-        return !!dataNeeded;
     }
 
     loadBoneFile(id: FileIdentifier) {
@@ -660,7 +628,7 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
         this.processBoneFileData();
 
         this.isModelDataLoaded = true;
-        this.callbackMgr.processCallbacks("modelDataLoaded");
+        this.processCallbacks("modelDataLoaded");
 
         this.loadTextures();
     }
@@ -714,7 +682,6 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
         this.isTexturesLoaded = false;
         this.textureObjects = {}
 
-        this.callbackMgr.processCallbacks("texturesLoadStart");
         const loadingPromises: Promise<void>[] = []
         for (let i = 0; i < this.modelData.textures.length; i++) {
             const textureId = this.modelData.textures[i].textureId
@@ -763,7 +730,8 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
             this.createTextureUnitData(i);
         }
 
-        this.callbackMgr.processCallbacks("texturesLoaded");
+        this.processCallbacks("texturesLoaded");
+        this.processCallbacks("loaded");
     }
 
     private onBoneFileLoaded(data: WoWBoneFileData | null) {
@@ -854,5 +822,13 @@ export class M2Model extends WorldPositionedObject implements IM2Model {
             "u_textureWeights": texUnitData.textureWeights
         })
 
+    }
+
+    override canExecuteCallbackNow(type: TParentEvent | M2ModelEvents): boolean {
+        switch(type) {
+            case "modelDataLoaded": return this.modelData != null;
+            case "texturesLoaded": return this.isTexturesLoaded;
+            default: return super.canExecuteCallbackNow(type);
+        }
     }
 }

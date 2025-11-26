@@ -7,12 +7,11 @@ import { IIoCContainer, IRenderer } from "@app/rendering/interfaces";
 
 import { M2Model } from "../m2Model";
 
-import { ITextureVariantModel, TextureVariantModelCallbackType } from "./interfaces";
+import { ITextureVariantModel, TextureVariantModelEvents } from "./interfaces";
 
-export class TextureVariantModel extends M2Model implements ITextureVariantModel{
+export class TextureVariantModel<TParentEvent extends string = TextureVariantModelEvents> extends M2Model<TParentEvent | TextureVariantModelEvents> implements ITextureVariantModel{
 
     textureVariations: TextureVariationsMetadata;
-    override callbackMgr: ICallbackManager<TextureVariantModelCallbackType, TextureVariantModel>;
 
     loadedTextures: ITexture[]
 
@@ -44,7 +43,7 @@ export class TextureVariantModel extends M2Model implements ITextureVariantModel
     override attachToRenderer(engine: IRenderer): void {
         super.attachToRenderer(engine);
 
-        this.on("modelDataLoaded", () => {
+        this.once("modelDataLoaded", () => {
             this.dataManager.getTextureVariationsMetadata(this.fileId).then(this.onTextureVariationsLoaded.bind(this));
         })
     }
@@ -53,15 +52,11 @@ export class TextureVariantModel extends M2Model implements ITextureVariantModel
         return super.isLoaded && this.textureVariations != null;
     }
 
-    override canExecuteCallback(type: TextureVariantModelCallbackType): boolean {
+    override canExecuteCallbackNow(type: TextureVariantModelEvents): boolean {
         switch(type) {
-            case "modelDataLoaded": 
-            case "texturesLoadStart": 
-            case "texturesLoaded":
-                return super.canExecuteCallback(type);
             case "textureVariationsLoaded":
                 return this.textureVariations != null;
-            default: return false;
+            default: return super.canExecuteCallbackNow(type);
         }
     }
 
@@ -72,7 +67,6 @@ export class TextureVariantModel extends M2Model implements ITextureVariantModel
         
         super.dispose();
         this.textureVariations = null;
-        this.callbackMgr = null;
     }
 
     private onTextureVariationsLoaded(data: TextureVariationsMetadata | null) {
@@ -82,7 +76,7 @@ export class TextureVariantModel extends M2Model implements ITextureVariantModel
 
         this.textureVariations = data;
 
-        this.callbackMgr.processCallbacks("textureVariationsLoaded");
+        this.processCallbacks("textureVariationsLoaded");
         
         for (const textureInfo of this.modelData.textures) {
             // Load first texture variation if any textures are undefined and have a usage type.

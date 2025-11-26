@@ -21,7 +21,7 @@ import vertexShaderProgramText from "./wmoModel.vert";
 import portalFragmentShaderProgramText from "./wmoPortal.frag";
 import portalVertexShaderProgramText from "./wmoPortal.vert";
 import { WMOLiquid } from "./wmoLiquid";
-import { IWMOModel } from "./interfaces";
+import { IWMOModel, WMOModelEvents } from "./interfaces";
 
 export interface PortalMapData {
     index: number;
@@ -41,7 +41,7 @@ export enum WMOOwnerTypes {
 const BATCH_IDENTIFIER = "WMO";
 const PORTAL_BATCH_IDENTIFIER = "WMO-PORTAL";
 
-export class WMOModel extends WorldPositionedObject implements IWMOModel {
+export class WMOModel<TParentEvent extends string = WMOModelEvents> extends WorldPositionedObject<TParentEvent | WMOModelEvents> implements IWMOModel<TParentEvent> {
     isModelDataLoaded: boolean;
     isTexturesLoaded: boolean;
 
@@ -205,7 +205,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
     }
 
     get isLoaded() {
-        return this.isModelDataLoaded && this.isTexturesLoaded && this.children.every((x) => x.isLoaded);
+        return this.isModelDataLoaded && this.isTexturesLoaded;
     }
 
     private onModelLoaded(data: WoWWorldModelData) {
@@ -233,6 +233,7 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
         this.setupPortalGraphics();
 
         this.isModelDataLoaded = true;
+        this.processCallbacks("modelDataLoaded");
     }
 
     private loadDoodads() {
@@ -287,6 +288,8 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
         Promise.all(loadingPromises).then(() => {
             this.setupMaterials();
             this.isTexturesLoaded = true;
+            this.processCallbacks("texturesLoaded");
+            this.processCallbacks("loaded");
         })
     }
 
@@ -296,10 +299,8 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
             const groupData = this.modelData.groups[i];
             for(const liquidData of groupData.liquidData) {
                 const liquidWmo = new WMOLiquid(liquidData, groupData, this.modelData.flags, this.dataManager);
-                liquidWmo.parent = this;
+                this.addChild(liquidWmo);
                 liquidWmo.updateModelMatrixFromParent();
-                liquidWmo.attachToRenderer(this.renderer);
-                this.children.push(liquidWmo);
                 this.groupLiquids[i].push(liquidWmo);
             }
         }
@@ -797,5 +798,13 @@ export class WMOModel extends WorldPositionedObject implements IWMOModel {
         super.setModelMatrix(position, rotation, scale);
 
         Float44.tranpose(this.invWorldModelMatrix, this.transposeInvModelMatrix);
+    }
+
+    override canExecuteCallbackNow(type: WMOModelEvents): boolean {
+        switch(type) {
+            case "modelDataLoaded": return this.modelData != null;
+            case "texturesLoaded": return this.isTexturesLoaded;
+            default: return super.canExecuteCallbackNow(type);
+        }
     }
 }
