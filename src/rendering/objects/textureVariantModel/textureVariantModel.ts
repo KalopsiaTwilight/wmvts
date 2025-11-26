@@ -52,7 +52,7 @@ export class TextureVariantModel<TParentEvent extends string = never> extends M2
         return super.isLoaded && this.textureVariations != null;
     }
 
-    override canExecuteCallbackNow(type: TextureVariantModelEvents): boolean {
+    protected override canExecuteCallbackNow(type: TextureVariantModelEvents): boolean {
         switch(type) {
             case "textureVariationsLoaded":
                 return this.textureVariations != null;

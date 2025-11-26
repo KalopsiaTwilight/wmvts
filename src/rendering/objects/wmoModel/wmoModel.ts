@@ -812,7 +812,7 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
         Float44.tranpose(this.invWorldModelMatrix, this.transposeInvModelMatrix);
     }
 
-    override canExecuteCallbackNow(type: WMOModelEvents): boolean {
+    protected override canExecuteCallbackNow(type: WMOModelEvents): boolean {
         switch(type) {
             case "modelDataLoaded": return this.modelData != null;
             case "texturesLoaded": return this.isTexturesLoaded;

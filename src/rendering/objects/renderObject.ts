@@ -30,7 +30,7 @@ export abstract class RenderObject<TEvent extends string = RenderObjectEvents> i
         this.addCallback(event, callback);
     }
 
-    canExecuteCallbackNow(type: TEvent | RenderObjectEvents): boolean {
+    protected canExecuteCallbackNow(type: TEvent | RenderObjectEvents): boolean {
         switch(type) {
             case "disposed": return this.isDisposing;
             case "loaded": return this.isLoaded;

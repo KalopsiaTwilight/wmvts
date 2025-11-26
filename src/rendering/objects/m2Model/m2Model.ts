@@ -837,7 +837,7 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
 
     }
 
-    override canExecuteCallbackNow(type: TParentEvent | M2ModelEvents): boolean {
+    protected override canExecuteCallbackNow(type: TParentEvent | M2ModelEvents): boolean {
         switch(type) {
             case "modelDataLoaded": return this.modelData != null;
             case "texturesLoaded": return this.isTexturesLoaded;

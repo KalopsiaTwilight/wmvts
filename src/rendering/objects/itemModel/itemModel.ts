@@ -1,6 +1,5 @@
 import { AABB, Float3 } from "@app/math"; 
 import { InventoryType, ItemMetadata, RecordIdentifier } from "@app/metadata";
-import { CallbackFn, ICallbackManager } from "@app/utils";
 import { ITexture } from "@app/rendering/graphics";
 import { IModelPickingStrategy, ITexturePickingStrategy } from "@app/rendering/strategies";
 import { IDataManager, IIoCContainer, IObjectFactory, IRenderer } from "@app/rendering/interfaces";
@@ -129,19 +128,13 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
         this.component2Texture = null;
     }
 
-    canExecuteCallback(type: ItemModelEvents): boolean {
-        if (this.isDisposing) {
-            return false;
-        }
-
-        let dataNeeded: unknown;
+    protected override canExecuteCallbackNow(type: ItemModelEvents): boolean {
         switch(type) {
-            case "metadataLoaded": dataNeeded = this.itemMetadata; break;
-            case "componentsLoaded": dataNeeded = this.componentsLoaded; break;
-            case "sectionTexturesLoaded": dataNeeded = this.texturesLoaded; break;
-            default: dataNeeded = null; break;
+            case "metadataLoaded": return this.itemMetadata != null;
+            case "componentsLoaded": return this.componentsLoaded;
+            case "sectionTexturesLoaded": return this.texturesLoaded;
+            default: return super.canExecuteCallbackNow(type);
         }
-        return !!dataNeeded;
     }
 
     private onItemMetadataLoaded(metadata: ItemMetadata) {

@@ -13,8 +13,6 @@ export interface IRenderObject<TEvent extends string = RenderObjectEvents> exten
     update(deltaTime: number): void;
     draw(): void;
     once(event: TEvent | RenderObjectEvents, callback: CallbackFn<this>): void
-    // TODO: Ideally this is private
-    canExecuteCallbackNow(type: TEvent | RenderObjectEvents): boolean 
 
     get isLoaded(): boolean;
     get isAttachedToRenderer(): boolean;

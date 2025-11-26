@@ -161,7 +161,7 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
         }
     }
 
-    override canExecuteCallbackNow(type: CharacterModelEvents): boolean {
+    protected override canExecuteCallbackNow(type: CharacterModelEvents): boolean {
         if (this.isDisposing) {
             return false;
         }
