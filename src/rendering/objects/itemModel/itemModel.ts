@@ -21,7 +21,7 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
     componentsLoaded: boolean;
     texturesLoaded: boolean;
 
-    character?: ICharacterModel;
+    character?: ICharacterModel<never>;
 
     component1?: IM2Model;
     component2?: IM2Model;
@@ -36,9 +36,8 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
     private objectFactory: IObjectFactory;
     private dataManager: IDataManager;
 
-    constructor(displayInfoId: RecordIdentifier, iocContainer: IIoCContainer) {
+    constructor(iocContainer: IIoCContainer) {
         super();
-        this.displayInfoId = displayInfoId;
         this.sectionTextures = { };
 
         this.callbackMgr = iocContainer.getCallbackManager(this);
@@ -50,11 +49,24 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
     
     override attachToRenderer(renderer: IRenderer): void {
         super.attachToRenderer(renderer);
-        this.dataManager.getItemMetadata(this.displayInfoId).then(this.onItemMetadataLoaded.bind(this));
+        if (this.displayInfoId) {
+            this.dataManager.getItemMetadata(this.displayInfoId).then(this.onItemMetadataLoaded.bind(this));
+        }
     }
 
     override get isLoaded(): boolean {
         return this.itemMetadata != null && this.texturesLoaded && this.componentsLoaded;
+    }
+
+    loadDisplayInfoId(displayInfoId: RecordIdentifier) {
+        if (this.displayInfoId === displayInfoId) {
+            return;
+        }
+        
+        this.displayInfoId = displayInfoId;
+        if (this.renderer) {
+            this.dataManager.getItemMetadata(this.displayInfoId).then(this.onItemMetadataLoaded.bind(this));
+        }
     }
 
     override update(deltaTime: number) {
@@ -87,7 +99,7 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
         }
     }
 
-    equipTo(character: ICharacterModel) {
+    equipTo<TParentEvent extends string>(character: ICharacterModel<TParentEvent>) {
         if (this.isDisposing) {
             return;
         }

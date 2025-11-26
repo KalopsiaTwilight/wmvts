@@ -11,27 +11,32 @@ export class DefaultObjectFactory implements IObjectFactory {
     }
 
     createM2Model(fileId: FileIdentifier) {
-        const model = new M2Model(fileId, this.iocContainer);
+        const model = new M2Model(this.iocContainer);
+        model.loadFileId(fileId);
         return model;
     }
 
     createWMOModel(fileId: FileIdentifier) {
-        const model = new WMOModel(fileId, this.iocContainer);
+        const model = new WMOModel(this.iocContainer);
+        model.loadFileId(fileId);
         return model;
     }
 
     createItemModel(displayId: RecordIdentifier) {
-        const model = new ItemModel(displayId, this.iocContainer);
+        const model = new ItemModel(this.iocContainer);
+        model.loadDisplayInfoId(displayId);
         return model;
     }
 
     createCharacterModel(modelId: RecordIdentifier) {
-        const model = new CharacterModel(modelId, this.iocContainer);
+        const model = new CharacterModel(this.iocContainer);
+        model.loadModelId(modelId);
         return model;
     }
 
     createTextureVariantModel(id: FileIdentifier) {
-        const model = new TextureVariantModel(id, this.iocContainer);
+        const model = new TextureVariantModel(this.iocContainer);
+        model.loadFileId(id);
         return model;
     }
 

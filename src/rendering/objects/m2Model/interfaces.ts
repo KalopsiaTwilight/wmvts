@@ -42,4 +42,5 @@ export interface IM2Model<TParentEvent extends string = M2ModelEvents> extends I
     toggleGeosets(start: number, end: number, show: boolean): void;
 
     loadBoneFile(id: FileIdentifier): void;
+    loadFileId(id: FileIdentifier): void;
 }

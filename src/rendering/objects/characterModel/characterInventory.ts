@@ -71,7 +71,7 @@ const slotToPriorityMap: { [key in EquipmentSlot]: number } = {
 
 export class CharacterInventory implements IDisposable {
     inventoryData: { [key in EquipmentSlot]?: EquippedItemData }
-    parent: CharacterModel
+    parent: CharacterModel<never>
     isDisposing: boolean;
     private objectFactory: IObjectFactory;
 
@@ -85,7 +85,7 @@ export class CharacterInventory implements IDisposable {
         return true;
     }
 
-    constructor(parent: CharacterModel, iocContainer: IIoCContainer) {
+    constructor(parent: CharacterModel<never>, iocContainer: IIoCContainer) {
         this.parent = parent;
         this.inventoryData = { };
         this.isDisposing = false;
@@ -105,7 +105,7 @@ export class CharacterInventory implements IDisposable {
             const attachments = this.getAttachmentIdsForSlot(slot, model.itemMetadata.inventoryType);
             this.inventoryData[slot].attachmentIds = attachments;
             this.inventoryData[slot].attachmentMatrices = attachments.map(() => Float44.identity());
-            this.parent.on("modelDataLoaded", () => {
+            this.parent.once("modelDataLoaded", () => {
                 const data = this.inventoryData[slot];
                 data.attachments = data.attachmentIds.map(i => this.parent.modelData.attachments.find(x => x.id === i));
             })

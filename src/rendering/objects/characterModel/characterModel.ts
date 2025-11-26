@@ -5,18 +5,15 @@ import {
     FileIdentifier,
     RecordIdentifier
 } from "@app/metadata";
-import { ICallbackManager, CallbackFn } from "@app/utils";
 import { ITexture } from "@app/rendering/graphics";
-import { IDataManager, IIoCContainer, IRenderer } from "@app/rendering/interfaces";
+import { IIoCContainer, IObjectFactory, IRenderer } from "@app/rendering/interfaces";
 import { ITexturePickingStrategy } from "@app/rendering/strategies";
 
-import { IM2Model } from "../m2Model";
+import { IM2Model, M2Model } from "../m2Model";
 
 import { SkinLayerTextureCombiner } from "./skinLayerTextureCombiner";
-import { M2Proxy  } from "./m2Proxy";
-import { CharacterModelCallbackType, EquipmentSlot, GeoSet, ICharacterModel } from "./interfaces"
+import { CharacterModelEvents, EquipmentSlot, GeoSet, ICharacterModel } from "./interfaces"
 import { CharacterInventory } from "./characterInventory";
-import { Background } from "../background";
 
 
 const DEFAULT_GEOSET_IDS = [1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 2, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
@@ -27,7 +24,7 @@ interface TextureSectionTextureData {
     textures: [ITexture, ITexture, ITexture]
 }
 
-export class CharacterModel extends M2Proxy implements ICharacterModel {
+export class CharacterModel<TParentEvent extends string = CharacterModelEvents> extends M2Model<TParentEvent | CharacterModelEvents> implements ICharacterModel<TParentEvent> {
     modelId: RecordIdentifier;
     race: number;
     gender: number;
@@ -45,30 +42,37 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
     private skinnedModels: { [key: FileIdentifier]: IM2Model }
     private inventory: CharacterInventory;
     private texturePickingStrategy: ITexturePickingStrategy;
-    private dataManager?: IDataManager;
-    override callbackMgr: ICallbackManager<CharacterModelCallbackType, CharacterModel>;
+    private objectFactory: IObjectFactory;
 
-    constructor(modelId: RecordIdentifier, iocContainer: IIoCContainer) {
+    constructor(iocContainer: IIoCContainer) {
         super(iocContainer);
+        this.class = 0;
+
+        this.inventory = new CharacterInventory(this, iocContainer);
+        this.texturePickingStrategy = iocContainer.getTexturePickingStrategy();
+        this.objectFactory = iocContainer.getObjectFactory();
+    }
+    
+    override attachToRenderer(renderer: IRenderer): void {
+        super.attachToRenderer(renderer);
+        if (this.modelId) {
+            this.dataManager.getCharacterMetadata(this.modelId).then(this.onCharacterMetadataLoaded.bind(this));
+        }
+    }
+
+    loadModelId(modelId: RecordIdentifier) {
         this.modelId = modelId;
         this.gender = (modelId-1) % 2;
         this.race = Math.ceil(modelId / 2);
-        this.class = 0;
 
         this.textureLayerBaseFileIds = {};
         this.textureLayerBaseTextures = {};
         this.textureLayerCombiners = {};
         this.textureSectionTextures = {};
         this.skinnedModels = {};
-        this.inventory = new CharacterInventory(this, iocContainer);
-        this.texturePickingStrategy = iocContainer.getTexturePickingStrategy();
-        this.dataManager = iocContainer.getDataManager();
-    }
-    
-    override attachToRenderer(renderer: IRenderer): void {
-        super.attachToRenderer(renderer);
-
-        this.dataManager.getCharacterMetadata(this.modelId).then(this.onCharacterMetadataLoaded.bind(this));
+        if (this.renderer) {
+            this.dataManager.getCharacterMetadata(this.modelId).then(this.onCharacterMetadataLoaded.bind(this));
+        }
     }
 
     override dispose(): void {
@@ -103,7 +107,6 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
         this.skinnedModels = null;
         this.inventory.dispose();
         this.inventory = null;
-        this.callbackMgr = null;
     }
 
     override get isLoaded(): boolean {
@@ -157,26 +160,15 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
             this.skinnedModels[fileId].draw();
         }
     }
-    
-    override on(type: CharacterModelCallbackType, fn: CallbackFn<CharacterModel>, persistent = false): void {
-        if (this.isDisposing) {
-            return;
-        }
-        this.callbackMgr.addCallback(type, fn, persistent);
-    }
 
-    canExecuteCallback(type: CharacterModelCallbackType): boolean {
+    override canExecuteCallbackNow(type: CharacterModelEvents): boolean {
         if (this.isDisposing) {
             return false;
         }
         switch(type) {
             case "characterMetadataLoaded": return this.characterMetadata != null;
             case "skinTexturesLoaded": return this.skinLayerTexturesLoaded;
-            case "modelCreated":
-            case "modelDataLoaded":
-            case "modelTexturesLoaded": 
-                return super.canExecuteCallback(type);
-            default: return false;
+            default: return super.canExecuteCallbackNow(type);
         }
     }
 
@@ -184,7 +176,7 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
         if (this.isDisposing) {
             return;
         }
-        this.on("characterMetadataLoaded", () => {
+        this.once("characterMetadataLoaded", () => {
             const optionIndex = this.characterMetadata.characterCustomizationData.options.findIndex(x => x.id === optionId);
             if (optionIndex < 0) {
                 return;
@@ -249,7 +241,7 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
         if (this.isDisposing) {
             return;
         }
-        this.on("modelTexturesLoaded", () => { 
+        this.once("texturesLoaded", () => { 
             this.onGeosetUpdate();
         });
     }
@@ -265,12 +257,12 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
 
         this.characterMetadata = data;
 
-        this.createM2Model(data.fileDataId);
+        this.loadFileId(data.fileDataId);
 
         this.loadSkinnedModels();
         this.setDefaultCustomizations();
         this.applyCustomizations();
-        this.callbackMgr.processCallbacks("characterMetadataLoaded")
+        this.processCallbacks("characterMetadataLoaded");
     }
 
     private setDefaultCustomizations() {
@@ -348,7 +340,7 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
         }
 
         this.loadBoneFile(boneFileId);
-        this.createM2Model(modelFileId);
+        this.loadFileId(modelFileId);
         this.loadSkinTextures(newSkinLayerTextures);
         this.updateGeosets();
     }
@@ -393,7 +385,7 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
         }
 
         this.updateSkinTextures();
-        this.callbackMgr.processCallbacks("skinTexturesLoaded")
+        this.processCallbacks("skinTexturesLoaded");
     }
 
     private updateSkinTextures() {
@@ -478,7 +470,7 @@ export class CharacterModel extends M2Proxy implements ICharacterModel {
             this.swapTextureType(2, cloakItem.model1.component1Texture);
         }
         
-        this.on("modelTexturesLoaded", () => {
+        this.once("texturesLoaded", () => {
             for(const key in this.textureLayerCombiners) {
                 this.swapTextureType(parseInt(key, 10), this.textureLayerCombiners[key].outputTexture);
             }

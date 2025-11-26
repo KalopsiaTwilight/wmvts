@@ -1,5 +1,5 @@
 import { IImmediateCallbackable, ISupportCallbacks } from "@app/utils";
-import { ItemMetadata } from "@app/metadata";
+import { ItemMetadata, RecordIdentifier } from "@app/metadata";
 import { ITexture } from "@app/rendering/graphics";
 
 import { ICharacterModel } from "../characterModel";
@@ -18,5 +18,6 @@ export interface IItemModel<Ct extends string = ItemModelCallbackType> extends
     component2Texture?: ITexture;
     sectionTextures: { [key: number]: [ITexture, ITexture, ITexture] };
 
-    equipTo(character: ICharacterModel): void;
+    equipTo<TParentEvent extends string>(character: ICharacterModel<TParentEvent>): void;
+    loadDisplayInfoId(displayInfoId: RecordIdentifier): void;
 }

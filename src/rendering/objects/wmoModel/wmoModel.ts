@@ -77,11 +77,10 @@ export class WMOModel<TParentEvent extends string = WMOModelEvents> extends Worl
     private objectFactory: IObjectFactory;
     private dataManager: IDataManager;
 
-    constructor(fileId: FileIdentifier, iocContainer: IIoCContainer) {
+    constructor(iocContainer: IIoCContainer) {
         super();
         this.isModelDataLoaded = false;
         this.isTexturesLoaded = false;
-        this.fileId = fileId;
 
         this.doodadSetId = 0; //TODO: Investigate what this means.
         this.lodGroupMap = [];
@@ -107,7 +106,20 @@ export class WMOModel<TParentEvent extends string = WMOModelEvents> extends Worl
         this.shaderProgram = this.renderer.getShaderProgram("WMO", vertexShaderProgramText, fragmentShaderProgramText);
         this.portalShader = this.renderer.getShaderProgram("WMOPortal", portalVertexShaderProgramText, portalFragmentShaderProgramText);
 
-        this.dataManager.getWMOModelFile(this.fileId).then(this.onModelLoaded.bind(this))
+        if (this.fileId) {
+            this.dataManager.getWMOModelFile(this.fileId).then(this.onModelLoaded.bind(this))
+        }
+    }
+
+    loadFileId(fileId: FileIdentifier) {
+        if (this.fileId === fileId) {
+            return;
+        }
+        
+        this.fileId = fileId;
+        if (this.renderer) {
+            this.dataManager.getWMOModelFile(this.fileId).then(this.onModelLoaded.bind(this))
+        }
     }
 
     update(deltaTime: number): void {

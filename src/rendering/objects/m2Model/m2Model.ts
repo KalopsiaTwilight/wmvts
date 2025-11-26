@@ -45,10 +45,10 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
     isModelDataLoaded: boolean;
     isTexturesLoaded: boolean;
 
-    particleEmitters: M2ParticleEmitter<TParentEvent>[];
+    particleEmitters: M2ParticleEmitter[];
 
     particleColorOverrides: ParticleColorOverrides;
-    ribbonEmitters: M2RibbonEmitter<TParentEvent>[];
+    ribbonEmitters: M2RibbonEmitter[];
 
     // graphics data
     shaderProgram: IShaderProgram;
@@ -67,9 +67,8 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
     isMirrored: boolean;
 
 
-    constructor(fileId: FileIdentifier, iocContainer: IIoCContainer) {
+    constructor(iocContainer: IIoCContainer) {
         super();
-        this.fileId = fileId;
         this.isModelDataLoaded = false;
         this.isTexturesLoaded = false;
         this.isDisposing = false;
@@ -129,7 +128,21 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
         super.attachToRenderer(renderer);
         this.shaderProgram = this.renderer.getShaderProgram("M2", vertexShaderProgramText, fragmentShaderProgramText);
 
-        this.dataManager.getM2ModelFile(this.fileId).then(this.onModelLoaded.bind(this));
+        if (this.fileId) {
+            this.dataManager.getM2ModelFile(this.fileId).then(this.onModelLoaded.bind(this));
+        }
+    }
+
+    
+    loadFileId(id: FileIdentifier) {
+        if (this.fileId === id) {
+            return;
+        }
+        
+        this.fileId = id;
+        if (this.renderer) {  
+            this.dataManager.getM2ModelFile(this.fileId).then(this.onModelLoaded.bind(this));
+        }
     }
 
     update(deltaTime: number): void {

@@ -34,10 +34,10 @@ class RibbonVertex {
 }
 
 
-export class M2RibbonEmitter<TParentEvent extends string> implements IDisposable {
+export class M2RibbonEmitter implements IDisposable {
     index: number;
     isDisposing: boolean;
-    parent: M2Model<TParentEvent>;
+    parent: M2Model<never>;
     m2data: WoWRibbonEmiterData;
     engine: IRenderer;
 
@@ -88,7 +88,7 @@ export class M2RibbonEmitter<TParentEvent extends string> implements IDisposable
     minWorldBounds: Float3;
     maxWorldBounds: Float3;
 
-    constructor(index: number, parent: M2Model<TParentEvent>, emitterData: WoWRibbonEmiterData) {
+    constructor(index: number, parent: M2Model<never>, emitterData: WoWRibbonEmiterData) {
         this.index = index;
         this.isDisposing = false;
         this.parent = parent;

@@ -15,8 +15,8 @@ export class TextureVariantModel<TParentEvent extends string = TextureVariantMod
 
     loadedTextures: ITexture[]
 
-    constructor(fileId: FileIdentifier, iocContainer: IIoCContainer) {
-        super(fileId, iocContainer);
+    constructor(iocContainer: IIoCContainer) {
+        super(iocContainer);
     }
     
     useTextureVariation(index: number) {
