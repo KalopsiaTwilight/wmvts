@@ -1,5 +1,4 @@
 export * from "./io"
-export * from "./callbackManager"
 
 export function hasFlagsActive(testVal: number, enumVals: number) {
     return (testVal & enumVals) === enumVals;

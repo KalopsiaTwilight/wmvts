@@ -1,7 +1,6 @@
 import { AABB, Float3, Float4, Float44, Frustrum, IPseudoRandomNumberGenerator } from "@app/math";
 import { WoWBoneFileData, WoWModelData, WoWWorldModelData } from "@app/modeldata";
 import { CharacterMetadata, FileIdentifier, ItemMetadata, LiquidTypeMetadata, RecordIdentifier, TextureVariationsMetadata } from "@app/metadata";
-import { ICallbackManager, IImmediateCallbackable } from "@app/utils";
 import { ErrorHandlerFn, IDataLoader, IDisposable, IProgressReporter } from "@app/interfaces";
 
 
@@ -48,7 +47,6 @@ export interface IDataManager {
 }
 
 export interface IIoCContainer {
-    getCallbackManager<TKeys extends string, T extends IImmediateCallbackable<TKeys>>(obj: T): ICallbackManager<TKeys, T>;
     getRandomNumberGenerator(seed?: number | string): IPseudoRandomNumberGenerator;
     getTexturePickingStrategy(): ITexturePickingStrategy;
     getModelPickingStrategy(): IModelPickingStrategy;

@@ -1,6 +1,6 @@
 import { WoWBoneData, WoWBoneFileData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureUnitData } from "@app/modeldata";
 import { Float4, Float3, Float44, AABB } from "@app/math"
-import { BinaryWriter, CallbackFn, distinct, ICallbackManager } from "@app/utils";
+import { BinaryWriter, distinct } from "@app/utils";
 import { FileIdentifier } from "@app/metadata";
 
 import { 

@@ -1,7 +1,6 @@
 
-import { FileIdentifier, TextureVariationsMetadata } from "@app/metadata";
+import { TextureVariationsMetadata } from "@app/metadata";
 import { WoWTextureType } from "@app/modeldata";
-import { ICallbackManager } from "@app/utils";
 import { ITexture } from "@app/rendering/graphics";
 import { IIoCContainer, IRenderer } from "@app/rendering/interfaces";
 

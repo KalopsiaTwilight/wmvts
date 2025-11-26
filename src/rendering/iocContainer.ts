@@ -1,5 +1,4 @@
 import { AleaPrngGenerator, IPseudoRandomNumberGenerator } from "@app/math";
-import { IImmediateCallbackable, CallbackManager } from "@app/utils";
 import { IDataManager, IIoCContainer, IObjectFactory } from "./interfaces";
 import { ITexturePickingStrategy, IModelPickingStrategy, defaultTexturePickingStrategy, defaultModelPickingStrategy } from "./strategies";
 import { DefaultObjectFactory } from "./objectFactory";
@@ -28,15 +27,8 @@ export class DefaultIoCContainer implements IIoCContainer {
         this.objectFactory = new DefaultObjectFactory(this);
         this.dataManager = new DefaultDataManager(this);
     }
-
-
-    getCallbackManager<TKeys extends string, T extends IImmediateCallbackable<TKeys>>(obj: T) {
-        const mgr = new CallbackManager<TKeys, T>();
-        mgr.bind(obj);
-        return mgr;
-    }
     
-    getRandomNumberGenerator(seed?: number | string) {
+    getRandomNumberGenerator(seed?: number | string): IPseudoRandomNumberGenerator {
         return new AleaPrngGenerator(seed ? seed : 0xb00b1e5);
     }
 
