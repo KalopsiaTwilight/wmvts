@@ -20,7 +20,7 @@ export type ParticleColorOverrides = [ ParticleColorOverride, ParticleColorOverr
 
 export type M2ModelEvents = "modelDataLoaded" | "texturesLoaded"
 
-export interface IM2Model<TParentEvent extends string = M2ModelEvents> extends IWorldPositionedObject<TParentEvent | M2ModelEvents>, ISkinnedObject
+export interface IM2Model<TParentEvent extends string = never> extends IWorldPositionedObject<TParentEvent | M2ModelEvents>, ISkinnedObject
 {
     fileId: FileIdentifier;
     // TODO: Deprecate direct property access

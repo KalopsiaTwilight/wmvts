@@ -9,12 +9,12 @@ import { WorldPositionedObject } from "../worldPositionedObject";
 import { ICharacterModel } from "../characterModel";
 import { IM2Model, ParticleColorOverride, ParticleColorOverrides } from "../m2Model";
 
-import { IItemModel, ItemModelCallbackType } from "./interfaces";
+import { IItemModel, ItemModelEvents } from "./interfaces";
 
 function parseIntToColor(val: number, dest: Float3) {
     return Float3.set(dest, ((val >> 16) & 255), ((val >> 8) & 255), ((val >> 0) & 255));
 }
-export class ItemModel extends WorldPositionedObject implements IItemModel{
+export class ItemModel<TParentEvent extends string = never> extends WorldPositionedObject<TParentEvent | ItemModelEvents> implements IItemModel<TParentEvent> {
     displayInfoId: RecordIdentifier;
     itemMetadata: ItemMetadata
 
@@ -30,7 +30,6 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
     component1Texture?: ITexture;
     component2Texture?: ITexture;
 
-    private callbackMgr: ICallbackManager<ItemModelCallbackType, ItemModel>
     private texturePickingStrategy: ITexturePickingStrategy;
     private modelPickingStrategy: IModelPickingStrategy;
     private objectFactory: IObjectFactory;
@@ -40,7 +39,6 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
         super();
         this.sectionTextures = { };
 
-        this.callbackMgr = iocContainer.getCallbackManager(this);
         this.texturePickingStrategy = iocContainer.getTexturePickingStrategy();
         this.modelPickingStrategy = iocContainer.getModelPickingStrategy();
         this.objectFactory = iocContainer.getObjectFactory();
@@ -62,7 +60,7 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
         if (this.displayInfoId === displayInfoId) {
             return;
         }
-        
+
         this.displayInfoId = displayInfoId;
         if (this.renderer) {
             this.dataManager.getItemMetadata(this.displayInfoId).then(this.onItemMetadataLoaded.bind(this));
@@ -129,18 +127,9 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
         this.sectionTextures = null;
         this.component1Texture = null;
         this.component2Texture = null;
-        this.callbackMgr = null;
     }
 
-    on(type: ItemModelCallbackType, fn: CallbackFn<ItemModel>, persistent = false): void {
-        if (this.isDisposing) {
-            return;
-        }
-
-        this.callbackMgr.addCallback(type, fn, persistent);
-    }
-
-    canExecuteCallback(type: ItemModelCallbackType): boolean {
+    canExecuteCallback(type: ItemModelEvents): boolean {
         if (this.isDisposing) {
             return false;
         }
@@ -253,7 +242,7 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
             }
         }
 
-        this.callbackMgr.processCallbacks("metadataLoaded")
+        this.processCallbacks("metadataLoaded")
         Promise.all(textureLoadingPromises).then(this.onTexturesLoaded.bind(this));
         this.onComponentLoaded();
     }
@@ -280,7 +269,7 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
             this.setBoundingBox(bb);
         }
 
-        this.callbackMgr.processCallbacks("componentsLoaded");
+        this.processCallbacks("componentsLoaded");
     }
 
     private onTexturesLoaded() {
@@ -288,6 +277,6 @@ export class ItemModel extends WorldPositionedObject implements IItemModel{
             return;
         }
         this.texturesLoaded = true;
-        this.callbackMgr.processCallbacks("sectionTexturesLoaded");
+        this.processCallbacks("sectionTexturesLoaded");
     }
 }

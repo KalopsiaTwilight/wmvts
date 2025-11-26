@@ -37,7 +37,7 @@ class RibbonVertex {
 export class M2RibbonEmitter implements IDisposable {
     index: number;
     isDisposing: boolean;
-    parent: M2Model<never>;
+    parent: M2Model;
     m2data: WoWRibbonEmiterData;
     engine: IRenderer;
 

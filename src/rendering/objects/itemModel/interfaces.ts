@@ -6,10 +6,9 @@ import { ICharacterModel } from "../characterModel";
 import { IWorldPositionedObject } from "../interfaces";
 import { IM2Model } from "../m2Model";
 
-export type ItemModelCallbackType = "metadataLoaded" | "sectionTexturesLoaded" | "componentsLoaded" 
+export type ItemModelEvents = "metadataLoaded" | "sectionTexturesLoaded" | "componentsLoaded" 
 
-export interface IItemModel<Ct extends string = ItemModelCallbackType> extends 
-     ISupportCallbacks<Ct>, IImmediateCallbackable<Ct>, IWorldPositionedObject  {
+export interface IItemModel<ParentEvent extends string = never> extends IWorldPositionedObject<ParentEvent | ItemModelEvents>  {
     // TODO: Deprecate property access
     itemMetadata: ItemMetadata
     component1?: IM2Model

@@ -24,7 +24,7 @@ interface TextureSectionTextureData {
     textures: [ITexture, ITexture, ITexture]
 }
 
-export class CharacterModel<TParentEvent extends string = CharacterModelEvents> extends M2Model<TParentEvent | CharacterModelEvents> implements ICharacterModel<TParentEvent> {
+export class CharacterModel<TParentEvent extends string = never> extends M2Model<TParentEvent | CharacterModelEvents> implements ICharacterModel<TParentEvent> {
     modelId: RecordIdentifier;
     race: number;
     gender: number;

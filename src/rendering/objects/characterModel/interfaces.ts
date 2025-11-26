@@ -2,7 +2,7 @@ import { RecordIdentifier } from "@app/metadata";
 import { IM2Model } from "@app/rendering";
 
 export type CharacterModelEvents = "characterMetadataLoaded" | "skinTexturesLoaded"
-export interface ICharacterModel<TParentEvent extends string = CharacterModelEvents> extends IM2Model<TParentEvent | CharacterModelEvents> {
+export interface ICharacterModel<TParentEvent extends string = never> extends IM2Model<TParentEvent | CharacterModelEvents> {
     modelId: RecordIdentifier;
     race: number;
     gender: number;

@@ -82,7 +82,7 @@ const M2ParticleEmitterRandomTable = [];
 export class M2ParticleEmitter implements IDisposable {
     // References
     index: number;
-    parent: M2Model<never>;
+    parent: M2Model;
     renderer: IRenderer;
     m2data: WoWParticleEmitterData;
     exp2Data: WoWExtendedParticleData;

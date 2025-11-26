@@ -9,7 +9,7 @@ import { M2Model } from "../m2Model";
 
 import { ITextureVariantModel, TextureVariantModelEvents } from "./interfaces";
 
-export class TextureVariantModel<TParentEvent extends string = TextureVariantModelEvents> extends M2Model<TParentEvent | TextureVariantModelEvents> implements ITextureVariantModel{
+export class TextureVariantModel<TParentEvent extends string = never> extends M2Model<TParentEvent | TextureVariantModelEvents> implements ITextureVariantModel{
 
     textureVariations: TextureVariationsMetadata;
 

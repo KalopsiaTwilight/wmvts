@@ -41,7 +41,7 @@ export enum WMOOwnerTypes {
 const BATCH_IDENTIFIER = "WMO";
 const PORTAL_BATCH_IDENTIFIER = "WMO-PORTAL";
 
-export class WMOModel<TParentEvent extends string = WMOModelEvents> extends WorldPositionedObject<TParentEvent | WMOModelEvents> implements IWMOModel<TParentEvent> {
+export class WMOModel<TParentEvent extends string = never> extends WorldPositionedObject<TParentEvent | WMOModelEvents> implements IWMOModel<TParentEvent> {
     isModelDataLoaded: boolean;
     isTexturesLoaded: boolean;
 
@@ -115,7 +115,7 @@ export class WMOModel<TParentEvent extends string = WMOModelEvents> extends Worl
         if (this.fileId === fileId) {
             return;
         }
-        
+
         this.fileId = fileId;
         if (this.renderer) {
             this.dataManager.getWMOModelFile(this.fileId).then(this.onModelLoaded.bind(this))
