@@ -15,8 +15,6 @@ import { DefaultIoCContainer } from "./iocContainer";
 const DataProcessingErrorType: ErrorType = "dataProcessing";
 const RenderingErrorType: ErrorType = "rendering"
 
-const LoadDataOperationText: string = "Loading model data..."
-
 export interface RenderingEngineRequirements {
     graphics: IGraphics,
     dataLoader: IDataLoader,
@@ -85,9 +83,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
     cameraFrustrum: Frustrum;
     cameraPosition: Float3;
 
-    // Caching. TODO: Simplify into single united cache?
     cache: ICache;
-    // TODO: Move this to datamanager?
     textureRequests: { [key: string]: Promise<ITexture> }
 
     // Some stats
@@ -108,7 +104,6 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
     otherGraphicsRequests: RenderingBatchRequest[];
     sceneObjects: IRenderObject[];
     sceneBoundingBox: AABB;
-
 
     // IoC
     iocContainer: IIoCContainer;
