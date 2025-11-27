@@ -207,7 +207,7 @@ export class M2ParticleEmitter extends Disposable implements IDisposable {
         this.headCellTrack = null;
         this.tailCellTrack.dispose();
         this.tailCellTrack = null;
-        this.alphaCutOffTrack.dispose();
+        this.alphaCutOffTrack?.dispose();
         this.alphaCutOffTrack = null;
 
         this.particlesFixMat = null;
