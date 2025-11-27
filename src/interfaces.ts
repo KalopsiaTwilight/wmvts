@@ -9,7 +9,18 @@ import { IRenderingEngine } from "./rendering";
 export type CallbackFn<T> = (obj: T) => void
 export interface ICallbackable<TEvent extends string>
 {
+    /**
+     * Sets up a callback that executes whenever the event fires for the first time and immediately fires if the event has already occured.
+     * @param event The name of the event.
+     * @param callback The callback function to execute.
+     */
     once(event: TEvent, callback: CallbackFn<this>): void
+    /**
+     * Sets up a callback that executes whenever the event fires and immediately fires if the event has already occured.
+     * @param event The name of the event.
+     * @param callback The callback function to execute.
+     */
+    on(event: TEvent, callback: CallbackFn<this>): void
 }
 
 export type DisposableEvents = "disposed";
