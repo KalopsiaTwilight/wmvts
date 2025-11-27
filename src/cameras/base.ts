@@ -1,12 +1,12 @@
 import { Disposable } from "@app/disposable";
 import { ICamera } from "@app/interfaces";
 import { AABB, Float3, Float44 } from "@app/math"
-import { IRenderingEngine } from "@app/rendering";
+import { IRenderer } from "@app/rendering";
 
 export class Camera extends Disposable implements ICamera {
     viewMatrix: Float44;
     position: Float3;
-    engine: IRenderingEngine;
+    renderer: IRenderer;
 
     constructor() {
         super();
@@ -16,8 +16,8 @@ export class Camera extends Disposable implements ICamera {
         this.position = Float3.zero();
     }
 
-    initialize(engine: IRenderingEngine) {
-        this.engine = engine;
+    initialize(engine: IRenderer) {
+        this.renderer = engine;
     }
 
     update(deltaTime: number) { 

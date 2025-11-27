@@ -1,5 +1,5 @@
 import { AABB, Float3, Float4, Float44 } from "@app/math"
-import { IRenderingEngine } from "@app/rendering";
+import { IRenderer } from "@app/rendering";
 
 import { Camera } from "./base";
 
@@ -11,6 +11,8 @@ enum MovementState {
 
 export class FirstPersonCamera extends Camera {
     cameraMatrix: Float44;
+
+    containerElement: HTMLElement;
 
     isDraggingMouse: boolean;
     yaw: number;
@@ -30,8 +32,10 @@ export class FirstPersonCamera extends Camera {
     onKeyDown: (ev: KeyboardEvent) => void;
     onKeyUp: (ev: KeyboardEvent) => void;
 
-    constructor() {
+    constructor(containerElement: HTMLElement) {
         super();
+        this.containerElement = containerElement;
+
         this.cameraMatrix = Float44.identity();
         this.position = Float3.create(0, 0, 0);
 
@@ -46,16 +50,15 @@ export class FirstPersonCamera extends Camera {
         this.isDraggingMouse = false;
     }
 
-    override initialize(engine: IRenderingEngine): void {
-        super.initialize(engine);
+    override initialize(renderer: IRenderer): void {
+        super.initialize(renderer);
 
-        if (engine.containerElement) {
-            this.onMouseDown = this.handleMouseDown.bind(this);
-            this.onTouchStart = this.handleTouchStart.bind(this);
-            
-            this.engine.containerElement.addEventListener('mousedown', this.onMouseDown);
-            this.engine.containerElement.addEventListener('touchstart', this.onTouchStart);
-        }
+        this.onMouseDown = this.handleMouseDown.bind(this);
+        this.onTouchStart = this.handleTouchStart.bind(this);
+        
+        this.containerElement.addEventListener('mousedown', this.onMouseDown);
+        this.containerElement.addEventListener('touchstart', this.onTouchStart);
+    
         if (document) {
             this.onMouseUp = this.handleDragRelease.bind(this);
             this.onTouchEnd = this.handleDragRelease.bind(this);
@@ -104,13 +107,11 @@ export class FirstPersonCamera extends Camera {
     }
 
     override dispose(): void {
-        if (this.engine.containerElement) {
-            this.engine.containerElement.removeEventListener('mousedown', this.onMouseDown);
-            this.engine.containerElement.removeEventListener('touchstart', this.onTouchStart);
+        this.containerElement.removeEventListener('mousedown', this.onMouseDown);
+        this.containerElement.removeEventListener('touchstart', this.onTouchStart);
 
-            this.onMouseDown = null;
-            this.onTouchStart = null;
-        }
+        this.onMouseDown = null;
+        this.onTouchStart = null;
         if (document) {
             document.removeEventListener('keydown', this.onKeyUp)
             document.removeEventListener('keyup', this.onKeyDown);
@@ -199,15 +200,15 @@ export class FirstPersonCamera extends Camera {
 
         eventArgs.preventDefault();
 
-        if (document && !document.pointerLockElement && this.engine.containerElement) {
-            this.engine.containerElement.requestPointerLock()
+        if (document && !document.pointerLockElement) {
+            this.containerElement.requestPointerLock()
         }
     }
 
     handleTouchStart(eventArgs: TouchEvent) {
         eventArgs.preventDefault();
-        if (document && !document.pointerLockElement && this.engine.containerElement) {
-            this.engine.containerElement.requestPointerLock()
+        if (document && !document.pointerLockElement) {
+            this.containerElement.requestPointerLock()
         }
     }
 

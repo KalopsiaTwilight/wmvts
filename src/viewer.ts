@@ -1,6 +1,6 @@
 import { IDataLoader, IProgressReporter, ErrorHandlerFn  } from "./interfaces";
 import { IRenderObject, WebGlGraphics, IWMOModel, IM2Model, ICharacterModel, IItemModel, ITextureVariantModel, BrowserRenderer } from "./rendering";
-import { Camera } from "./cameras";
+import { Camera, FirstPersonCamera, OrbitalCamera, RotatingCamera } from "./cameras";
 import { Float4, Float3 } from "./math";
 import { FileIdentifier, RecordIdentifier } from "./metadata";
 
@@ -42,7 +42,7 @@ export class WoWModelViewer {
 
     canvas: HTMLCanvasElement;
     viewerContainer: HTMLDivElement;
-    renderEngine: BrowserRenderer;
+    renderer: BrowserRenderer;
 
     width: number;
     height: number;
@@ -63,106 +63,118 @@ export class WoWModelViewer {
     }
 
     addM2Model(fileId: FileIdentifier): IM2Model {
-        const model = this.renderEngine.objectFactory.createM2Model(fileId);
+        const model = this.renderer.objectFactory.createM2Model(fileId);
         this.addSceneObject(model);
         return model;
     }
 
     addWMOModel(fileId: FileIdentifier): IWMOModel {
-        const model = this.renderEngine.objectFactory.createWMOModel(fileId);
+        const model = this.renderer.objectFactory.createWMOModel(fileId);
         this.addSceneObject(model);
         return model;
     }
 
     addCharacterModel(modelId: RecordIdentifier): ICharacterModel {
-        const model = this.renderEngine.objectFactory.createCharacterModel(modelId);
+        const model = this.renderer.objectFactory.createCharacterModel(modelId);
         this.addSceneObject(model);
         return model;
     }
 
     addItemModel(modelId: RecordIdentifier): IItemModel {
-        const model = this.renderEngine.objectFactory.createItemModel(modelId);
+        const model = this.renderer.objectFactory.createItemModel(modelId);
         this.addSceneObject(model);
         return model;
     }
 
     addTextureVariantModel(fileId: FileIdentifier): ITextureVariantModel {
-        const model = this.renderEngine.objectFactory.createTextureVariantModel(fileId);
+        const model = this.renderer.objectFactory.createTextureVariantModel(fileId);
         this.addSceneObject(model);
         return model;
     }
 
     addSceneObject(object: IRenderObject) {
-        this.renderEngine.addSceneObject(object, 0);
+        this.renderer.addSceneObject(object, 0);
     }
 
     removeSceneObject(object: IRenderObject) {
-        this.renderEngine.removeSceneObject(object);
+        this.renderer.removeSceneObject(object);
+    }
+
+    useFirstPersonCamera() {
+        this.renderer.switchCamera(new FirstPersonCamera(this.viewerContainer));
+    }
+
+    useOrbitalCamera() {
+        this.renderer.switchCamera(new OrbitalCamera(this.viewerContainer));
+    }
+
+    useRotatingCamera() {
+        this.renderer.switchCamera(new RotatingCamera());
     }
 
     useCamera(camera: Camera) {
-        this.renderEngine.switchCamera(camera);
+        this.renderer.switchCamera(camera);
     }
 
     useCameraFov(newFov: number) {
-        this.renderEngine.fov = newFov;
-        this.renderEngine.resize(this.width, this.height);
+        this.renderer.fov = newFov;
+        this.renderer.resize(this.width, this.height);
     }
 
     useLightDirection(newLightDir: Float3) {
-        Float3.copy(Float3.normalize(newLightDir), this.renderEngine.lightDir);
+        Float3.copy(Float3.normalize(newLightDir), this.renderer.lightDir);
     }
 
     useLightColor(lightColor: Float4) {
-        Float4.copy(lightColor, this.renderEngine.lightColor);
+        Float4.copy(lightColor, this.renderer.lightColor);
     }
     
     useAmbientColor(ambientColor: Float4) {
-        Float4.copy(ambientColor, this.renderEngine.ambientColor);
+        Float4.copy(ambientColor, this.renderer.ambientColor);
     }
 
     useClearColor(color: Float4) {
-        Float4.copy(color, this.renderEngine.clearColor);
+        Float4.copy(color, this.renderer.clearColor);
     }
 
     useOceanCloseColor(color: Float4) {
-        Float4.copy(color, this.renderEngine.oceanCloseColor);
+        Float4.copy(color, this.renderer.oceanCloseColor);
     }
 
     useOceanFarColor(color: Float4) {
-        Float4.copy(color, this.renderEngine.oceanFarColor);
+        Float4.copy(color, this.renderer.oceanFarColor);
     }
 
     useRiverCloseColor(color: Float4) {
-        Float4.copy(color, this.renderEngine.riverCloseColor);
+        Float4.copy(color, this.renderer.riverCloseColor);
     }
     
     useRiverFarColor(color: Float4) {
-        Float4.copy(color, this.renderEngine.riverFarColor);
+        Float4.copy(color, this.renderer.riverFarColor);
     }
     
     useWaterAlphas(color: Float4) {
-        Float4.copy(color, this.renderEngine.waterAlphas);
+        Float4.copy(color, this.renderer.waterAlphas);
     }
 
     showDebug() {
-        this.renderEngine.enableDebug();
+        this.renderer.enableDebug();
     }
 
     hideDebug() {
-        this.renderEngine.disableDebug();
+        this.renderer.disableDebug();
     }
 
     enableDebugPortals() {
-        this.renderEngine.enableDebugPortals();
+        this.renderer.enableDebugPortals();
     }
 
     disableDebugPortals() {
-        this.renderEngine.disableDebugPortals();
+        this.renderer.disableDebugPortals();
     }
 
     setDoodadRenderDistance(value: number) {
-        this.renderEngine.doodadRenderDistance = value;
+        this.renderer.doodadRenderDistance = value;
     }
     
     private initialize() {
@@ -172,30 +184,28 @@ export class WoWModelViewer {
             this.canvas = document.createElement("canvas");
         }
         
-        if (document) {
-            const containerElem = this.options.canvas.container ? 
-            this.options.canvas.container : this.canvas.parentElement;
-            
-            if (containerElem) {
-                this.width = containerElem.getBoundingClientRect().width;
-                this.height = containerElem.getBoundingClientRect().height;
+        const containerElem = this.options.canvas.container ? 
+        this.options.canvas.container : this.canvas.parentElement;
+        
+        if (containerElem) {
+            this.width = containerElem.getBoundingClientRect().width;
+            this.height = containerElem.getBoundingClientRect().height;
 
-                this.viewerContainer = document.createElement("div");
-                this.viewerContainer.className = "wmvts-container";
-                this.viewerContainer.style.lineHeight = "0";
-                this.viewerContainer.style.position = "relative";
-                containerElem.append(this.viewerContainer)
-                this.viewerContainer.append(this.canvas);
-                
+            this.viewerContainer = document.createElement("div");
+            this.viewerContainer.className = "wmvts-container";
+            this.viewerContainer.style.lineHeight = "0";
+            this.viewerContainer.style.position = "relative";
+            containerElem.append(this.viewerContainer)
+            this.viewerContainer.append(this.canvas);
             
-                if (this.options.canvas.resizeToContainer) {
-                    const resizeObserver = new ResizeObserver(() => {
-                        this.width = this.viewerContainer.getBoundingClientRect().width;
-                        this.height = this.viewerContainer.getBoundingClientRect().height;
-                        this.resize(this.width, this.height);
-                    })
-                    resizeObserver.observe(this.viewerContainer);
-                }
+        
+            if (this.options.canvas.resizeToContainer) {
+                const resizeObserver = new ResizeObserver(() => {
+                    this.width = this.viewerContainer.getBoundingClientRect().width;
+                    this.height = this.viewerContainer.getBoundingClientRect().height;
+                    this.resize(this.width, this.height);
+                })
+                resizeObserver.observe(this.viewerContainer);
             }
         }
 
@@ -208,7 +218,7 @@ export class WoWModelViewer {
         
         let gl = this.canvas.getContext("webgl", { alpha: true, premultipliedAlpha: false });
         const graphics = new WebGlGraphics(gl);
-        this.renderEngine = new BrowserRenderer(graphics, this.options.dataLoader, {
+        this.renderer = new BrowserRenderer(graphics, this.options.dataLoader, {
             progress: this.options.progressReporter,
             container: this.viewerContainer,
             errorHandler: this.options.onError,
@@ -220,22 +230,22 @@ export class WoWModelViewer {
             lightDirection: this.options.scene?.lightDirection
         });
         this.resize(this.width, this.height);
-        this.renderEngine.sceneCamera = this.options.scene?.camera ?? new Camera();
+        this.renderer.sceneCamera = this.options.scene?.camera ?? new Camera();
         if (this.options.scene && this.options.scene.objects) {
             for(const obj of this.options.scene.objects) {
-                this.renderEngine.addSceneObject(obj, 0);
+                this.renderer.addSceneObject(obj, 0);
             }
         }
-        this.renderEngine.start();
+        this.renderer.start();
     }
 
     private resize(width: number, height: number) {
-        if (this.renderEngine && this.renderEngine.width === width && this.renderEngine.height === height) {
+        if (this.renderer && this.renderer.width === width && this.renderer.height === height) {
             return;
         }
 
         this.canvas.width = width;
         this.canvas.height = height;
-        this.renderEngine.resize(width, height);
+        this.renderer.resize(width, height);
     }
 }

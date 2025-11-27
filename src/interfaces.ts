@@ -4,7 +4,7 @@ import {
     FileIdentifier, RecordIdentifier 
 } from "./metadata";
 import { WoWBoneFileData, WoWModelData, WoWWorldModelData } from "./modeldata";
-import { IRenderingEngine } from "./rendering";
+import { IRenderer } from "./rendering";
 
 export type CallbackFn<T> = (obj: T) => void
 export interface ICallbackable<TEvent extends string>
@@ -57,7 +57,7 @@ export interface IProgressReporter {
 }
 
 export interface ICamera extends IDisposable {
-    initialize(engine: IRenderingEngine): void;
+    initialize(engine: IRenderer): void;
     scaleToBoundingBox(boundingBox: AABB): void;
     update(deltaTime: number): void;
     getViewMatrix(): Float44

@@ -1,6 +1,6 @@
 import { AABB, Float3, Float4, Float44 } from "@app/math";
 
-import { IRenderingEngine } from "../interfaces";
+import { IRenderer } from "../interfaces";
 import { IWorldPositionedObject, RenderObjectEvents } from "./interfaces";
 import { RenderObject } from "./renderObject";
 
@@ -14,7 +14,7 @@ export abstract class WorldPositionedObject<TEvent extends string = RenderObject
     localBoundingBox: AABB;
     worldBoundingBox: AABB;
 
-    renderer: IRenderingEngine;
+    renderer: IRenderer;
 
     get isAttachedToRenderer() {
         return this.renderer != null;
@@ -32,11 +32,11 @@ export abstract class WorldPositionedObject<TEvent extends string = RenderObject
         this.invWorldModelMatrix = Float44.invert(this.worldModelMatrix);
     }
 
-    attachToRenderer(engine: IRenderingEngine): void {
-        super.attachToRenderer(engine);
+    attachToRenderer(renderer: IRenderer): void {
+        super.attachToRenderer(renderer);
         for(const child of this.children) {
             if (!child.isAttachedToRenderer) {
-                child.attachToRenderer(engine);
+                child.attachToRenderer(renderer);
             }
         }
     }
