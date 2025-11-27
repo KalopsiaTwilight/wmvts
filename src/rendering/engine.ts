@@ -303,6 +303,9 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
 
     addSceneObject(object: IRenderObject, priority: number) {
         object.attachToRenderer(this);
+        object.once("disposed", () => {
+            this.sceneObjects = this.sceneObjects.filter(x => !x.isDisposing);
+        })
         if (isWorldPositionedObject(object)) {
             object.once("loaded", (obj) => {
                 this.processNewBoundingBox(obj.worldBoundingBox);

@@ -10,7 +10,6 @@ interface CacheEntry<TValue> {
 
 export type OwnerIdentifier = string | number;
 export class WebGlCache extends Disposable implements ICache {
-    isDisposing: boolean;    
     items: { [index: CacheKey]: CacheEntry<unknown> };
     maxTtl: number
 
@@ -18,7 +17,6 @@ export class WebGlCache extends Disposable implements ICache {
         super();
         this.items = { };
         this.maxTtl = maxTtl
-        this.isDisposing = false;
     }
 
     dispose(): void {
@@ -27,6 +25,9 @@ export class WebGlCache extends Disposable implements ICache {
         }
         
         super.dispose();
+        for(const key of this.getKeys()) {
+            this.delete(key);
+        }
         this.items = null;
     }
 
@@ -50,12 +51,20 @@ export class WebGlCache extends Disposable implements ICache {
     }
 
     addOwner(key: CacheKey, owner: OwnerIdentifier) {
+        if (this.isDisposing) {
+            return;
+        }
+
         if (this.items[key]) {
             this.items[key].owners.push(owner);
         }
     }
 
     removeOwner(key: CacheKey, owner: OwnerIdentifier) {
+        if (this.isDisposing) {
+            return;
+        }
+
         if (this.items[key]) {
             this.items[key].owners = this.items[key].owners.filter(x => x !== owner);
         }

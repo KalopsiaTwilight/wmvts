@@ -267,6 +267,9 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
                     this.addChild(doodadModel);
                     const scale = Float3.create(doodadDef.scale, doodadDef.scale, doodadDef.scale);
                     doodadModel.setModelMatrix(doodadDef.position, doodadDef.rotation, scale);
+                    doodadModel.once("disposed", () => {
+                        this.groupDoodads[i] = this.groupDoodads[i].filter(x => !x.isDisposing);
+                    })
                     this.groupDoodads[i].push(doodadModel);
                 }
             }
@@ -476,12 +479,6 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
             
             for(let i = 0; i < this.groupDoodads[group].length; i++) {
                 const doodad = this.groupDoodads[group][i];
-                // TODO: This should probably be handled elsewhere. Perhaps an on("dispose")?
-                if (doodad.isDisposing) {
-                    this.groupDoodads[group].splice(i, 1);
-                    i--;
-                    continue;
-                }
                 
                 const distance = AABB.distanceToPointIgnoreAxis(doodad.worldBoundingBox, this.localCamera, Axis.Z);
                 if (distance > this.renderer.doodadRenderDistance) {

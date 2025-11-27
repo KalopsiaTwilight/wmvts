@@ -5,8 +5,6 @@ import { IWorldPositionedObject, RenderObjectEvents } from "./interfaces";
 import { RenderObject } from "./renderObject";
 
 export abstract class WorldPositionedObject<TEvent extends string = RenderObjectEvents> extends RenderObject<TEvent> implements IWorldPositionedObject<TEvent> {
-    isDisposing: boolean;
-
     parent?: IWorldPositionedObject;
     children: IWorldPositionedObject[];
 
@@ -61,7 +59,8 @@ export abstract class WorldPositionedObject<TEvent extends string = RenderObject
     abstract get isLoaded(): boolean;
     
     dispose(): void {
-        this.isDisposing = true;
+        super.dispose();
+
         if (this.children) {
             for(const child of this.children) {
                 child.dispose();

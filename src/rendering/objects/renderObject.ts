@@ -4,8 +4,6 @@ import { IRenderObject, RenderObjectEvents } from "./interfaces";
 
 
 export abstract class RenderObject<TEvent extends string = never> extends Disposable<TEvent | RenderObjectEvents> implements IRenderObject<TEvent> {
-    isDisposing: boolean;
-
     renderer: IRenderingEngine;
     
     get isAttachedToRenderer() {
