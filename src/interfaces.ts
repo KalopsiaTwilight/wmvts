@@ -22,8 +22,6 @@ export function isDisposable(obj: any): obj is IDisposable {
     return obj && typeof(obj.dispose) === 'function';
 }
 
-export type RequestFrameFunction = (callback: Function) => void;
-
 export type ErrorType = "dataFetching" | "dataProcessing" | "rendering";
 export type ErrorHandlerFn = (type: ErrorType, objectId: string|null, error: Error) => void;
 export interface IDataLoader {

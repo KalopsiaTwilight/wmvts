@@ -1,7 +1,7 @@
 import { Camera } from "@app/cameras";
 import { AABB, Float3, Float4, Float44, Frustrum } from "@app/math";
 import { FileIdentifier } from "@app/metadata";
-import { IProgressReporter, IDataLoader, RequestFrameFunction, ErrorHandlerFn, ErrorType, IDisposable } from "@app/interfaces";
+import { IProgressReporter, IDataLoader, ErrorHandlerFn, ErrorType, IDisposable } from "@app/interfaces";
 import { Disposable } from "@app/disposable";
 
 import { IRenderObject, isWorldPositionedObject } from "./objects";
@@ -10,44 +10,16 @@ import {
     RenderMaterial
 } from "./graphics";
 import { WebGlCache } from "./webglCache";
-import { IDataManager, IIoCContainer, IObjectFactory, IObjectIdentifier, IRenderingEngine } from "./interfaces";
+import { IBaseRendererOptions, IDataManager, IIoCContainer, IObjectFactory, IObjectIdentifier, IRenderer, RendererEvents } from "./interfaces";
 import { DefaultIoCContainer } from "./iocContainer";
 
 const DataProcessingErrorType: ErrorType = "dataProcessing";
 const RenderingErrorType: ErrorType = "rendering"
 
-export interface RenderingEngineRequirements {
-    graphics: IGraphics,
-    dataLoader: IDataLoader,
-    requestFrame: RequestFrameFunction,
-}
-
-export interface RenderingEngineOptions {
-    progress?: IProgressReporter,
-    container?: HTMLElement,
-    errorHandler?: ErrorHandlerFn,
-    cameraFov?: number;
-
-    clearColor?: Float4;
-
-    lightDirection?: Float3;
-    lightColor?: Float4;
-    ambientColor?: Float4;
-
-    oceanCloseColor?: Float4;
-    oceanFarColor?: Float4;
-    riverCloseColor?: Float4;
-    riverFarColor?: Float4;
-    waterAlphas?: Float4;
-
-    cacheTtl?: number;
-}
-export class RenderingEngine extends Disposable implements IRenderingEngine {
+export abstract class BaseRenderer<TParentEvent extends string = never> extends Disposable<TParentEvent | RendererEvents> implements IRenderer<TParentEvent> {
     // Options / Configurables
     graphics: IGraphics;
     dataLoader: IDataLoader;
-    requestFrame: RequestFrameFunction;
-    containerElement?: HTMLElement;
     progress?: IProgressReporter;
     errorHandler?: ErrorHandlerFn;
     sceneCamera: Camera;
@@ -75,6 +47,8 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
     // Working data
     isDisposing: boolean;
     lastTime: number;
+    lastDeltaTime: number;
+    timeElapsed: number;
 
     // Camera data
     projectionMatrix: Float44;
@@ -86,19 +60,6 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
 
     graphicsCache: WebGlCache;
     textureRequests: { [key: string]: Promise<ITexture> }
-
-    // Some stats
-    framesDrawn: number;
-    timeElapsed: number;
-
-    // FPS calculation over avg of x frames
-    maxFpsCounterSize: number;
-    fpsCounter: number[];
-
-    // DOM References
-    debugContainer?: HTMLDivElement;
-    fpsElement?: HTMLParagraphElement;
-    batchesElement?: HTMLParagraphElement;
 
     // Drawing data
     drawRequests: DrawingBatchRequest[];
@@ -112,16 +73,13 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
     dataManager: IDataManager;
     objectIdentifier: IObjectIdentifier;
 
-    constructor(graphics: IGraphics, dataLoader: IDataLoader, requestFrame: RequestFrameFunction,
-        options: RenderingEngineOptions) {
+    constructor(graphics: IGraphics, dataLoader: IDataLoader, options: IBaseRendererOptions) {
         super();
         this.graphics = graphics;
         this.dataLoader = dataLoader;
-        this.requestFrame = requestFrame;
         this.progress = options.progress;
         this.dataLoader.useProgressReporter(options.progress);
         this.errorHandler = options.errorHandler;
-        this.containerElement = options.container;
 
         this.sceneObjects = [];
         this.sceneBoundingBox = AABB.zero();
@@ -152,11 +110,6 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
         this.riverFarColor = options.riverFarColor ? options.riverFarColor : Float4.create(26 / 255, 46 / 255, 51 / 255, 1),
             this.waterAlphas = options.waterAlphas ? options.waterAlphas : Float4.create(0.3, 0.8, 0.5, 1)
 
-        this.framesDrawn = 0;
-        this.timeElapsed = 0;
-        this.maxFpsCounterSize = 100;
-        this.fpsCounter = [];
-
         // Set opts to defaults
         this.debugPortals = false;
         this.doodadRenderDistance = 300;
@@ -166,6 +119,11 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
         this.objectFactory = this.iocContainer.getObjectFactory();
         this.dataManager = this.iocContainer.getDataManager();
         this.objectIdentifier = this.iocContainer.getObjectIdentifier();
+
+        // Set up working data
+        this.lastDeltaTime = 0;
+        this.lastTime = 0;
+        this.timeElapsed = 0;
     }
 
     dispose(): void {
@@ -177,15 +135,15 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
         }
     }
 
-    now() {
-        return window.performance && window.performance.now ? window.performance.now() : Date.now();
-    }
 
     draw(currentTime: number) {
         try {
+            this.processCallbacks("beforeUpdate");
+
             const deltaTime = (currentTime - this.lastTime);
             this.lastTime = currentTime;
 
+            // Update camera
             this.sceneCamera.update(deltaTime);
             Float44.copy(this.sceneCamera.getViewMatrix(), this.viewMatrix);
             Float44.invert(this.viewMatrix, this.invViewMatrix);
@@ -199,24 +157,25 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
             for (const obj of this.sceneObjects) {
                 obj.update(deltaTime);
             }
+            this.processCallbacks("afterUpdate")
+
+            this.processCallbacks("beforeDraw");
 
             // Do non drawing graphics work
-            this.otherGraphicsRequests.sort((a, b) => a.key.compareTo(b.key));
+            this.otherGraphicsRequests.sort((a, b) => a.compareTo(b));
             for (const batch of this.otherGraphicsRequests) {
                 batch.submit(this.graphics);
             }
             this.graphics.endFrame();
             this.otherGraphicsRequests = [];
 
-
+            // Draw all scene objects
             for (const obj of this.sceneObjects) {
                 obj.draw();
             }
 
-            // Sort batches in draw order.
-            this.drawRequests.sort((r1, r2) => r1.compareTo(r2))
-
             // Draw new frame
+            this.drawRequests.sort((r1, r2) => r1.compareTo(r2))
             this.graphics.clearFrame(this.clearColor);
             this.graphics.startFrame(this.width, this.height);
             for (const batch of this.drawRequests) {
@@ -224,24 +183,10 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
             }
             this.graphics.endFrame();
 
-            if (this.fpsElement) {
-                this.fpsCounter.push(1 / (deltaTime / 1000));
-                if (this.fpsCounter.length > this.maxFpsCounterSize) {
-                    this.fpsCounter.splice(0, 1);
-                }
-                const avgFps = this.fpsCounter.reduce((acc, next) => acc + next, 0) / this.fpsCounter.length;
-                this.fpsElement.textContent = "FPS: " + Math.floor(avgFps);
-            }
-
-            if (this.batchesElement) {
-                this.batchesElement.textContent = "Batches: " + this.drawRequests.length;
-            }
+            this.processCallbacks("afterDraw");
 
             this.drawRequests = [];
-
-            if (this.drawRequests.length > 0) {
-                this.framesDrawn++;
-            }
+            this.lastDeltaTime = deltaTime;
             this.timeElapsed += deltaTime;
         }
         catch (err) {
@@ -249,41 +194,9 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
         }
     }
 
-    start() {
-        this.lastTime = this.now();
 
-        this.sceneCamera.initialize(this);
-        Float44.copy(this.sceneCamera.getViewMatrix(), this.viewMatrix);
-        Float44.invert(this.viewMatrix, this.invViewMatrix);
-
-        var aspect = this.width / this.height;
-        Float44.perspective(Math.PI / 180 * this.fov, aspect, 0.1, 2000, this.projectionMatrix);
-        const engine = this;
-        const drawFrame = () => {
-            if (engine.isDisposing) {
-                return;
-            }
-            const now = engine.now();
-            engine.draw(now);
-            this.requestFrame(drawFrame)
-        }
-        drawFrame();
-    }
-
-    enableDebug() {
-        this.setupDebugElements();
-    }
-
-    enableDebugPortals() {
-        this.debugPortals = true;
-    }
-
-    disableDebug() {
-        this.destroyDebugElements();
-    }
-
-    disableDebugPortals() {
-        this.debugPortals = false;
+    protected now() {
+        return window.performance && window.performance.now ? window.performance.now() : Date.now();
     }
 
     resize(width: number, height: number) {
@@ -308,7 +221,8 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
         })
         if (isWorldPositionedObject(object)) {
             object.once("loaded", (obj) => {
-                this.processNewBoundingBox(obj.worldBoundingBox);
+                this.sceneBoundingBox = AABB.merge(this.sceneBoundingBox, obj.worldBoundingBox);
+                this.sceneCamera.scaleToBoundingBox(this.sceneBoundingBox);
             })
         }
         this.sceneObjects.push(object);
@@ -330,11 +244,6 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
         this.sceneCamera.scaleToBoundingBox(this.sceneBoundingBox);
     }
 
-    processNewBoundingBox(boundingBox: AABB): void {
-        this.sceneBoundingBox = AABB.merge(this.sceneBoundingBox, boundingBox);
-        this.sceneCamera.scaleToBoundingBox(this.sceneBoundingBox);
-    }
-
     submitDrawRequest(request: DrawingBatchRequest) {
         this.drawRequests.push(request);
     }
@@ -348,8 +257,7 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
     }
 
     getUnknownTexture(): ITexture {
-        const unknownTexture = this.graphics.createSolidColorTexture(Float4.create(0, 1, 0, 1));
-        return unknownTexture;
+        return this.graphics.createSolidColorTexture(Float4.create(0, 1, 0, 1));
     }
 
     async getTexture(requester: IDisposable, fileId: FileIdentifier, opts?: ITextureOptions): Promise<ITexture | null> {
@@ -461,43 +369,5 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
             "u_waterAlphas": this.waterAlphas
         });
         return material;
-    }
-
-    private setupDebugElements() {
-        if (document && this.containerElement) {
-            this.debugContainer = document.createElement("div");
-            this.debugContainer.style.position = "absolute";
-            this.debugContainer.style.left = "0";
-            this.debugContainer.style.top = "0";
-            this.debugContainer.style.padding = "1em";
-
-            this.fpsElement = document.createElement("p");
-            this.fpsElement.style.color = "white";
-            this.fpsElement.style.margin = "0";
-            this.debugContainer.append(this.fpsElement);
-
-            this.batchesElement = document.createElement("p");
-            this.batchesElement.style.color = "white";
-            this.batchesElement.style.margin = "0";
-            this.batchesElement.style.marginTop = "1.2em";
-            this.debugContainer.append(this.batchesElement);
-
-            this.containerElement.append(this.debugContainer);
-        }
-    }
-
-    private destroyDebugElements() {
-        if (this.fpsElement) {
-            this.fpsElement.remove()
-            this.fpsElement = null;
-        }
-        if (this.batchesElement) {
-            this.batchesElement.remove();
-            this.batchesElement = null;
-        }
-        if (this.debugContainer) {
-            this.debugContainer.remove()
-            this.debugContainer = null;
-        }
     }
 }

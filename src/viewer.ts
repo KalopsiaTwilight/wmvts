@@ -1,5 +1,5 @@
-import { IDataLoader, IProgressReporter,  RequestFrameFunction, ErrorHandlerFn  } from "./interfaces";
-import { RenderingEngine, IRenderObject, WebGlGraphics, M2Model, WMOModel, IWMOModel, IM2Model, ICharacterModel, IItemModel, ITextureVariantModel } from "./rendering";
+import { IDataLoader, IProgressReporter, ErrorHandlerFn  } from "./interfaces";
+import { IRenderObject, WebGlGraphics, IWMOModel, IM2Model, ICharacterModel, IItemModel, ITextureVariantModel, BrowserRenderer } from "./rendering";
 import { Camera } from "./cameras";
 import { Float4, Float3 } from "./math";
 import { FileIdentifier, RecordIdentifier } from "./metadata";
@@ -16,8 +16,7 @@ export interface WoWModelViewerOptions {
         width?: number;
         clearColor?: Float4,
         resizeToContainer?: boolean,
-        createCanvas?: CanvasCreationFunction,
-        requestFrame?: RequestFrameFunction,
+        createCanvas?: CanvasCreationFunction
     },
     scene?: {
         cameraFov?: number;
@@ -43,7 +42,7 @@ export class WoWModelViewer {
 
     canvas: HTMLCanvasElement;
     viewerContainer: HTMLDivElement;
-    renderEngine: RenderingEngine;
+    renderEngine: BrowserRenderer;
 
     width: number;
     height: number;
@@ -207,11 +206,9 @@ export class WoWModelViewer {
             this.height = this.options.canvas.height;
         }
         
-        const requestFrameFn = this.options.canvas.requestFrame ? 
-            this.options.canvas.requestFrame : window.requestAnimationFrame.bind(window);
         let gl = this.canvas.getContext("webgl", { alpha: true, premultipliedAlpha: false });
         const graphics = new WebGlGraphics(gl);
-        this.renderEngine = new RenderingEngine(graphics, this.options.dataLoader, requestFrameFn, {
+        this.renderEngine = new BrowserRenderer(graphics, this.options.dataLoader, {
             progress: this.options.progressReporter,
             container: this.viewerContainer,
             errorHandler: this.options.onError,

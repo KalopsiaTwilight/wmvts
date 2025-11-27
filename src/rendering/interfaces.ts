@@ -8,7 +8,30 @@ import { DrawingBatchRequest, IDataBuffers, IGraphics, IShaderProgram, ITexture,
 import { IModelPickingStrategy, ITexturePickingStrategy } from "./strategies";
 import { ICharacterModel, IItemModel, IM2Model, ITextureVariantModel, IWMOModel } from "./objects";
 
-export interface IRenderer {
+export type RendererEvents = "beforeDraw" | "afterDraw" | "beforeUpdate" | "afterUpdate" 
+
+export interface IBaseRendererOptions {
+    progress?: IProgressReporter,
+    container?: HTMLElement,
+    errorHandler?: ErrorHandlerFn,
+    cameraFov?: number;
+
+    clearColor?: Float4;
+
+    lightDirection?: Float3;
+    lightColor?: Float4;
+    ambientColor?: Float4;
+
+    oceanCloseColor?: Float4;
+    oceanFarColor?: Float4;
+    riverCloseColor?: Float4;
+    riverFarColor?: Float4;
+    waterAlphas?: Float4;
+
+    cacheTtl?: number;
+}
+
+export interface IRenderer<TParentEvent extends string = never> extends IDisposable<TParentEvent | RendererEvents> {
     graphics: IGraphics;
     
     // Camera data
@@ -20,6 +43,8 @@ export interface IRenderer {
     cameraPosition: Float3;
     // various rendering settings
     timeElapsed: number;
+
+    // TODO: Do these belong here?
     debugPortals: boolean;
     doodadRenderDistance: number;
 
@@ -70,7 +95,6 @@ export interface IObjectFactory {
     createTextureVariantModel(fileId: FileIdentifier): ITextureVariantModel;
     createCache(): ICache;
 }
-
 
 export type CacheKey = number | string;
 export interface ICache extends IDisposable {
