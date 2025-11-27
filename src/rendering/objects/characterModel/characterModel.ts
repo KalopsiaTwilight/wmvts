@@ -368,7 +368,7 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
             for(let j = 0; j < 3; j++) {
                 const fileId = newSkinLayers[key][j];
                 if (fileId) {
-                    promises.push(this.renderer.getTexture(fileId).then((texture) => {
+                    promises.push(this.renderer.getTexture(this, fileId).then((texture) => {
                         if (this.textureLayerBaseFileIds[key][j] === texture.fileId) {
                             this.textureLayerBaseTextures[key][j] = texture;
                         }

@@ -4,8 +4,11 @@ import { Disposable } from "@app/disposable";
 
 interface CacheEntry<TValue> {
     value: TValue
+    owners: OwnerIdentifier[];
     ttl: number
 }
+
+export type OwnerIdentifier = string | number;
 export class WebGlCache extends Disposable implements ICache {
     isDisposing: boolean;    
     items: { [index: CacheKey]: CacheEntry<unknown> };
@@ -28,7 +31,34 @@ export class WebGlCache extends Disposable implements ICache {
     }
 
     update(deltaTime: number) {
-        // TODO: Update ttl and delete if no object 'owns' the resource.
+        const keys = this.getKeys();
+        for(const key of keys) {
+            const entry = this.items[key];
+            // Only invalidate objects that aren't 'owned'
+            if (entry.owners.length > 0) {
+                continue;
+            }
+            // Persist entry
+            if (entry.ttl == -1) {
+                continue;
+            }
+            entry.ttl -= deltaTime;
+            if (entry.ttl < 0) {
+                this.delete(key);
+            }
+        }
+    }
+
+    addOwner(key: CacheKey, owner: OwnerIdentifier) {
+        if (this.items[key]) {
+            this.items[key].owners.push(owner);
+        }
+    }
+
+    removeOwner(key: CacheKey, owner: OwnerIdentifier) {
+        if (this.items[key]) {
+            this.items[key].owners = this.items[key].owners.filter(x => x !== owner);
+        }
     }
 
     delete(key: CacheKey) {
@@ -67,7 +97,8 @@ export class WebGlCache extends Disposable implements ICache {
     store<TValue>(key: CacheKey, value: TValue, ttl: number = this.maxTtl) {
         this.items[key] = {
             ttl,
-            value
+            value,
+            owners: []
         }
     }
 

@@ -481,7 +481,7 @@ export class M2RibbonEmitter extends Disposable implements IDisposable {
 
     private setupGraphics() {
         // Set up buffers
-        this.shaderProgram = this.engine.getShaderProgram('M2RibbonEmitter',
+        this.shaderProgram = this.engine.getShaderProgram(this, 'M2RibbonEmitter',
             vertexShaderProgramText, fragmentShaderProgramText)
 
         this.vertexBuffer = this.engine.graphics.createVertexDataBuffer([

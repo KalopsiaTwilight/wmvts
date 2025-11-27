@@ -103,8 +103,8 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
 
     override attachToRenderer(env: IRenderer): void {
         super.attachToRenderer(env);
-        this.shaderProgram = this.renderer.getShaderProgram("WMO", vertexShaderProgramText, fragmentShaderProgramText);
-        this.portalShader = this.renderer.getShaderProgram("WMOPortal", portalVertexShaderProgramText, portalFragmentShaderProgramText);
+        this.shaderProgram = this.renderer.getShaderProgram(this, "WMO", vertexShaderProgramText, fragmentShaderProgramText);
+        this.portalShader = this.renderer.getShaderProgram(this, "WMOPortal", portalVertexShaderProgramText, portalFragmentShaderProgramText);
 
         if (this.fileId) {
             this.dataManager.getWMOModelFile(this.fileId).then(this.onModelLoaded.bind(this))
@@ -285,7 +285,7 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
                     if (fileId !== 0) {
                         const clampS = (material.flags & WoWWorldModelMaterialMaterialFlags.ClampS) > 0;
                         const clampT = (material.flags & WoWWorldModelMaterialMaterialFlags.ClampT) > 0;
-                        const texturePromise = this.renderer.getTexture(fileId, {
+                        const texturePromise = this.renderer.getTexture(this, fileId, {
                             clampS, clampT
                         }).then((texture) => {
                             if (!this.isDisposing) {
@@ -662,7 +662,7 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
     private setupDataBuffers() {
         this.groupDatabuffers = new Array(this.modelData.groups.length);
         for (let i = 0; i < this.modelData.groups.length; i++) {
-            this.groupDatabuffers[i] = this.renderer.getDataBuffers("WMO-" + this.fileId + "-" + i, (graphics) => {
+            this.groupDatabuffers[i] = this.renderer.getDataBuffers(this, "WMO-" + this.fileId + "-" + i, (graphics) => {
                 const group = this.modelData.groups[i];
 
                 const numColors = group.vertexColors.length / group.vertices.length;

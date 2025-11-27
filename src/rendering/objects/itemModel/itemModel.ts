@@ -172,7 +172,7 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
             const textureFileId = this.texturePickingStrategy(metadata.component1.textureFiles, race, gender, charClass)[0];
             if (textureFileId) {
                 this.component1Texture = this.renderer.getUnknownTexture();
-                const promise = this.renderer.getTexture(textureFileId).then((texture) => {
+                const promise = this.renderer.getTexture(this, textureFileId).then((texture) => {
                     this.component1Texture = texture;
                     if (this.component1) {
                         // TODO: Test if it's always index 0 or type: 2 or w/e
@@ -199,7 +199,7 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
             const textureFileId = this.texturePickingStrategy(metadata.component1.textureFiles, race, gender, charClass)[0];
             if (textureFileId) {
                 this.component2Texture = this.renderer.getUnknownTexture();
-                const promise = this.renderer.getTexture(textureFileId).then((texture) => {
+                const promise = this.renderer.getTexture(this, textureFileId).then((texture) => {
                     this.component2Texture = texture;
                     if (this.component2) {
                         // TODO: Test if it's always index 0 or type: 2 or w/e
@@ -226,7 +226,7 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
 
                 for(let i = 0; i < 2; i++) {
                     if (textureIds[i]) {
-                        const promise = this.renderer.getTexture(textureIds[i]).then((texture) => {
+                        const promise = this.renderer.getTexture(this, textureIds[i]).then((texture) => {
                             this.sectionTextures[section.section][i] = texture;
                         });
                         textureLoadingPromises.push(promise);

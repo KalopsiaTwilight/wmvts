@@ -126,7 +126,7 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
 
     override attachToRenderer(renderer: IRenderer): void {
         super.attachToRenderer(renderer);
-        this.shaderProgram = this.renderer.getShaderProgram("M2", vertexShaderProgramText, fragmentShaderProgramText);
+        this.shaderProgram = this.renderer.getShaderProgram(this, "M2", vertexShaderProgramText, fragmentShaderProgramText);
 
         if (this.fileId) {
             this.dataManager.getM2ModelFile(this.fileId).then(this.onModelLoaded.bind(this));
@@ -647,7 +647,7 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
     }
 
     private setupDataBuffers() {
-        this.dataBuffers = this.renderer.getDataBuffers("M2-" + this.fileId, (graphics) => {
+        this.dataBuffers = this.renderer.getDataBuffers(this, "M2-" + this.fileId, (graphics) => {
             const vertexIndexBuffer = graphics.createVertexIndexBuffer(true);
             const vertexDataBuffer = graphics.createVertexDataBuffer([
                 { index: this.shaderProgram.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: 48, offset: 0 },
@@ -699,7 +699,7 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
         for (let i = 0; i < this.modelData.textures.length; i++) {
             const textureId = this.modelData.textures[i].textureId
             if (textureId) {
-                const promise = this.renderer.getTexture(textureId).then((texture) => {
+                const promise = this.renderer.getTexture(this, textureId).then((texture) => {
                     if (!this.isDisposing) {
                         this.textureObjects[i] = texture
                     }

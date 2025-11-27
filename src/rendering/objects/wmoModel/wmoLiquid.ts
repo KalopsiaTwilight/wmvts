@@ -90,7 +90,7 @@ export class WMOLiquid extends WorldPositionedObject {
     override attachToRenderer(renderer: IRenderer): void {
         super.attachToRenderer(renderer);
 
-        this.shaderProgram = renderer.getShaderProgram("WMOLiquid", vertexShaderProgramText, fragmentShaderProgramText);
+        this.shaderProgram = renderer.getShaderProgram(this, "WMOLiquid", vertexShaderProgramText, fragmentShaderProgramText);
 
         const potentialVertices: WMOLiquidVertexData[] = [];
         const [width, height] = this.data.liquidTiles;
@@ -245,7 +245,7 @@ export class WMOLiquid extends WorldPositionedObject {
         for (let i = 0; i < this.textures.length; i++) {
             const fileId = metadata.textures[i].fileDataId;
             if (fileId) {
-                const promise = this.renderer.getTexture(fileId).then((tex) => {
+                const promise = this.renderer.getTexture(this, fileId).then((tex) => {
                     this.textures[i] = tex;
                 });
                 texturePromises.push(promise);

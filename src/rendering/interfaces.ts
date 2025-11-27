@@ -29,9 +29,9 @@ export interface IRenderer {
     getBaseMaterial(): RenderMaterial;
     getSolidColorTexture(color: Float4): ITexture;
     getUnknownTexture(): ITexture;
-    getTexture(fileId: FileIdentifier, opts?: ITextureOptions): Promise<ITexture>;
-    getShaderProgram(key: string, vertexShader: string, fragmentShader: string): IShaderProgram;
-    getDataBuffers(key: string, createFn: (graphics: IGraphics) => IDataBuffers): IDataBuffers;
+    getTexture(requestor: IDisposable, fileId: FileIdentifier, opts?: ITextureOptions): Promise<ITexture>;
+    getShaderProgram(requestor: IDisposable, key: string, vertexShader: string, fragmentShader: string): IShaderProgram;
+    getDataBuffers(requestor: IDisposable, key: string, createFn: (graphics: IGraphics) => IDataBuffers): IDataBuffers;
 }
 
 export interface IDataManager {
@@ -46,6 +46,10 @@ export interface IDataManager {
     getBoneFileData(fileId: FileIdentifier): Promise<WoWBoneFileData | null>;
 }
 
+export interface IObjectIdentifier {
+    createIdentifier(object: unknown): number | string;
+}
+
 export interface IIoCContainer {
     getRandomNumberGenerator(seed?: number | string): IPseudoRandomNumberGenerator;
     getTexturePickingStrategy(): ITexturePickingStrategy;
@@ -55,6 +59,7 @@ export interface IIoCContainer {
     getProgressReporter(): IProgressReporter | undefined;
     getErrorHandler(): ErrorHandlerFn | undefined;
     getDataManager(): IDataManager;
+    getObjectIdentifier(): IObjectIdentifier;
 }
 
 export interface IObjectFactory {

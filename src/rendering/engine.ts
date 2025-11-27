@@ -1,7 +1,7 @@
 import { Camera } from "@app/cameras";
 import { AABB, Float3, Float4, Float44, Frustrum } from "@app/math";
 import { FileIdentifier } from "@app/metadata";
-import { IProgressReporter, IDataLoader, RequestFrameFunction, ErrorHandlerFn, ErrorType } from "@app/interfaces";
+import { IProgressReporter, IDataLoader, RequestFrameFunction, ErrorHandlerFn, ErrorType, IDisposable } from "@app/interfaces";
 import { Disposable } from "@app/disposable";
 
 import { IRenderObject, isWorldPositionedObject } from "./objects";
@@ -10,7 +10,7 @@ import {
     RenderMaterial
 } from "./graphics";
 import { WebGlCache } from "./webglCache";
-import { ICache, IDataManager, IIoCContainer, IObjectFactory, IRenderingEngine } from "./interfaces";
+import { IDataManager, IIoCContainer, IObjectFactory, IObjectIdentifier, IRenderingEngine } from "./interfaces";
 import { DefaultIoCContainer } from "./iocContainer";
 
 const DataProcessingErrorType: ErrorType = "dataProcessing";
@@ -84,7 +84,7 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
     cameraFrustrum: Frustrum;
     cameraPosition: Float3;
 
-    cache: ICache;
+    graphicsCache: WebGlCache;
     textureRequests: { [key: string]: Promise<ITexture> }
 
     // Some stats
@@ -110,6 +110,7 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
     iocContainer: IIoCContainer;
     objectFactory: IObjectFactory;
     dataManager: IDataManager;
+    objectIdentifier: IObjectIdentifier;
 
     constructor(graphics: IGraphics, dataLoader: IDataLoader, requestFrame: RequestFrameFunction,
         options: RenderingEngineOptions) {
@@ -133,7 +134,7 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
         this.cameraPosition = Float3.zero();
 
         const cacheTtl = options.cacheTtl ? options.cacheTtl : 1000 * 60 * 15;
-        this.cache = new WebGlCache(cacheTtl);
+        this.graphicsCache = new WebGlCache(cacheTtl);
 
         this.textureRequests = {};
         this.drawRequests = [];
@@ -164,6 +165,7 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
         this.iocContainer = new DefaultIoCContainer(this.dataLoader, this.errorHandler, this.progress);
         this.objectFactory = this.iocContainer.getObjectFactory();
         this.dataManager = this.iocContainer.getDataManager();
+        this.objectIdentifier = this.iocContainer.getObjectIdentifier();
     }
 
     dispose(): void {
@@ -193,7 +195,7 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
 
             // Update objects
             this.dataManager.update(deltaTime);
-            this.cache.update(deltaTime);
+            this.graphicsCache.update(deltaTime);
             for (const obj of this.sceneObjects) {
                 obj.update(deltaTime);
             }
@@ -347,16 +349,24 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
         return unknownTexture;
     }
 
-    async getTexture(fileId: FileIdentifier, opts?: ITextureOptions): Promise<ITexture | null> {
+    async getTexture(requester: IDisposable, fileId: FileIdentifier, opts?: ITextureOptions): Promise<ITexture | null> {
+        const id = this.objectIdentifier.createIdentifier(requester);
         const key = "TEXTURE-" + fileId;
 
+        requester.once("disposed", () => {
+            this.graphicsCache.removeOwner(key, id);
+        })
         // Try to resolve from cache
-        if (this.cache.contains(key)) {
-            return this.cache.get(key);
+        if (this.graphicsCache.contains(key)) {
+            this.graphicsCache.addOwner(key, id);
+            return this.graphicsCache.get(key);
         }
 
         if (this.textureRequests[key]) {
             const data = await this.textureRequests[key];
+            if (this.graphicsCache.contains(key)) {
+                this.graphicsCache.addOwner(key, id);
+            }
             return data;
         }
 
@@ -371,7 +381,8 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
 
         const texture = await promise;
         if (texture) {
-            this.cache.store(key, texture);
+            this.graphicsCache.store(key, texture);
+            this.graphicsCache.addOwner(key, id);
         }
         delete this.textureRequests[key];
         return texture;
@@ -393,25 +404,40 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
         });
     }
 
-    getShaderProgram(key: string, vertexShader: string, fragmentShader: string): IShaderProgram {
+    getShaderProgram(requester: IDisposable, key: string, vertexShader: string, fragmentShader: string): IShaderProgram {
+        const id = this.objectIdentifier.createIdentifier(requester);
+        requester.once("disposed", () => {
+            this.graphicsCache.removeOwner(cacheKey, id);
+        })
+
         const cacheKey = "PROGRAM-" + key;
-        if (this.cache.contains(cacheKey)) {
-            return this.cache.get(cacheKey);
+        if (this.graphicsCache.contains(cacheKey)) {
+            this.graphicsCache.addOwner(cacheKey, id);
+            return this.graphicsCache.get(cacheKey);
         }
 
         const program = this.graphics.createShaderProgram(vertexShader, fragmentShader);
-        this.cache.store(cacheKey, program, -1);
+        this.graphicsCache.store(cacheKey, program);
+        this.graphicsCache.addOwner(cacheKey, id);
         return program;
     }
 
-    getDataBuffers(key: string, createFn: (graphics: IGraphics) => IDataBuffers): IDataBuffers {
+    getDataBuffers(requester: IDisposable, key: string, createFn: (graphics: IGraphics) => IDataBuffers): IDataBuffers {
+        const id = this.objectIdentifier.createIdentifier(requester);
+
+        requester.once("disposed", () => {
+            this.graphicsCache.removeOwner(cacheKey, id);
+        })
+
         const cacheKey = "DATABUFFER-" + key;
-        if (this.cache.contains(cacheKey)) {
-            return this.cache.get(cacheKey);
+        if (this.graphicsCache.contains(cacheKey)) {
+            this.graphicsCache.addOwner(cacheKey, id);
+            return this.graphicsCache.get(cacheKey);
         }
 
         const dataBuffers = createFn(this.graphics);
-        this.cache.store(cacheKey, dataBuffers);
+        this.graphicsCache.store(cacheKey, dataBuffers);
+        this.graphicsCache.addOwner(cacheKey, id);
         return dataBuffers;
     }
 

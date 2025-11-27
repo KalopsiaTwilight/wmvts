@@ -902,7 +902,7 @@ export class M2ParticleEmitter extends Disposable implements IDisposable {
 
     private setupGraphics() {
         // Set up buffers;
-        this.shaderProgram = this.renderer.getShaderProgram('M2ParticleEmitter', 
+        this.shaderProgram = this.renderer.getShaderProgram(this, 'M2ParticleEmitter', 
             vertexShaderProgramText, fragmentShaderProgramText);
         this.vertexBuffer = this.renderer.graphics.createVertexDataBuffer([
             { index: this.shaderProgram.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: 56, offset: 0 },

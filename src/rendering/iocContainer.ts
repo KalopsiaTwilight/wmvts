@@ -1,9 +1,10 @@
 import { AleaPrngGenerator, IPseudoRandomNumberGenerator } from "@app/math";
-import { IDataManager, IIoCContainer, IObjectFactory } from "./interfaces";
+import { IDataManager, IIoCContainer, IObjectFactory, IObjectIdentifier } from "./interfaces";
 import { ITexturePickingStrategy, IModelPickingStrategy, defaultTexturePickingStrategy, defaultModelPickingStrategy } from "./strategies";
 import { DefaultObjectFactory } from "./objectFactory";
 import { ErrorHandlerFn, IDataLoader, IProgressReporter } from "@app/interfaces";
 import { DefaultDataManager } from "./dataManager";
+import { ObjectIdentifier } from "./objectIdentifier";
 
 
 export class DefaultIoCContainer implements IIoCContainer {
@@ -16,6 +17,7 @@ export class DefaultIoCContainer implements IIoCContainer {
     private progressReporter?: IProgressReporter;
     private errorHandler?: ErrorHandlerFn;
     private dataManager?: IDataManager;
+    private objectIdentifier?: IObjectIdentifier;
 
     constructor(dataLoader: IDataLoader, errorHandler?: ErrorHandlerFn, progressReporter?: IProgressReporter) {
         this.texturePickingStrategy = defaultTexturePickingStrategy;
@@ -26,6 +28,7 @@ export class DefaultIoCContainer implements IIoCContainer {
         // TODO: Make these configurable;
         this.objectFactory = new DefaultObjectFactory(this);
         this.dataManager = new DefaultDataManager(this);
+        this.objectIdentifier = new ObjectIdentifier();
     }
     
     getRandomNumberGenerator(seed?: number | string): IPseudoRandomNumberGenerator {
@@ -58,5 +61,9 @@ export class DefaultIoCContainer implements IIoCContainer {
     
     getDataManager(): IDataManager {
         return this.dataManager;
+    }
+
+    getObjectIdentifier(): IObjectIdentifier {
+        return this.objectIdentifier
     }
 }

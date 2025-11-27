@@ -35,8 +35,8 @@ export class Background extends RenderObject implements IBackground {
     attachToRenderer(renderer: IRenderer): void {
         this.renderer = renderer;
         
-        this.program = this.renderer.getShaderProgram("BG", vsProgramText, fsProgramText);
-        this.dataBuffers = this.renderer.getDataBuffers("BG-RECT", (graphics) => {
+        this.program = this.renderer.getShaderProgram(this, "BG", vsProgramText, fsProgramText);
+        this.dataBuffers = this.renderer.getDataBuffers(this, "BG-RECT", (graphics) => {
             const vertexDataBuffer = graphics.createVertexDataBuffer([
                 { index: this.program.getAttribLocation('a_texCoord'), size: 2, type: BufferDataType.Float, normalized: false, stride: 16, offset: 0 },
                 { index: this.program.getAttribLocation('a_position'), size: 2, type: BufferDataType.Float, normalized: false, stride: 16, offset: 8 },

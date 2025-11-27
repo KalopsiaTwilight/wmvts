@@ -33,7 +33,7 @@ export class TextureVariantModel<TParentEvent extends string = never> extends M2
                 break;
             }
 
-            this.renderer.getTexture(data.textureIds[i]).then((texture) => {
+            this.renderer.getTexture(this, data.textureIds[i]).then((texture) => {
                 this.swapTexture(i, texture);
             })
         }

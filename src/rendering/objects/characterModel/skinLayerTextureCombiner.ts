@@ -50,8 +50,8 @@ export class SkinLayerTextureCombiner extends Disposable implements IDisposable 
         this.blackTexture = this.renderer.getSolidColorTexture([0,0,0,0]);
         this.alphaTexture = this.renderer.getSolidColorTexture([0,0,0,1]);
 
-        this.blendProgram = this.renderer.getShaderProgram("SKIN_BLEND", vsProgramText, fsProgramText);
-        this.dataBuffers = this.renderer.getDataBuffers("SKIN-RECT", (graphics) => {
+        this.blendProgram = this.renderer.getShaderProgram(this, "SKIN_BLEND", vsProgramText, fsProgramText);
+        this.dataBuffers = this.renderer.getDataBuffers(this, "SKIN-RECT", (graphics) => {
             const vertexDataBuffer = graphics.createVertexDataBuffer([
                 { index: this.blendProgram.getAttribLocation('a_texCoord'), size: 2, type: BufferDataType.Float, normalized: false, stride: 8, offset: 0 },
             ], true);
