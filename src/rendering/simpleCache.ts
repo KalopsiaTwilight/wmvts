@@ -1,23 +1,28 @@
 import { isDisposable } from "@app/interfaces";
 import { CacheKey, ICache } from "./interfaces";
+import { Disposable } from "@app/disposable";
 
 interface CacheEntry<TValue> {
     value: TValue
     ttl: number
 }
-export class SimpleCache implements ICache {
-    isDisposing: boolean;    
+export class SimpleCache extends Disposable implements ICache {
     items: { [index: CacheKey]: CacheEntry<unknown> };
     maxTtl: number
 
     constructor(maxTtl: number = 300000) {
+        super();
         this.items = { };
         this.maxTtl = maxTtl
         this.isDisposing = false;
     }
 
     dispose(): void {
-        this.isDisposing = true;
+        if (this.isDisposing) {
+            return;
+        }
+
+        super.dispose();
         this.items = null;
     }
 

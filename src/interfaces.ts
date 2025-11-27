@@ -6,7 +6,14 @@ import {
 import { WoWBoneFileData, WoWModelData, WoWWorldModelData } from "./modeldata";
 import { IRenderingEngine } from "./rendering";
 
-export interface IDisposable {
+export type CallbackFn<T> = (obj: T) => void
+export interface ICallbackable<TEvent extends string>
+{
+    once(event: TEvent, callback: CallbackFn<this>): void
+}
+
+export type DisposableEvents = "disposed";
+export interface IDisposable<TParentEvent extends string = never> extends ICallbackable<TParentEvent | DisposableEvents>  {
     isDisposing: boolean;
     dispose(): void;
 }

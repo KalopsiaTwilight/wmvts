@@ -1,10 +1,11 @@
 import { Float4 } from "@app/math"
+import { Disposable } from "@app/disposable";
 import { 
     BufferDataType, ColorMask, GxBlend, IFrameBuffer, IShaderProgram, ITexture, RenderMaterial, 
     OffMainDrawingRequest, GenericBatchRequest, IDataBuffers
 } from "@app/rendering/graphics";
-import { IRenderer } from "@app/rendering/interfaces";
 import { IDisposable } from "@app/interfaces";
+import { IRenderer } from "@app/rendering/interfaces";
 
 import { ICharacterModel } from "./interfaces";
 
@@ -13,7 +14,7 @@ import fsProgramText from "./skinLayerTextureCombiner.frag";
 
 const BATCH_IDENTIFIER  = "CHAR-SKIN"
 
-export class SkinLayerTextureCombiner implements IDisposable {
+export class SkinLayerTextureCombiner extends Disposable implements IDisposable {
     renderer: IRenderer;
     width: number;
     height: number;
@@ -39,6 +40,7 @@ export class SkinLayerTextureCombiner implements IDisposable {
     isDisposing: boolean;
 
     constructor(parent: ICharacterModel, textureType: number, width: number, height: number) {
+        super();
         this.parentId = parent.modelId;
         this.renderer = parent.renderer;
         this.textureType = textureType;
@@ -69,11 +71,14 @@ export class SkinLayerTextureCombiner implements IDisposable {
 
         this.currentBatchId = 0;
         this.resolution = new Float32Array([this.width, this.height]);
-        this.isDisposing = false;
     }
     
     dispose(): void {
-        this.isDisposing = true;
+        if (this.isDisposing) {
+            return;
+        }
+        
+        super.dispose();
         this.renderer = null;
         this.blackTexture.dispose();
         this.blackTexture = null;

@@ -1,6 +1,7 @@
 import { WoWAnimationData, WoWAnimationFlags, WoWTrackData } from "@app/modeldata";
 import { Float3, Float4 } from "@app/math";
 import { IDisposable } from "@app/interfaces";
+import { Disposable } from "@app/disposable";
 
 const FALLBACK_ANIM_ID = 0;
 
@@ -10,7 +11,7 @@ export type CopyFn<T> = (from: T, to: T) => T;
 const lerpNum: LerpFn<number> = (valA, valB, coEff) => valA + coEff * (valB - valA);
 const copyNum: CopyFn<number> = (val) => val;
 
-export class AnimationState implements IDisposable {
+export class AnimationState extends Disposable implements IDisposable {
     animations: WoWAnimationData[];
     globalTimers: number[];
     globalLoops: number[];
@@ -25,9 +26,8 @@ export class AnimationState implements IDisposable {
     isPaused: boolean;
     speed: number;
 
-    isDisposing: boolean;
-
     constructor(animations: WoWAnimationData[], globalLoops: number[]) {
+        super();
         this.animations = animations;
 
         this.currentAnimActiveTime = 0;
@@ -41,16 +41,14 @@ export class AnimationState implements IDisposable {
         }
 
         this.speed = 1;
-
-        this.isDisposing = false;
     }
 
     dispose(): void {
         if (this.isDisposing) {
             return;
         }
-
-        this.isDisposing = true;
+        
+        super.dispose();
         this.animations = null;
         this.globalTimers = null;
         this.globalLoops = null;

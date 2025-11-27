@@ -3,22 +3,20 @@ import { IDisposable } from "@app/interfaces";
 import { AABB, Float3, Float4, Float44 } from "@app/math";
 
 
-export type RenderObjectEvents = "loaded" | "disposed"
+export type RenderObjectEvents = "loaded"
 
-export type CallbackFn<T> = (obj: T) => void
-export interface IRenderObject<TEvent extends string = RenderObjectEvents> extends IDisposable {
+export interface IRenderObject<TParentEvent extends string = never> extends IDisposable<TParentEvent | RenderObjectEvents> {
     renderer?: IRenderer;
 
     attachToRenderer(renderer: IRenderer): void;
     update(deltaTime: number): void;
     draw(): void;
-    once(event: TEvent | RenderObjectEvents, callback: CallbackFn<this>): void
 
     get isLoaded(): boolean;
     get isAttachedToRenderer(): boolean;
 }
 
-export interface IWorldPositionedObject<TEvent extends string = RenderObjectEvents> extends IRenderObject<TEvent> {
+export interface IWorldPositionedObject<TEvent extends string = never> extends IRenderObject<TEvent> {
     parent?: IWorldPositionedObject;
     children: IWorldPositionedObject[];
     localModelMatrix: Float44;

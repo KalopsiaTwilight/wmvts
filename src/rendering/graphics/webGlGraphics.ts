@@ -1,6 +1,7 @@
 import { createProgramInfo, createTexture, ProgramInfo, setUniforms } from "twgl.js";
 
 import { Float4 } from "@app/math";
+import { Disposable } from "@app/disposable";
 
 import { IGraphics, IVertexDataBuffer, IVertexIndexBuffer, IShaderProgram, 
     IUniformsData, IVertexAttributePointer, ITexture,
@@ -243,23 +244,22 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
     }
 }
 
-export class WebGLTextureAbstraction implements ITexture {
+export class WebGLTextureAbstraction extends Disposable implements ITexture {
     gl: WebGLRenderingContext;
     texture: WebGLTexture
 
-    isDisposing: boolean;
     fileId: number;
     width: number;
     height: number;
 
     constructor(gl: WebGLRenderingContext, texture: WebGLTexture) {
+        super();
         this.gl = gl;
         this.texture = texture;
 
         this.fileId = 0;
         this.width = 0;
         this.height = 0;
-        this.isDisposing = false;
     }
 
     bind(): void {
@@ -285,10 +285,11 @@ export class WebGLTextureAbstraction implements ITexture {
     }
 
     dispose(): void {
-        if(this.isDisposing) {
+        if (this.isDisposing) {
             return;
         }
-        this.isDisposing = true;
+        
+        super.dispose();
         this.gl.deleteTexture(this.texture);
         this.texture = null;
         this.gl = null;
@@ -337,19 +338,18 @@ export class WebGlVertexAttribPointer implements IVertexAttributePointer {
     }
 }
 
-export class WebGLVertexIndexBuffer implements IVertexIndexBuffer {
+export class WebGLVertexIndexBuffer extends Disposable implements IVertexIndexBuffer {
     gl: WebGLRenderingContext;
     size: number;
     dynamic: boolean;
     buffer: WebGLBuffer;
-    isDisposing: boolean;
 
     constructor(gl: WebGLRenderingContext, dynamic: boolean) {
+        super();
         this.gl = gl;
         this.dynamic = dynamic;
         this.buffer = gl.createBuffer();
         this.size = 0;
-        this.isDisposing = false;
     }
 
     setData(bytes: Uint16Array) {
@@ -384,27 +384,27 @@ export class WebGLVertexIndexBuffer implements IVertexIndexBuffer {
         if (this.isDisposing) {
             return;
         }
-        this.isDisposing = true;
+        
+        super.dispose();
         this.gl.deleteBuffer(this.buffer)
     }
 };
 
-export class WebGlVertexDataBuffer implements IVertexIndexBuffer
+export class WebGlVertexDataBuffer extends Disposable implements IVertexIndexBuffer
 {
     gl: WebGLRenderingContext;
     size: number;
     dynamic: boolean;
     buffer: WebGLBuffer;
     pointers: WebGlVertexAttribPointer[];
-    isDisposing: boolean;
 
     constructor(gl: WebGLRenderingContext, pointers: WebGlVertexAttribPointer[], dynamic: boolean) {
+        super();
         this.gl = gl;
         this.dynamic = dynamic;
         this.buffer = gl.createBuffer();
         this.size = 0;
         this.pointers = pointers;
-        this.isDisposing = false;
     }
 
     bind() {
@@ -442,7 +442,8 @@ export class WebGlVertexDataBuffer implements IVertexIndexBuffer
         if (this.isDisposing) {
             return;
         }
-        this.isDisposing = true;
+        
+        super.dispose();
         this.gl.deleteBuffer(this.buffer);
         for(const pointer of this.pointers) {
             pointer.dispose();
@@ -452,19 +453,18 @@ export class WebGlVertexDataBuffer implements IVertexIndexBuffer
         this.gl = null;
     }
 }
-export class WebGLShaderProgram implements IShaderProgram
+export class WebGLShaderProgram extends Disposable implements IShaderProgram
 {
     gl: WebGLRenderingContext;
     programInfo: ProgramInfo;
     lastUniforms: IUniformsData;
-    isDisposing: boolean;
 
     constructor(gl: WebGLRenderingContext, vertexShader: string, fragmentShader: string) {
+        super();
         this.gl = gl
         this.programInfo = createProgramInfo(gl, [vertexShader, fragmentShader])
         if (!this.programInfo)
             throw "Failed to create program";
-        this.isDisposing = false;
     }
 
     getAttribLocation(name: string) {
@@ -509,29 +509,29 @@ export class WebGLShaderProgram implements IShaderProgram
         if (this.isDisposing) {
             return;
         }
-        this.isDisposing = true;
+        
+        super.dispose();
         this.gl.deleteProgram(this.programInfo.program)
         this.programInfo = null;
         this.lastUniforms = null;
         this.gl = null;
     }
 }
-export class WebGlNativeVertexArrayObject implements IDataBuffers {
+export class WebGlNativeVertexArrayObject extends Disposable implements IDataBuffers {
     gl: WebGLRenderingContext;
 
     glVaoExt: OES_vertex_array_object;
     webGlVAO: WebGLVertexArrayObjectOES;
-    isDisposing: boolean;
 
     vertexDataBuffers: IVertexDataBuffer[];
     vertexIndexBuffer: IVertexIndexBuffer;
 
     constructor(gl: WebGLRenderingContext, glVaoExt: OES_vertex_array_object) {
+        super();
         this.gl = gl;
 
         this.glVaoExt = glVaoExt;
         this.webGlVAO = glVaoExt.createVertexArrayOES();
-        this.isDisposing = false;
         this.vertexDataBuffers = [];
     }
 
@@ -573,7 +573,8 @@ export class WebGlNativeVertexArrayObject implements IDataBuffers {
         if (this.isDisposing) {
             return;
         }
-        this.isDisposing = true;
+
+        super.dispose();
         this.vertexIndexBuffer.dispose();
         this.glVaoExt.deleteVertexArrayOES(this.webGlVAO);
         for(const buffer of this.vertexDataBuffers) {
@@ -586,26 +587,26 @@ export class WebGlNativeVertexArrayObject implements IDataBuffers {
     }
 }
 
-export class WebGlFrameBuffer implements IFrameBuffer {    
+export class WebGlFrameBuffer extends Disposable implements IFrameBuffer {    
     gl: WebGLRenderingContext;
     glFrameBuffer: WebGLFramebuffer;
-    isDisposing: boolean;
 
     width: number;
     height: number;
     
     constructor(gl: WebGLRenderingContext, width: number, height: number) {
+        super();
         this.gl = gl;
         this.width = width;
         this.height = height;
         this.glFrameBuffer = gl.createFramebuffer();
-        this.isDisposing = false;
     }
 
     bind(): void {
         if (this.isDisposing) {
             return;
         }
+        
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.glFrameBuffer);
         this.gl.viewport(0, 0, this.width, this.height);
     }
@@ -620,7 +621,8 @@ export class WebGlFrameBuffer implements IFrameBuffer {
         if (this.isDisposing) {
             return;
         }
-        this.isDisposing = true;
+        
+        super.dispose();
         this.gl.deleteFramebuffer(this.glFrameBuffer);
         this.glFrameBuffer = null;
         this.gl = null;

@@ -1,12 +1,13 @@
 import { Camera } from "@app/cameras";
 import { AABB, Float3, Float4, Float44, Frustrum } from "@app/math";
 import { FileIdentifier } from "@app/metadata";
-import { IDisposable, IProgressReporter, IDataLoader, RequestFrameFunction, ErrorHandlerFn, ErrorType } from "@app/interfaces";
+import { IProgressReporter, IDataLoader, RequestFrameFunction, ErrorHandlerFn, ErrorType } from "@app/interfaces";
+import { Disposable } from "@app/disposable";
 
 import { IRenderObject, isWorldPositionedObject } from "./objects";
-import { 
-    DrawingBatchRequest, IDataBuffers, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest, 
-    RenderMaterial 
+import {
+    DrawingBatchRequest, IDataBuffers, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest,
+    RenderMaterial
 } from "./graphics";
 import { WebGlCache } from "./webglCache";
 import { ICache, IDataManager, IIoCContainer, IObjectFactory, IRenderingEngine } from "./interfaces";
@@ -41,7 +42,7 @@ export interface RenderingEngineOptions {
 
     cacheTtl?: number;
 }
-export class RenderingEngine implements IRenderingEngine, IDisposable {
+export class RenderingEngine extends Disposable implements IRenderingEngine {
     // Options / Configurables
     graphics: IGraphics;
     dataLoader: IDataLoader;
@@ -112,6 +113,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
 
     constructor(graphics: IGraphics, dataLoader: IDataLoader, requestFrame: RequestFrameFunction,
         options: RenderingEngineOptions) {
+        super();
         this.graphics = graphics;
         this.dataLoader = dataLoader;
         this.requestFrame = requestFrame;
@@ -146,8 +148,8 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         this.oceanCloseColor = options.oceanCloseColor ? options.oceanCloseColor : Float4.create(17 / 255, 75 / 255, 89 / 255, 1);
         this.oceanFarColor = options.oceanFarColor ? options.oceanFarColor : Float4.create(0, 29 / 255, 41 / 255, 1);
         this.riverCloseColor = options.riverCloseColor ? options.riverCloseColor : Float4.create(41 / 255, 76 / 255, 81 / 255, 1);
-        this.riverFarColor = options.riverFarColor ? options.riverFarColor :  Float4.create(26 / 255, 46 / 255, 51 / 255, 1),
-        this.waterAlphas = options.waterAlphas ? options.waterAlphas : Float4.create(0.3, 0.8, 0.5, 1)
+        this.riverFarColor = options.riverFarColor ? options.riverFarColor : Float4.create(26 / 255, 46 / 255, 51 / 255, 1),
+            this.waterAlphas = options.waterAlphas ? options.waterAlphas : Float4.create(0.3, 0.8, 0.5, 1)
 
         this.framesDrawn = 0;
         this.timeElapsed = 0;
@@ -157,7 +159,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
         // Set opts to defaults
         this.debugPortals = false;
         this.doodadRenderDistance = 300;
-        
+
         // TODO: Make this configurable
         this.iocContainer = new DefaultIoCContainer(this.dataLoader, this.errorHandler, this.progress);
         this.objectFactory = this.iocContainer.getObjectFactory();
@@ -197,21 +199,21 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
             }
 
             // Do non drawing graphics work
-            const otherGraphicsWork = this.otherGraphicsRequests.sort((a,b) => a.key.compareTo(b.key));
-            for(const batch of otherGraphicsWork) {
+            const otherGraphicsWork = this.otherGraphicsRequests.sort((a, b) => a.key.compareTo(b.key));
+            for (const batch of otherGraphicsWork) {
                 batch.submit(this.graphics);
             }
             this.graphics.endFrame();
             this.otherGraphicsRequests = [];
 
-            
+
             for (const obj of this.sceneObjects) {
                 obj.draw();
             }
 
             // Sort batches in draw order.
             const drawOrderRequests = this.drawRequests.sort((r1, r2) => r1.compareTo(r2))
-                
+
             // Draw new frame
             this.graphics.clearFrame(this.clearColor);
             this.graphics.startFrame(this.width, this.height);
@@ -315,7 +317,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
 
     private recalculateSceneBounds() {
         this.sceneBoundingBox = AABB.zero();
-        for(const obj of this.sceneObjects) {
+        for (const obj of this.sceneObjects) {
             if (isWorldPositionedObject(obj)) {
                 this.sceneBoundingBox = AABB.merge(this.sceneBoundingBox, obj.worldBoundingBox)
             }
@@ -343,7 +345,7 @@ export class RenderingEngine implements IRenderingEngine, IDisposable {
     getUnknownTexture(): ITexture {
         const unknownTexture = this.graphics.createSolidColorTexture(Float4.create(0, 1, 0, 1));
         return unknownTexture;
-    } 
+    }
 
     async getTexture(fileId: FileIdentifier, opts?: ITextureOptions): Promise<ITexture | null> {
         const key = "TEXTURE-" + fileId;

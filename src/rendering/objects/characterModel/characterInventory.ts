@@ -1,15 +1,16 @@
 
 import { InventoryType, ItemFeatureFlag } from "@app/metadata";
+import { Disposable } from "@app/disposable";
 import { WoWAttachmentData } from "@app/modeldata";
 import { Float44 } from "@app/math";
 import { IDisposable } from "@app/interfaces";
+import { IIoCContainer, IObjectFactory } from "@app/rendering/interfaces";
 
 import { IItemModel } from "../itemModel";
 import { IM2Model } from "../m2Model";
 
 import { EquipmentSlot, GeoSet } from "./interfaces";
 import { type CharacterModel } from "./characterModel";
-import { IIoCContainer, IObjectFactory } from "@app/rendering/interfaces";
 
 export interface EquippedItemData {
     displayId1: number;
@@ -69,7 +70,7 @@ const slotToPriorityMap: { [key in EquipmentSlot]: number } = {
     [EquipmentSlot.End]: 0,
 }
 
-export class CharacterInventory implements IDisposable {
+export class CharacterInventory extends Disposable implements IDisposable {
     inventoryData: { [key in EquipmentSlot]?: EquippedItemData }
     parent: CharacterModel
     isDisposing: boolean;
@@ -86,9 +87,9 @@ export class CharacterInventory implements IDisposable {
     }
 
     constructor(parent: CharacterModel, iocContainer: IIoCContainer) {
+        super();
         this.parent = parent;
         this.inventoryData = { };
-        this.isDisposing = false;
         this.objectFactory = iocContainer.getObjectFactory();
     }
 
@@ -196,7 +197,7 @@ export class CharacterInventory implements IDisposable {
             return;
         }
         
-        this.isDisposing = true;
+        super.dispose();
         for(const slot in this.inventoryData) {
             this.unloadItem(slot as unknown as EquipmentSlot);
         }

@@ -1,7 +1,7 @@
 import { WoWExtendedParticleData, WoWParticleEmitterData } from "@app/modeldata";
 import { Float2, Float3, Float33, Float4, Float44, IPseudoRandomNumberGenerator } from "@app/math";
 import { IDisposable } from "@app/interfaces";
-
+import { Disposable } from "@app/disposable";
 import { 
     BufferDataType, ColorMask, DrawingBatchRequest,  GxBlend, IDataBuffers, IShaderProgram, ITexture, IVertexDataBuffer, 
     IVertexIndexBuffer, RenderMaterial
@@ -79,7 +79,7 @@ class ParticlePreRenderData {
 
 const M2ParticleEmitterRandomTable = [];
 
-export class M2ParticleEmitter implements IDisposable {
+export class M2ParticleEmitter extends Disposable implements IDisposable {
     // References
     index: number;
     parent: M2Model;
@@ -88,7 +88,6 @@ export class M2ParticleEmitter implements IDisposable {
     exp2Data: WoWExtendedParticleData;
     rng: IPseudoRandomNumberGenerator;
     particleGenerator: BaseParticleGenerator;
-    isDisposing: boolean;
 
     // Graphics 
     shaderProgram: IShaderProgram;
@@ -142,6 +141,7 @@ export class M2ParticleEmitter implements IDisposable {
     show: boolean;
 
     constructor(index: number, parent: M2Model<never>, emitterData: WoWParticleEmitterData, exp2Data?: WoWExtendedParticleData) {
+        super();
         this.index = index;
         this.renderer = parent.renderer;
         this.parent = parent;
@@ -177,7 +177,6 @@ export class M2ParticleEmitter implements IDisposable {
         this.scaleTrack = new LocalAnimatedFloat2(this.m2data.scaleTrack);
         this.headCellTrack = new LocalAnimatedNumber(this.m2data.headCellTrack);
         this.tailCellTrack = new LocalAnimatedNumber(this.m2data.tailCellTrack);
-        this.isDisposing = false;
         this.show = true;
 
         this.initialize();
@@ -187,8 +186,8 @@ export class M2ParticleEmitter implements IDisposable {
         if (this.isDisposing) {
             return;
         }
-
-        this.isDisposing = true;
+        
+        super.dispose();
         this.parent = null;
         this.renderer = null;
         this.m2data = null;

@@ -1,7 +1,7 @@
 import { WoWRibbonEmiterData } from "@app/modeldata";
 import { Float2, Float3, Float4, Float44 } from "@app/math";
 import { IDisposable } from "@app/interfaces";
-
+import { Disposable } from "@app/disposable";
 import { 
     BufferDataType, ColorMask, DrawingBatchRequest, GxBlend, IShaderProgram, IDataBuffers, 
     IVertexDataBuffer, IVertexIndexBuffer, M2BlendModeToEGxBlend, RenderMaterial
@@ -34,9 +34,8 @@ class RibbonVertex {
 }
 
 
-export class M2RibbonEmitter implements IDisposable {
+export class M2RibbonEmitter extends Disposable implements IDisposable {
     index: number;
-    isDisposing: boolean;
     parent: M2Model;
     m2data: WoWRibbonEmiterData;
     engine: IRenderer;
@@ -89,8 +88,8 @@ export class M2RibbonEmitter implements IDisposable {
     maxWorldBounds: Float3;
 
     constructor(index: number, parent: M2Model<never>, emitterData: WoWRibbonEmiterData) {
+        super();
         this.index = index;
-        this.isDisposing = false;
         this.parent = parent;
         this.m2data = emitterData;
         this.engine = parent.renderer;
@@ -173,8 +172,8 @@ export class M2RibbonEmitter implements IDisposable {
         if (this.isDisposing) {
             return;
         }
-
-        this.isDisposing = true;
+        
+        super.dispose();
 
         this.parent = null;
         this.m2data = null;
