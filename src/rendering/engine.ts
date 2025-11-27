@@ -201,8 +201,8 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
             }
 
             // Do non drawing graphics work
-            const otherGraphicsWork = this.otherGraphicsRequests.sort((a, b) => a.key.compareTo(b.key));
-            for (const batch of otherGraphicsWork) {
+            this.otherGraphicsRequests.sort((a, b) => a.key.compareTo(b.key));
+            for (const batch of this.otherGraphicsRequests) {
                 batch.submit(this.graphics);
             }
             this.graphics.endFrame();
@@ -214,12 +214,12 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
             }
 
             // Sort batches in draw order.
-            const drawOrderRequests = this.drawRequests.sort((r1, r2) => r1.compareTo(r2))
+            this.drawRequests.sort((r1, r2) => r1.compareTo(r2))
 
             // Draw new frame
             this.graphics.clearFrame(this.clearColor);
             this.graphics.startFrame(this.width, this.height);
-            for (const batch of drawOrderRequests) {
+            for (const batch of this.drawRequests) {
                 batch.submit(this.graphics);
             }
             this.graphics.endFrame();
@@ -234,12 +234,12 @@ export class RenderingEngine extends Disposable implements IRenderingEngine {
             }
 
             if (this.batchesElement) {
-                this.batchesElement.textContent = "Batches: " + drawOrderRequests.length;
+                this.batchesElement.textContent = "Batches: " + this.drawRequests.length;
             }
 
             this.drawRequests = [];
 
-            if (drawOrderRequests.length > 0) {
+            if (this.drawRequests.length > 0) {
                 this.framesDrawn++;
             }
             this.timeElapsed += deltaTime;
