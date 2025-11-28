@@ -127,14 +127,54 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
     }
 
     dispose(): void {
+        if (this.isDisposing) {
+            return;
+        }
+
+        super.dispose();
+        this.graphics = null;
+        this.dataLoader = null;
+        this.progress = null;
+        this.errorHandler = null;
+        this.sceneCamera = null;
+
+        this.ambientColor = null;
+        this.lightColor = null;
+        this.lightDir = null;
+        
+        // Water settings
+        this.oceanCloseColor = null;
+        this.oceanFarColor = null;
+        this.riverCloseColor = null;
+        this.riverFarColor = null;
+        this.waterAlphas = null;
+
+        // Camera data
+        this.projectionMatrix = null;
         this.viewMatrix = null;
         this.invViewMatrix = null;
-        this.sceneCamera.dispose();
-        for (const object of this.sceneObjects) {
-            object.dispose();
-        }
-    }
+        this.projViewMatrix = null;
+        this.cameraFrustrum = null;
+        this.cameraPosition = null;
 
+        this.graphicsCache.dispose();
+        this.graphicsCache = null;
+        this.textureRequests = null;
+
+        // Drawing data
+        this.drawRequests = null;
+        this.otherGraphicsRequests = null;
+        for(let i = 0; i < this.sceneObjects.length; i++) {
+            this.sceneObjects[i].dispose();
+        }
+        this.sceneObjects = null;
+        this.sceneBoundingBox = null;
+
+        this.iocContainer = null;
+        this.objectFactory = null;
+        this.dataManager = null;
+        this.objectIdentifier = null;
+    }
 
     draw(currentTime: number) {
         try {
@@ -193,7 +233,6 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
             this.errorHandler?.(RenderingErrorType, null, err);
         }
     }
-
 
     protected now() {
         return window.performance && window.performance.now ? window.performance.now() : Date.now();
