@@ -41,18 +41,8 @@ export abstract class WorldPositionedObject<TEvent extends string = RenderObject
         }
     }
 
-    update(deltaTime: number): void {
-        if (this.isDisposing) {
-            return;
-        }
-
-        const toRemove: IWorldPositionedObject[] = [];
-        for (const child of this.children) {
-            if (child.isDisposing) {
-                toRemove.push(child);
-            }
-        }
-        this.children = this.children.filter(x => toRemove.indexOf(x) === -1)
+    update(deltaTime: number) {
+        
     }
 
     abstract draw(): void;
@@ -119,6 +109,9 @@ export abstract class WorldPositionedObject<TEvent extends string = RenderObject
         if (this.isAttachedToRenderer) {
             obj.attachToRenderer(this.renderer);
         }
+        obj.once("disposed", () => {
+            this.children = this.children.filter(x => !x.isDisposing);
+        })
     }
 
     protected setBoundingBox(boundingBox: AABB) {
