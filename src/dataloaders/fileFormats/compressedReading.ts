@@ -39,6 +39,11 @@ export function readAABB(reader: BinaryReader) {
     return AABB.create(readFloat3(reader), readFloat3(reader));
 }
 
+export function readString(reader: BinaryReader) {
+    const arr = new Uint8Array(readArray(reader, (r) => r.readUInt8()));
+    return new TextDecoder().decode(arr)
+}
+
 export function readArray<T>(reader: BinaryReader, deserializeFn: (binaryReader: BinaryReader, index?: number) => T): T[] {
     const numElems = reader.readInt32LE();
     if (numElems > 0) {

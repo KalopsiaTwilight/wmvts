@@ -7,7 +7,7 @@ import {
     WoWWorldModelLiquidTile, WoWWorldModelLiquidVertex, WoWWorldModelMaterial, WoWWorldModelPortal, WoWWorldModelPortalRef 
 } from "@app/modeldata"
 
-import { readAABB, readArray, readColor, readFloat2, readFloat3, readFloat4, readInt2 } from "./compressedReading";
+import { readAABB, readArray, readColor, readFloat2, readFloat3, readFloat4, readInt2, readString } from "./compressedReading";
 
 export function parseCWMOFile(data: ArrayBuffer) {
     let reader = new BinaryReader(data);
@@ -165,7 +165,8 @@ function readFog(reader: BinaryReader) {
 function readDoodadSet(reader: BinaryReader) {
     const data: WoWWorldModelDoodadSet = {
         startIndex: reader.readUInt32LE(),
-        count: reader.readUInt32LE()
+        count: reader.readUInt32LE(),
+        name: readString(reader),
     }
     return data;
 }

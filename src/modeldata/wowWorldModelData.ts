@@ -141,6 +141,7 @@ export interface WoWWorldModelDoodadDef {
 export interface WoWWorldModelDoodadSet {
     startIndex: number;
     count: number;
+    name: string;
 }
 
 export enum WoWWorldModelMaterialMaterialFlags {

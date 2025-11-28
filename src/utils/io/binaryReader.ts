@@ -2,7 +2,7 @@ export class BinaryReader {
     dataView: DataView;
     offset: number;
 
-    constructor(buffer: ArrayBuffer) {
+    constructor(buffer: ArrayBufferLike) {
         this.dataView = new DataView(buffer);
         this.offset = 0;
     }
