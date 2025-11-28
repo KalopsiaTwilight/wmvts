@@ -11,9 +11,6 @@ export abstract class LocalAnimatedValue<T> {
     }
 
     dispose(): null {
-        for(let i = 0; i < this.values.length; i++) {
-            this.values[i] = null;
-        }
         this.timestamps = null;
         this.values = null;
         return null;
