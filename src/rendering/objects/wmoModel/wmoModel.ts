@@ -82,7 +82,7 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
         this.isModelDataLoaded = false;
         this.isTexturesLoaded = false;
 
-        this.doodadSetId = 0; //TODO: Investigate what this means.
+        this.doodadSetId = 0;
         this.lodGroupMap = [];
 
         this.loadedTextures = {};
@@ -170,6 +170,15 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
         }
     }
 
+    getDoodadSets() {
+        return this.modelData.doodadSets.map(x => x.name);
+    }
+
+    useDoodadSet(id: number) {
+        this.doodadSetId = id;
+        this.loadDoodads();
+    }
+
     override dispose(): void {
         if (this.isDisposing) {
             return;
@@ -249,7 +258,13 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
     }
 
     private loadDoodads() {
-        // TODO: Check if model references should be shared amongst LOD groups
+        for (let i = 0; i < this.modelData.groups.length; i++) {
+            if (this.groupDoodads[i]) {
+                for(const obj of this.groupDoodads[i]) {
+                    obj.dispose();
+                }
+            } 
+        }
         const refs = this.getDoodadSetRefs();
         for (let i = 0; i < this.modelData.groups.length; i++) {
             const group = this.modelData.groups[i];
@@ -329,7 +344,7 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
         let refs = Array.from({ length: defaultSet.count }, (x, i) => i + defaultSet.startIndex);
         if (this.doodadSetId != 0) {
             const set = this.modelData.doodadSets[this.doodadSetId];
-            refs.concat(Array.from({ length: set.count }, (x, i) => i + set.startIndex));
+            refs = refs.concat(Array.from({ length: set.count }, (x, i) => i + set.startIndex));
         }
         return refs;
     }
