@@ -1,5 +1,5 @@
 import { AABB, Float3, Float44 } from "@app/math"
-import { IRenderingEngine } from "@app/rendering";
+import { IRenderer } from "@app/rendering";
 
 import { Camera } from "./base";
 
@@ -13,8 +13,8 @@ export class RotatingCamera extends Camera {
         super();
     }
 
-    override initialize(engine: IRenderingEngine): void {
-        super.initialize(engine);
+    override initialize(renderer: IRenderer): void {
+        super.initialize(renderer);
 
         this.time = 0;
         this.radius = 50;

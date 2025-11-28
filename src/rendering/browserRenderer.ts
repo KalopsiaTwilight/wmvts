@@ -1,14 +1,14 @@
 import {  Float44 } from "@app/math";
 import { IDataLoader } from "@app/interfaces";
 
-import { IBaseRendererOptions, IRenderingEngine } from "./interfaces";
+import { IBaseRendererOptions, IRenderer } from "./interfaces";
 import { BaseRenderer } from "./baseRenderer";
 import { IGraphics } from "./graphics";
 
 export interface IBrowserRendererOptions extends IBaseRendererOptions {
 }
 
-export class BrowserRenderer extends BaseRenderer implements IRenderingEngine {
+export class BrowserRenderer extends BaseRenderer implements IRenderer {
     // Some stats
     framesDrawn: number;
 

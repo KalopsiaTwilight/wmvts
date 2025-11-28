@@ -1,16 +1,16 @@
 import { Disposable } from "@app/disposable";
-import { IRenderingEngine } from "../interfaces";
+import { IRenderer } from "../interfaces";
 import { IRenderObject, RenderObjectEvents } from "./interfaces";
 
 
 export abstract class RenderObject<TEvent extends string = never> extends Disposable<TEvent | RenderObjectEvents> implements IRenderObject<TEvent> {
-    renderer: IRenderingEngine;
+    renderer: IRenderer;
     
     get isAttachedToRenderer() {
         return this.renderer != null;
     }
 
-    attachToRenderer(engine: IRenderingEngine): void {
+    attachToRenderer(engine: IRenderer): void {
         this.renderer = engine;
     }
 

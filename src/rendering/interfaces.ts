@@ -104,8 +104,3 @@ export interface ICache extends IDisposable {
     get<TValue>(key: CacheKey): TValue|null;
     store<TValue>(key: CacheKey, value: TValue, ttl?: number): void;
 }
-
-// TODO: Remove this special case used only by cameras
-export interface IRenderingEngine extends IRenderer {
-    containerElement?: HTMLElement;
-}
