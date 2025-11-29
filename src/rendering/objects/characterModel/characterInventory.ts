@@ -9,7 +9,7 @@ import { IIoCContainer, IObjectFactory } from "@app/rendering/interfaces";
 import { IItemModel } from "../itemModel";
 import { IM2Model } from "../m2Model";
 
-import { EquipmentSlot, GeoSet } from "./interfaces";
+import { EquipmentSlot, GeoSet, TextureSection } from "./interfaces";
 import { type CharacterModel } from "./characterModel";
 
 export interface EquippedItemData {
@@ -79,7 +79,7 @@ export class CharacterInventory extends Disposable implements IDisposable {
     get isLoaded() {
         for(const slot in this.inventoryData) {
             const data = this.inventoryData[slot as unknown as EquipmentSlot];
-            if (!data.model1.isLoaded || (data.model2 && !data.model2.isLoaded)) {
+            if (data && (data.model1 && !data.model1.isLoaded) || (data.model2 && !data.model2.isLoaded)) {
                 return false;
             }
         }
@@ -91,6 +91,10 @@ export class CharacterInventory extends Disposable implements IDisposable {
         this.parent = parent;
         this.inventoryData = { };
         this.objectFactory = iocContainer.getObjectFactory();
+    }
+
+    hasItemInSlot(slot: EquipmentSlot): boolean {
+        return !!this.inventoryData[slot];
     }
 
     equipItem(slot: EquipmentSlot, displayId1: number, displayId2?: number) {
@@ -292,6 +296,20 @@ export class CharacterInventory extends Disposable implements IDisposable {
         return geoSetMap;
     }
 
+    shouldDrawUnderwear(): [boolean, boolean] {
+        let shouldDrawTop = true;
+        const topSlots = [EquipmentSlot.Body, EquipmentSlot.Shirt];
+        for(const slot of topSlots) {
+            shouldDrawTop = shouldDrawTop && !(this.inventoryData[slot] && !!this.inventoryData[slot].model1.sectionTextures[TextureSection.UpperTorso])
+        }
+        const bottomSlots = [EquipmentSlot.Body, EquipmentSlot.Legs];
+        let shouldDrawBottom = true;
+        for(const slot of topSlots) {
+            shouldDrawBottom = shouldDrawBottom && !(this.inventoryData[slot] && !!this.inventoryData[slot].model1.sectionTextures[TextureSection.UpperLeg])
+        }
+        return [shouldDrawBottom, shouldDrawTop];
+    }
+
     private updateAttachmentGeosets(slot: EquipmentSlot, model: IItemModel) {
         if (this.isDisposing) {
             return;
@@ -360,7 +378,7 @@ export class CharacterInventory extends Disposable implements IDisposable {
         if (data.model2) {
             data.model2.dispose()
         }
-        this.inventoryData[slot] = null;
+        delete this.inventoryData[slot];
         this.parent.clearTexturesForSlot(slot);
     }
 

@@ -402,8 +402,7 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
         }
 
         // Draw base layers
-        const hasChestEquipment = this.textureSectionTextures[3] && this.textureSectionTextures[3].length;
-        const hasLegEquipment = this.textureSectionTextures[5] && this.textureSectionTextures[5].length;
+        const [shouldDrawTop, shouldDrawBottom] = this.inventory.shouldDrawUnderwear();
         const layers = this.customizationData.textureLayers.sort((a,b) => a.layer - b.layer);
         for(const layer of layers) {
             if (!this.textureLayerBaseFileIds[layer.layer]) {
@@ -416,12 +415,12 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
             }
 
             // skip base upper torso if equipment draws there
-            if (layer.textureSection === 3 && hasChestEquipment) {
+            if (layer.textureSection === 3 && !shouldDrawTop) {
                 continue;
             }
 
             // skip base lower torso if equipment draws there
-            if (layer.textureSection === 5 && hasLegEquipment) {
+            if (layer.textureSection === 5 && !shouldDrawBottom) {
                 continue;
             }
 

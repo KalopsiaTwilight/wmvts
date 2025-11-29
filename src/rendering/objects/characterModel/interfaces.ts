@@ -84,3 +84,15 @@ export enum GeoSet
     HairDecoration = 42,
     HornDecoration = 43
 }
+
+export enum TextureSection {
+    UpperArm = 0,
+    LowerArm = 1,
+    Hand = 2,
+    UpperTorso = 3,
+    LowerTorso = 4,
+    UpperLeg = 5,
+    LowerLeg = 6,
+    Foot = 7,
+    Accessory = 8
+}
