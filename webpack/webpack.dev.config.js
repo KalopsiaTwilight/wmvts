@@ -7,7 +7,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const devConfig = {
     mode: 'development',
     entry: {
-        index: './demo/index.ts',
+        index: './demo/browser/index.ts',
     },
     devtool: 'inline-source-map',
     devServer: {
