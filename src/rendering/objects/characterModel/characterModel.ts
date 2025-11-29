@@ -205,6 +205,7 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
             return;
         }
         this.inventory.unequipItem(slot);
+        this.updateGeosets();
     }
 
     setTexturesForSection(section: number, slot: EquipmentSlot, priority: number, textures: [ITexture, ITexture, ITexture]) {
