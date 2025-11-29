@@ -90,8 +90,8 @@ export class WoWModelServerDataProvider implements IDataLoader {
             const data = await resp.json() as CharacterMetadata;
             return data;
         }
-        catch {
-            return null;
+        catch(err) {
+            return err;
         }
     }
 
@@ -107,8 +107,9 @@ export class WoWModelServerDataProvider implements IDataLoader {
             const data = await resp.json() as ItemMetadata;
             
             return data;
-        } catch {
-            return null;
+        } 
+        catch(err) {
+            return err;
         }
     }
 
