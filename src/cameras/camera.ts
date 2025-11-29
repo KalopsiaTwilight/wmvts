@@ -1,9 +1,10 @@
 import { Disposable } from "@app/disposable";
-import { ICamera } from "@app/interfaces";
+import { CallbackFn, ICamera } from "@app/interfaces";
 import { Float3, Float4, Float44 } from "@app/math"
 import { IRenderer } from "@app/rendering";
 
 export class Camera extends Disposable implements ICamera {
+    resizeCallbackFn: CallbackFn<IRenderer>;
     resizeOnSceneExpand: boolean;
 
     cameraMatrix: Float44;
@@ -104,9 +105,10 @@ export class Camera extends Disposable implements ICamera {
         this.renderer = renderer;
         
         if (this.resizeOnSceneExpand) {
-            this.renderer.on("sceneBoundingBoxUpdate", () => {
+            this.resizeCallbackFn = () => {
                 this.scaleToSceneBoundingBox();
-            })
+            };
+            this.renderer.on("sceneBoundingBoxUpdate", this.resizeCallbackFn);
             this.scaleToSceneBoundingBox();
         }
     }
@@ -121,6 +123,7 @@ export class Camera extends Disposable implements ICamera {
         }
         
         super.dispose();
+        this.renderer.off("sceneBoundingBoxUpdate", this.resizeCallbackFn);
         this.viewMatrix = null;
         this.position = null;
         this.rotation = null;

@@ -1,10 +1,11 @@
-import { AABB, Float3, Float44 } from "@app/math"
+import { Float3, Float44 } from "@app/math"
 import { IRenderer } from "@app/rendering";
 
 import { Disposable } from "@app/disposable";
-import { ICamera } from "@app/interfaces";
+import { CallbackFn, ICamera } from "@app/interfaces";
 
 export class RotatingCamera extends Disposable implements ICamera {
+    resizeCallbackFn: CallbackFn<IRenderer>
     resizeOnSceneExpand: boolean;
     renderer: IRenderer;
 
@@ -40,9 +41,10 @@ export class RotatingCamera extends Disposable implements ICamera {
         this.rotateSpeed = 50 * 1/1000;
 
         if (this.resizeOnSceneExpand) {
-            this.renderer.on("sceneBoundingBoxUpdate", () => {
+            this.resizeCallbackFn = () => {
                 this.scaleToSceneBoundingBox();
-            })
+            };
+            this.renderer.on("sceneBoundingBoxUpdate", this.resizeCallbackFn);
             this.scaleToSceneBoundingBox();
         }
     }
@@ -72,6 +74,8 @@ export class RotatingCamera extends Disposable implements ICamera {
         }
 
         super.dispose();
+
+        this.renderer.on("sceneBoundingBoxUpdate", this.resizeCallbackFn)
 
         this.viewMatrix = null;
         this.renderer = null;

@@ -1,8 +1,8 @@
-import { AABB, Float3, Float44 } from "@app/math"
+import { Float3, Float44 } from "@app/math"
 import { IRenderer } from "@app/rendering";
 
 import { Disposable } from "@app/disposable";
-import { ICamera } from "@app/interfaces";
+import { CallbackFn, ICamera } from "@app/interfaces";
 
 export enum DragOperation {
     None,
@@ -11,6 +11,7 @@ export enum DragOperation {
 }
 
 export class OrbitalCamera extends Disposable implements ICamera {
+    resizeCallbackFn: CallbackFn<IRenderer>
     resizeOnSceneExpand: boolean;
     renderer: IRenderer;
 
@@ -125,9 +126,10 @@ export class OrbitalCamera extends Disposable implements ICamera {
 
         if (this.resizeOnSceneExpand) {
             this.scaleToSceneBoundingBox();
-            this.renderer.on("sceneBoundingBoxUpdate", () => {
+            this.resizeCallbackFn = () => {
                 this.scaleToSceneBoundingBox();
-            })
+            };
+            this.renderer.on("sceneBoundingBoxUpdate", this.resizeCallbackFn)
         }
     }
 
@@ -159,6 +161,8 @@ export class OrbitalCamera extends Disposable implements ICamera {
         }
 
         super.dispose();
+
+        this.renderer.off("sceneBoundingBoxUpdate", this.resizeCallbackFn)
 
         this.containerElement.removeEventListener('contextmenu', this.onContextMenu);
         this.containerElement.removeEventListener('mousedown', this.onMouseDown);

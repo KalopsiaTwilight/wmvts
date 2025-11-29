@@ -21,6 +21,12 @@ export interface ICallbackable<TEvent extends string>
      * @param callback The callback function to execute.
      */
     on(event: TEvent, callback: CallbackFn<this>): void
+    /**
+     * Removes a registered callback, ensuring it won't fire anymore.
+     * @param event The name of the event.
+     * @param callback The callback function to remove.
+     */
+    off(event: TEvent, callback: CallbackFn<this>): void
 }
 
 export type DisposableEvents = "disposed";

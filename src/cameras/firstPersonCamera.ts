@@ -1,6 +1,6 @@
-import { AABB, Float3, Float4, Float44 } from "@app/math"
+import { Float3, Float4, Float44 } from "@app/math"
 import { IRenderer } from "@app/rendering";
-import { ICamera } from "@app/interfaces";
+import { CallbackFn, ICamera } from "@app/interfaces";
 import { Disposable } from "@app/disposable";
 
 enum MovementState {
@@ -10,6 +10,7 @@ enum MovementState {
 }
 
 export class FirstPersonCamera extends Disposable implements ICamera {
+    resizeCallbackFn: CallbackFn<IRenderer>;
     resizeOnSceneExpand: boolean;
 
     position: Float3;
@@ -95,9 +96,10 @@ export class FirstPersonCamera extends Disposable implements ICamera {
 
         if (this.resizeOnSceneExpand) {
             this.scaleToSceneBoundingBox();
-            this.renderer.on("sceneBoundingBoxUpdate", () => {
+            this.resizeCallbackFn = () => {
                 this.scaleToSceneBoundingBox();
-            })
+            };
+            this.renderer.on("sceneBoundingBoxUpdate", this.resizeCallbackFn);
         }
     }
 
@@ -143,6 +145,8 @@ export class FirstPersonCamera extends Disposable implements ICamera {
         }
 
         super.dispose();
+        
+        this.renderer.off("sceneBoundingBoxUpdate", this.resizeCallbackFn);
 
         this.containerElement.removeEventListener('mousedown', this.onMouseDown);
         this.containerElement.removeEventListener('touchstart', this.onTouchStart);

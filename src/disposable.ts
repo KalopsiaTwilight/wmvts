@@ -7,6 +7,7 @@ interface ICallbackData<TParentEvent extends string> {
 
 export abstract class Disposable<TParentEvent extends string = never> implements IDisposable<TParentEvent> {
     isDisposing: boolean;
+    idCounter: number;
 
     private callbacks: { [key: string]: ICallbackData<TParentEvent>[] }
 
@@ -17,6 +18,10 @@ export abstract class Disposable<TParentEvent extends string = never> implements
 
     on(event: TParentEvent | DisposableEvents, callback: (obj: this) => void) {
         this.addCallback(event, callback, true);
+    }
+
+    off(event: TParentEvent | DisposableEvents, callback: (obj: this) => void) {
+        this.removeCallback(event, callback);
     }
 
     once(event: TParentEvent | DisposableEvents, callback: (obj: this) => void) {
@@ -55,6 +60,15 @@ export abstract class Disposable<TParentEvent extends string = never> implements
             this.callbacks[type] = [];
         }
         this.callbacks[type].push({ callback, persistent });
+    }
+
+    private removeCallback(type: TParentEvent | DisposableEvents, callback: CallbackFn<this>) {
+        const callbacks = this.callbacks[type];
+        if (!callbacks) {
+            return;
+        }
+
+        this.callbacks[type] = callbacks.filter(x => x.callback !== callback);
     }
 
     dispose(): void {
