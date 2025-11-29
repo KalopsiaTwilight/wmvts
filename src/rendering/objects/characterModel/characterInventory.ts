@@ -5,6 +5,7 @@ import { WoWAttachmentData } from "@app/modeldata";
 import { Float44 } from "@app/math";
 import { IDisposable } from "@app/interfaces";
 import { IIoCContainer, IObjectFactory } from "@app/rendering/interfaces";
+import { ITexture } from "@app/rendering/graphics";
 
 import { IItemModel } from "../itemModel";
 import { IM2Model } from "../m2Model";
@@ -119,14 +120,6 @@ export class CharacterInventory extends Disposable implements IDisposable {
             this.updateAttachmentGeosets(slot, model);
         })
         model1.once("sectionTexturesLoaded", (model: IItemModel) => {
-            for(const section in model.sectionTextures) {
-                const sectionNr = parseInt(section, 10);
-                let priority = slotToPriorityMap[slot];
-                if (slot == EquipmentSlot.Hands && model.itemMetadata.geosetGroup[0] === 0) {
-                    priority -= 2;
-                }
-                this.parent.setTexturesForSection(sectionNr, slot, priority, model.sectionTextures[section]);
-            }
             this.parent.reloadSkinTextures();
             this.parent.updateGeosets();
         });
@@ -153,6 +146,8 @@ export class CharacterInventory extends Disposable implements IDisposable {
             return;
         }
         this.unloadItem(slot);
+        this.parent.updateGeosets();
+        this.parent.reloadSkinTextures();
     }
 
     update(deltaTime: number) {
@@ -296,6 +291,35 @@ export class CharacterInventory extends Disposable implements IDisposable {
         return geoSetMap;
     }
 
+    getItemTextures(): { [key in TextureSection]?: [ITexture, ITexture, ITexture][] } {
+        if (!this.isLoaded || this.isDisposing) {
+            return { };
+        }
+        const itemTextureMap: { [key in TextureSection]?: [ITexture, ITexture, ITexture][] } = {};
+
+        const priorityOrderedSlots = Object.values(EquipmentSlot)
+            .sort((a,b) => slotToPriorityMap[a as EquipmentSlot] - slotToPriorityMap[b as EquipmentSlot]) as EquipmentSlot[];
+        
+        for(const slot of priorityOrderedSlots) {
+            const item = this.inventoryData[slot];
+            if (!item) {
+                continue;
+            }
+
+            const model = item.model1;
+            for(const section in model.sectionTextures) {
+                const sectionNr = parseInt(section, 10) as TextureSection;
+
+                if (!itemTextureMap[sectionNr]) {
+                    itemTextureMap[sectionNr] = []
+                }
+                itemTextureMap[sectionNr].push(model.sectionTextures[section])
+            }
+        }
+
+        return itemTextureMap;
+    }
+
     shouldDrawUnderwear(): [boolean, boolean] {
         let shouldDrawTop = true;
         const topSlots = [EquipmentSlot.Body, EquipmentSlot.Shirt];
@@ -379,7 +403,6 @@ export class CharacterInventory extends Disposable implements IDisposable {
             data.model2.dispose()
         }
         delete this.inventoryData[slot];
-        this.parent.clearTexturesForSlot(slot);
     }
 
     private getAttachmentIdsForSlot(slot: EquipmentSlot, type: InventoryType) : number[] {

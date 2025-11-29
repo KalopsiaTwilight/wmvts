@@ -12,7 +12,7 @@ import { ITexturePickingStrategy } from "@app/rendering/strategies";
 import { IM2Model, M2Model } from "../m2Model";
 
 import { SkinLayerTextureCombiner } from "./skinLayerTextureCombiner";
-import { CharacterModelEvents, EquipmentSlot, GeoSet, ICharacterModel } from "./interfaces"
+import { CharacterModelEvents, EquipmentSlot, GeoSet, ICharacterModel, TextureSection } from "./interfaces"
 import { CharacterInventory } from "./characterInventory";
 
 
@@ -38,7 +38,6 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
     private textureLayerBaseFileIds: { [key: string]: [number, number, number] }
     private textureLayerBaseTextures: { [key: string]: [ITexture, ITexture, ITexture] }
     private textureLayerCombiners: { [key: string]: SkinLayerTextureCombiner }
-    private textureSectionTextures: { [key: number]: TextureSectionTextureData[] }
     private skinnedModels: { [key: FileIdentifier]: IM2Model }
     private inventory: CharacterInventory;
     private texturePickingStrategy: ITexturePickingStrategy;
@@ -68,7 +67,6 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
         this.textureLayerBaseFileIds = {};
         this.textureLayerBaseTextures = {};
         this.textureLayerCombiners = {};
-        this.textureSectionTextures = {};
         this.skinnedModels = {};
         if (this.renderer) {
             this.dataManager.getCharacterMetadata(this.modelId).then(this.onCharacterMetadataLoaded.bind(this));
@@ -91,16 +89,6 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
             this.textureLayerCombiners[key].dispose();
         }
         this.textureLayerCombiners = null;
-        for(const key in this.textureSectionTextures) {
-            for(const data of this.textureSectionTextures[key]) {
-                for(const texture of data.textures) {
-                    texture.dispose();
-                }
-                data.textures = null;
-            }
-            delete this.textureSectionTextures[key];
-        }
-        this.textureSectionTextures =null;
         for(const key in this.skinnedModels) {
             this.skinnedModels[key].dispose();
         }
@@ -205,34 +193,9 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
             return;
         }
         this.inventory.unequipItem(slot);
-        this.updateGeosets();
-    }
-
-    setTexturesForSection(section: number, slot: EquipmentSlot, priority: number, textures: [ITexture, ITexture, ITexture]) {
-        if (this.isDisposing) {
-            return;
-        }
-        let data = this.textureSectionTextures[section];
-        if (!data) {
-            data = [];
-            this.textureSectionTextures[section] = data;
-        }
-        data.push({ priority, slot, textures });
     }
 
     reloadSkinTextures() {
-        if (this.skinLayerTexturesLoaded) {
-            this.updateSkinTextures();
-        }
-    }
-
-    clearTexturesForSlot(slot: EquipmentSlot) {
-        if (this.isDisposing) {
-            return;
-        }
-        for(const section in this.textureSectionTextures) {
-            this.textureSectionTextures[section] = this.textureSectionTextures[section].filter(x => x.slot !== slot);
-        }
         if (this.skinLayerTexturesLoaded) {
             this.updateSkinTextures();
         }
@@ -446,7 +409,9 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
             combiner.drawTextureSection(this.textureLayerBaseTextures[layer.layer], x, y, width, height, layer.blendMode);
         }
 
-        for(const section in this.textureSectionTextures) {
+        const inventoryTextures = this.inventory.getItemTextures();
+        for(const section in inventoryTextures) {
+            const sectionNr = parseInt(section, 10) as TextureSection;
             // TODO: Check if it's always layer 1
             const combiner = this.textureLayerCombiners[1];
             if (!combiner) {
@@ -458,9 +423,8 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
                 continue;
             }
 
-            const textureData = this.textureSectionTextures[section].sort((a,b) => a.priority - b.priority);
-            for(const item of textureData) {
-                combiner.drawTextureSection(item.textures, textureSection.x, textureSection.y, textureSection.width,textureSection.height, 0);
+            for(const item of inventoryTextures[sectionNr]) {
+                combiner.drawTextureSection(item, textureSection.x, textureSection.y, textureSection.width,textureSection.height, 0);
             }
         }
 
