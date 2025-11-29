@@ -1,7 +1,7 @@
 import { AABB, Float3, Float4, Float44 } from "@app/math"
 import { IRenderer } from "@app/rendering";
-
-import { Camera } from "./base";
+import { ICamera } from "@app/interfaces";
+import { Disposable } from "@app/disposable";
 
 enum MovementState {
     None = 0,
@@ -9,15 +9,19 @@ enum MovementState {
     Negative = -1
 }
 
-export class FirstPersonCamera extends Camera {
+export class FirstPersonCamera extends Disposable implements ICamera {
+    resizeOnSceneExpand: boolean;
+
+    position: Float3;
+    rotation: Float3;
+    
+    viewMatrix: Float44;
     cameraMatrix: Float44;
 
+    renderer: IRenderer;
     containerElement: HTMLElement;
 
     isDraggingMouse: boolean;
-    yaw: number;
-    pitch: number;
-
     xMovement: MovementState;
     yMovement: MovementState;
     zMovement: MovementState;
@@ -32,15 +36,14 @@ export class FirstPersonCamera extends Camera {
     onKeyDown: (ev: KeyboardEvent) => void;
     onKeyUp: (ev: KeyboardEvent) => void;
 
-    constructor(containerElement: HTMLElement) {
+    constructor(containerElement: HTMLElement, resizeOnSceneExpand = true) {
         super();
         this.containerElement = containerElement;
 
+        this.viewMatrix = Float44.identity();
         this.cameraMatrix = Float44.identity();
         this.position = Float3.create(0, 0, 0);
-
-        this.pitch = 0;
-        this.yaw = Math.PI;
+        this.rotation = Float3.create(0, 0, Math.PI);
 
         this.xMovement = MovementState.None;
         this.yMovement = MovementState.None;
@@ -48,10 +51,23 @@ export class FirstPersonCamera extends Camera {
         this.movementSpeed = 50;
 
         this.isDraggingMouse = false;
+        this.resizeOnSceneExpand = resizeOnSceneExpand;
     }
 
-    override initialize(renderer: IRenderer): void {
-        super.initialize(renderer);
+    getViewMatrix(): Float44 {
+        if (this.isDisposing) {
+            return Float44.identity();
+        }
+
+        return this.viewMatrix;
+    }
+
+    attachToRenderer(renderer: IRenderer): void {
+        if (this.isDisposing) {
+            return;
+        }
+
+        this.renderer = renderer;
 
         this.onMouseDown = this.handleMouseDown.bind(this);
         this.onTouchStart = this.handleTouchStart.bind(this);
@@ -76,14 +92,25 @@ export class FirstPersonCamera extends Camera {
 
             })
         }
+
+        if (this.resizeOnSceneExpand) {
+            this.scaleToSceneBoundingBox();
+            this.renderer.on("sceneBoundingBoxUpdate", () => {
+                this.scaleToSceneBoundingBox();
+            })
+        }
     }
 
-    override update(deltaTime: number) {
+    update(deltaTime: number) {
+        if (this.isDisposing) {
+            return;
+        }
+
         if (deltaTime > 100) {
             deltaTime = 100;
         }
 
-        const rotation = Float4.quatFromEulers(0, this.pitch, this.yaw);
+        const rotation = Float4.quatFromEulers(this.rotation[0], this.rotation[1], this.rotation[2]);
         const rotMatrix = Float44.fromQuat(rotation);
         // Handle movement
         const movementDir = Float3.create(this.xMovement, this.yMovement, this.zMovement)
@@ -106,7 +133,17 @@ export class FirstPersonCamera extends Camera {
         Float44.invert(this.cameraMatrix, this.viewMatrix);
     }
 
+    setMovementSpeed(speed: number) {
+        this.movementSpeed = speed;
+    }
+
     override dispose(): void {
+        if (this.isDisposing) {
+            return;
+        }
+
+        super.dispose();
+
         this.containerElement.removeEventListener('mousedown', this.onMouseDown);
         this.containerElement.removeEventListener('touchstart', this.onTouchStart);
 
@@ -127,19 +164,29 @@ export class FirstPersonCamera extends Camera {
             this.onKeyUp = null;
             this.onKeyDown = null;
         }
-        super.dispose();
+
+        this.position = null;
+        this.rotation = null;
+        this.viewMatrix = null;
+        this.cameraMatrix = null;
+        this.containerElement = null;
+        this.renderer = null;
     }
 
-    override scaleToBoundingBox(box?: AABB): void {
-        const { min, max } = box;
-        Float3.copy(max, this.position);
+    private scaleToSceneBoundingBox(): void {
+        if (this.isDisposing) {
+            return;
+        }
+        
+        const sceneBB = this.renderer.getSceneBoundingBox();;
+        Float3.copy(sceneBB.max, this.position);
         const lookDir = Float3.negate(this.position);
         const horizontalDistance = Math.sqrt(lookDir[0] *lookDir[0] + lookDir[2]*lookDir[2])
-        this.pitch = Math.atan2(lookDir[1], horizontalDistance)
-        this.yaw = Math.atan2(lookDir[0], lookDir[2])
+        this.rotation[1] = Math.atan2(lookDir[1], horizontalDistance)
+        this.rotation[2] = Math.atan2(lookDir[0], lookDir[2])
     }
     
-    handleKeyDown(eventArgs: KeyboardEvent) {
+    private handleKeyDown(eventArgs: KeyboardEvent) {
         switch(eventArgs.key.toUpperCase()) {
             case 'W': {
                 this.zMovement = MovementState.Negative;
@@ -170,7 +217,7 @@ export class FirstPersonCamera extends Camera {
         return true;
     }
 
-    handleKeyUp(eventArgs: KeyboardEvent) {
+    private handleKeyUp(eventArgs: KeyboardEvent) {
         switch(eventArgs.key.toUpperCase()) {
             case 'W':
             case 'S': {
@@ -192,7 +239,7 @@ export class FirstPersonCamera extends Camera {
         return true;
     }
 
-    handleMouseDown(eventArgs: MouseEvent) {
+    private handleMouseDown(eventArgs: MouseEvent) {
         if (eventArgs.button == 2) {
             return;
         }
@@ -205,14 +252,14 @@ export class FirstPersonCamera extends Camera {
         }
     }
 
-    handleTouchStart(eventArgs: TouchEvent) {
+    private handleTouchStart(eventArgs: TouchEvent) {
         eventArgs.preventDefault();
         if (document && !document.pointerLockElement) {
             this.containerElement.requestPointerLock()
         }
     }
 
-    handleMouseMove(eventArgs: MouseEvent) {
+    private handleMouseMove(eventArgs: MouseEvent) {
         if (!this.isDraggingMouse) {
             return;
         }
@@ -220,20 +267,24 @@ export class FirstPersonCamera extends Camera {
         this.handleDrag(eventArgs.movementX, eventArgs.movementY);
     }
 
-    handleTouchMove(eventArgs: TouchEvent) {
+    private handleTouchMove(eventArgs: TouchEvent) {
         this.handleDrag(eventArgs.touches[0].clientX, eventArgs.touches[0].clientY);
     }
 
-    handleDrag(xPct: number, yPct: number) {
+    private handleDrag(xPct: number, yPct: number) {
+        if (this.isDisposing) {
+            return;
+        }
+
         const rotationScale = Math.PI/180/4;
         const deltaX = xPct * rotationScale;
         const deltaY = yPct * rotationScale;
 
-        this.pitch += deltaX;
-        this.yaw += deltaY;
+        this.rotation[1] += deltaX;
+        this.rotation[2] += deltaY;
     }
 
-    handleDragRelease() {
+    private handleDragRelease() {
         this.isDraggingMouse = false;
 
         if (document && document.pointerLockElement) {

@@ -57,8 +57,7 @@ export interface IProgressReporter {
 }
 
 export interface ICamera extends IDisposable {
-    initialize(engine: IRenderer): void;
-    scaleToBoundingBox(boundingBox: AABB): void;
+    attachToRenderer(renderer: IRenderer): void;
     update(deltaTime: number): void;
     getViewMatrix(): Float44
 }

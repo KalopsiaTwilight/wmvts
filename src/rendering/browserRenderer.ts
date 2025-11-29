@@ -40,7 +40,7 @@ export class BrowserRenderer extends BaseRenderer implements IRenderer {
         this.timeElapsed = 0;
         this.lastDeltaTime = 1;
 
-        this.sceneCamera.initialize(this);
+        this.sceneCamera.attachToRenderer(this);
         Float44.copy(this.sceneCamera.getViewMatrix(), this.viewMatrix);
         Float44.invert(this.viewMatrix, this.invViewMatrix);
 

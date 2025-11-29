@@ -8,7 +8,7 @@ import { DrawingBatchRequest, IDataBuffers, IGraphics, IShaderProgram, ITexture,
 import { IModelPickingStrategy, ITexturePickingStrategy } from "./strategies";
 import { ICharacterModel, IItemModel, IM2Model, ITextureVariantModel, IWMOModel } from "./objects";
 
-export type RendererEvents = "beforeDraw" | "afterDraw" | "beforeUpdate" | "afterUpdate" 
+export type RendererEvents = "beforeDraw" | "afterDraw" | "beforeUpdate" | "afterUpdate" | "sceneBoundingBoxUpdate"
 
 export interface IBaseRendererOptions {
     progress?: IProgressReporter,
@@ -57,6 +57,8 @@ export interface IRenderer<TParentEvent extends string = never> extends IDisposa
     getTexture(requestor: IDisposable, fileId: FileIdentifier, opts?: ITextureOptions): Promise<ITexture>;
     getShaderProgram(requestor: IDisposable, key: string, vertexShader: string, fragmentShader: string): IShaderProgram;
     getDataBuffers(requestor: IDisposable, key: string, createFn: (graphics: IGraphics) => IDataBuffers): IDataBuffers;
+    
+    getSceneBoundingBox(): AABB;
 }
 
 export interface IDataManager {

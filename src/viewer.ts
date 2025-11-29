@@ -1,4 +1,4 @@
-import { IDataLoader, IProgressReporter, ErrorHandlerFn  } from "./interfaces";
+import { IDataLoader, IProgressReporter, ErrorHandlerFn, ICamera  } from "./interfaces";
 import { IRenderObject, WebGlGraphics, IWMOModel, IM2Model, ICharacterModel, IItemModel, ITextureVariantModel, BrowserRenderer } from "./rendering";
 import { Camera, FirstPersonCamera, OrbitalCamera, RotatingCamera } from "./cameras";
 import { Float4, Float3 } from "./math";
@@ -93,26 +93,38 @@ export class WoWModelViewer {
     }
 
     addSceneObject(object: IRenderObject) {
-        this.renderer.addSceneObject(object, 0);
+        this.renderer.addSceneObject(object);
     }
 
     removeSceneObject(object: IRenderObject) {
         this.renderer.removeSceneObject(object);
     }
 
-    useFirstPersonCamera() {
-        this.renderer.switchCamera(new FirstPersonCamera(this.viewerContainer));
+    useStaticCamera(resizeOnSceneExpand = true): Camera {
+        const camera = new Camera(resizeOnSceneExpand);
+        this.renderer.switchCamera(camera);
+        return camera;
     }
 
-    useOrbitalCamera() {
-        this.renderer.switchCamera(new OrbitalCamera(this.viewerContainer));
+    useFirstPersonCamera(resizeOnSceneExpand = true): FirstPersonCamera {
+        const camera = new FirstPersonCamera(this.viewerContainer, resizeOnSceneExpand);
+        this.renderer.switchCamera(camera);
+        return camera;
     }
 
-    useRotatingCamera() {
-        this.renderer.switchCamera(new RotatingCamera());
+    useOrbitalCamera(resizeOnSceneExpand = true): OrbitalCamera {
+        const camera = new OrbitalCamera(this.viewerContainer, resizeOnSceneExpand);
+        this.renderer.switchCamera(camera);
+        return camera;
     }
 
-    useCamera(camera: Camera) {
+    useRotatingCamera(resizeOnSceneExpand = true): RotatingCamera {
+        const camera = new RotatingCamera(resizeOnSceneExpand);
+        this.renderer.switchCamera(camera);
+        return camera;
+    }
+
+    useCamera(camera: ICamera) {
         this.renderer.switchCamera(camera);
     }
 
@@ -233,7 +245,7 @@ export class WoWModelViewer {
         this.renderer.sceneCamera = this.options.scene?.camera ?? new Camera();
         if (this.options.scene && this.options.scene.objects) {
             for(const obj of this.options.scene.objects) {
-                this.renderer.addSceneObject(obj, 0);
+                this.renderer.addSceneObject(obj);
             }
         }
         this.renderer.start();

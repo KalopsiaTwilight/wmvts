@@ -1,7 +1,6 @@
-import { Camera } from "@app/cameras";
 import { AABB, Float3, Float4, Float44, Frustrum } from "@app/math";
 import { FileIdentifier } from "@app/metadata";
-import { IProgressReporter, IDataLoader, ErrorHandlerFn, ErrorType, IDisposable } from "@app/interfaces";
+import { IProgressReporter, IDataLoader, ErrorHandlerFn, ErrorType, IDisposable, ICamera } from "@app/interfaces";
 import { Disposable } from "@app/disposable";
 
 import { IRenderObject, isWorldPositionedObject } from "./objects";
@@ -22,7 +21,7 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
     dataLoader: IDataLoader;
     progress?: IProgressReporter;
     errorHandler?: ErrorHandlerFn;
-    sceneCamera: Camera;
+    sceneCamera: ICamera;
 
     // Rendering settings
     fov: number;
@@ -246,14 +245,13 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
         Float44.perspective(Math.PI / 180 * this.fov, aspect, 0.1, 2000, this.projectionMatrix);
     }
 
-    switchCamera(newCamera: Camera) {
-        newCamera.initialize(this);
-        newCamera.scaleToBoundingBox(this.sceneBoundingBox);
+    switchCamera(newCamera: ICamera) {
+        newCamera.attachToRenderer(this);
         this.sceneCamera.dispose();
         this.sceneCamera = newCamera;
     }
 
-    addSceneObject(object: IRenderObject, priority: number) {
+    addSceneObject(object: IRenderObject) {
         object.attachToRenderer(this);
         object.once("disposed", () => {
             this.sceneObjects = this.sceneObjects.filter(x => !x.isDisposing);
@@ -261,7 +259,7 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
         if (isWorldPositionedObject(object)) {
             object.once("loaded", (obj) => {
                 this.sceneBoundingBox = AABB.merge(this.sceneBoundingBox, obj.worldBoundingBox);
-                this.sceneCamera.scaleToBoundingBox(this.sceneBoundingBox);
+                this.processCallbacks("sceneBoundingBoxUpdate");
             })
         }
         this.sceneObjects.push(object);
@@ -280,7 +278,7 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
                 this.sceneBoundingBox = AABB.merge(this.sceneBoundingBox, obj.worldBoundingBox)
             }
         }
-        this.sceneCamera.scaleToBoundingBox(this.sceneBoundingBox);
+        this.processCallbacks("sceneBoundingBoxUpdate");
     }
 
     submitDrawRequest(request: DrawingBatchRequest) {
@@ -408,5 +406,9 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
             "u_waterAlphas": this.waterAlphas
         });
         return material;
+    }
+
+    getSceneBoundingBox() {
+        return this.sceneBoundingBox;
     }
 }

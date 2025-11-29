@@ -1,7 +1,8 @@
 import { AABB, Float3, Float44 } from "@app/math"
 import { IRenderer } from "@app/rendering";
 
-import { Camera } from "./base";
+import { Disposable } from "@app/disposable";
+import { ICamera } from "@app/interfaces";
 
 export enum DragOperation {
     None,
@@ -9,7 +10,10 @@ export enum DragOperation {
     Translation
 }
 
-export class OrbitalCamera extends Camera {
+export class OrbitalCamera extends Disposable implements ICamera {
+    resizeOnSceneExpand: boolean;
+    renderer: IRenderer;
+
     containerElement: HTMLElement;
     containerWidth: number;
     containerHeight: number;
@@ -18,8 +22,10 @@ export class OrbitalCamera extends Camera {
     lastDragX: number;
     lastDragY: number;
 
+    viewMatrix: Float44;
     cameraMatrix: Float44;
 
+    position: Float3;
     targetLocation: Float3;
     upDir: Float3;
 
@@ -46,11 +52,13 @@ export class OrbitalCamera extends Camera {
     onTouchMove: (ev: TouchEvent) => void;;
     onTouchEnd: (ev: TouchEvent) => void;;
 
-    constructor(containerElement: HTMLElement) {
+    constructor(containerElement: HTMLElement, resizeOnSceneExpand = true) {
         super();
 
+        this.resizeOnSceneExpand = resizeOnSceneExpand;
         this.containerElement = containerElement;
         this.cameraMatrix = Float44.identity();
+        this.viewMatrix = Float44.identity();
         this.currentDragOperation = DragOperation.None;
         this.targetLocation = Float3.create(0, 0, 0);
         this.upDir = Float3.create(0, 0, 1);
@@ -74,9 +82,21 @@ export class OrbitalCamera extends Camera {
         Float44.lookAt(this.position, this.targetLocation, this.upDir, this.cameraMatrix);
     }
 
-    override initialize(renderer: IRenderer) {
-        super.initialize(renderer);
-        
+    getViewMatrix(): Float44 {
+        if (this.isDisposing) {
+            return Float44.identity();
+        }
+
+        return this.viewMatrix;
+    }
+
+    attachToRenderer(renderer: IRenderer) {
+        if (this.isDisposing) {
+            return;
+        }
+
+        this.renderer = renderer;
+
         this.onContextMenu = (evt) => { evt.preventDefault(); return false; };
         this.onMouseDown = this.handleMouseDown.bind(this);
         this.onTouchStart = this.handleTouchStart.bind(this);
@@ -102,9 +122,20 @@ export class OrbitalCamera extends Camera {
             document.addEventListener('mousemove', this.onMouseMove);
             document.addEventListener('touchmove', this.onTouchMove);
         }
+
+        if (this.resizeOnSceneExpand) {
+            this.scaleToSceneBoundingBox();
+            this.renderer.on("sceneBoundingBoxUpdate", () => {
+                this.scaleToSceneBoundingBox();
+            })
+        }
     }
 
-    override update(deltaTime: number): void {
+    update(deltaTime: number): void {
+        if (this.isDisposing) {
+            return;
+        }
+
         if (this.currentZoom != 0) {
             this.currentRadius = this.currentRadius + this.currentZoom * this.zoomFactor;
             this.currentRadius = Math.min(Math.max(this.minRadius, this.currentRadius), this.maxRadius);
@@ -123,6 +154,12 @@ export class OrbitalCamera extends Camera {
     }
 
     override dispose() {
+        if (this.isDisposing) {
+            return;
+        }
+
+        super.dispose();
+
         this.containerElement.removeEventListener('contextmenu', this.onContextMenu);
         this.containerElement.removeEventListener('mousedown', this.onMouseDown);
         this.containerElement.removeEventListener('touchstart', this.onTouchStart);
@@ -144,14 +181,16 @@ export class OrbitalCamera extends Camera {
             this.onTouchMove = null;
         }
 
-        super.dispose();
+        this.containerElement = null;
+        this.viewMatrix = null;
         this.cameraMatrix = null;
         this.targetLocation = null;
         this.upDir = null;
         this.cameraTranslation = null;
+        this.renderer = null;
     }
 
-    handleMouseDown(eventArgs: MouseEvent) {
+    private handleMouseDown(eventArgs: MouseEvent) {
         if (eventArgs.button == 2 || eventArgs.ctrlKey) {
             this.currentDragOperation = DragOperation.Translation
         } else {
@@ -163,7 +202,7 @@ export class OrbitalCamera extends Camera {
         eventArgs.preventDefault();
     }
 
-    handleTouchStart(eventArgs: TouchEvent) {
+    private handleTouchStart(eventArgs: TouchEvent) {
         this.currentDragOperation = DragOperation.Rotation;
         this.lastDragX = eventArgs.touches[0].clientX;
         this.lastDragY = eventArgs.touches[0].clientY;
@@ -171,15 +210,19 @@ export class OrbitalCamera extends Camera {
         eventArgs.preventDefault();
     }
 
-    handleMouseMove(eventArgs: MouseEvent) {
+    private handleMouseMove(eventArgs: MouseEvent) {
         this.handleDrag(eventArgs.x, eventArgs.y);
     }
 
-    handleTouchMove(eventArgs: TouchEvent) {
+    private handleTouchMove(eventArgs: TouchEvent) {
         this.handleDrag(eventArgs.touches[0].clientX, eventArgs.touches[0].clientY);
     }
 
-    handleDrag(currentX: number, currentY: number) {
+    private handleDrag(currentX: number, currentY: number) {
+        if (this.isDisposing) {
+            return;
+        }
+
         if (this.currentDragOperation === DragOperation.None) {
             return;
         }
@@ -205,17 +248,21 @@ export class OrbitalCamera extends Camera {
         this.lastDragY = currentY;
     }
 
-    handleDragRelease() {
+    private handleDragRelease() {
         this.currentDragOperation = DragOperation.None;
     }
 
-    handleWheel(eventArgs: WheelEvent) {
+    private handleWheel(eventArgs: WheelEvent) {
         this.currentZoom = eventArgs.deltaY < 0 ? -1 : 1;
         eventArgs.preventDefault();
     }
 
-    override scaleToBoundingBox(box: AABB): void {
-        const { min, max } = box;
+    private scaleToSceneBoundingBox(): void {
+        if (this.isDisposing) {
+            return;
+        }
+
+        const { min, max } = this.renderer.getSceneBoundingBox();
         const diff = Float3.subtract(max, min);
         const distance = Float3.length(diff)
 

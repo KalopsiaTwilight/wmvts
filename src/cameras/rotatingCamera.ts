@@ -1,27 +1,57 @@
 import { AABB, Float3, Float44 } from "@app/math"
 import { IRenderer } from "@app/rendering";
 
-import { Camera } from "./base";
+import { Disposable } from "@app/disposable";
+import { ICamera } from "@app/interfaces";
 
-export class RotatingCamera extends Camera {
+export class RotatingCamera extends Disposable implements ICamera {
+    resizeOnSceneExpand: boolean;
+    renderer: IRenderer;
+
+    viewMatrix: Float44;
 
     time: number;
     radius: number;
     rotateSpeed: number;
 
-    constructor() {
+    constructor(resizeOnSceneExpand = true) {
         super();
+        this.viewMatrix = Float44.identity();
+        this.resizeOnSceneExpand = resizeOnSceneExpand;
     }
 
-    override initialize(renderer: IRenderer): void {
-        super.initialize(renderer);
+    getViewMatrix(): Float44 {
+        if (this.isDisposing) {
+            return Float44.identity();
+        }
+        
+        return this.viewMatrix;
+    }
+
+    attachToRenderer(renderer: IRenderer): void {
+        if (this.isDisposing) {
+            return;
+        }
+        
+        this.renderer = renderer;
 
         this.time = 0;
         this.radius = 50;
         this.rotateSpeed = 50 * 1/1000;
+
+        if (this.resizeOnSceneExpand) {
+            this.renderer.on("sceneBoundingBoxUpdate", () => {
+                this.scaleToSceneBoundingBox();
+            })
+            this.scaleToSceneBoundingBox();
+        }
     }
 
-    override update(deltaTime: number) {
+    update(deltaTime: number) {
+        if (this.isDisposing) {
+            return;
+        }
+        
         this.time = (this.time + deltaTime) % (360 * 1/this.rotateSpeed)
         let currentAngle = Math.floor(this.time / (1/this.rotateSpeed));
         
@@ -35,9 +65,24 @@ export class RotatingCamera extends Camera {
         // // Make a view matrix from the camera matrix
         Float44.invert(cameraMatrix, this.viewMatrix);
     }
+    
+    override dispose(): void {
+        if (this.isDisposing) {
+            return;
+        }
 
-    override scaleToBoundingBox(box: AABB): void {
-        const { min, max } = box;
+        super.dispose();
+
+        this.viewMatrix = null;
+        this.renderer = null;
+    }
+
+    private scaleToSceneBoundingBox(): void {
+        if (this.isDisposing) {
+            return;
+        }
+
+        const { min, max } = this.renderer.getSceneBoundingBox();
         const diff = Float3.subtract(max, min);
         const distance = Float3.length(diff)
 
