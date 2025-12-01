@@ -3,7 +3,10 @@ import { Float4 } from "@app/math";
 import { 
     IGraphics, IShaderProgram, ITexture, IVertexAttributePointer, IVertexDataBuffer, 
     IVertexIndexBuffer, ColorMask, GxBlend, ITextureOptions, IFrameBuffer, 
-    IDataBuffers
+    IDataBuffers,
+    IAttribLocations,
+    RawImageData,
+    IDataTexture
 } from "./abstractions";
 
 export abstract class CachedGraphics implements IGraphics {
@@ -164,14 +167,16 @@ export abstract class CachedGraphics implements IGraphics {
     abstract drawIndexedTriangleStrip(offset: number, count: number): void;
 
     abstract createTextureFromImg(img: HTMLImageElement, opts?: ITextureOptions): ITexture;
+    abstract createTextureFromRawImgData(data: RawImageData, opts?: ITextureOptions): ITexture;
     abstract createSolidColorTexture(color: Float4): ITexture;
     abstract createEmptyTexture(width: number, height: number): ITexture;
+    abstract createDataTexture(width: number): IDataTexture;
     abstract setColorBufferToTexture(texture: ITexture): void;
 
     abstract createVertexIndexBuffer(dynamic: boolean): IVertexIndexBuffer
     abstract createVertexDataBuffer(pointers: IVertexAttributePointer[], dynamic: boolean): IVertexDataBuffer
     abstract createDataBuffers(indexBuffer?: IVertexIndexBuffer, dataBuffer?: IVertexDataBuffer): IDataBuffers;
-    abstract createShaderProgram(vertexShader: string, fragmentShader: string): IShaderProgram
+    abstract createShaderProgram(vertexShader: string, fragmentShader: string, attribLocations?: IAttribLocations): IShaderProgram
     abstract createFrameBuffer(width: number, height: number): IFrameBuffer;
 
     abstract copyFrameToTexture(texture: ITexture, x: number, y: number, width: number, height: number): void;

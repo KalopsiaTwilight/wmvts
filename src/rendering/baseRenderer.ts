@@ -5,14 +5,13 @@ import { Disposable } from "@app/disposable";
 
 import { IRenderObject, isWorldPositionedObject } from "./objects";
 import {
-    DrawingBatchRequest, IDataBuffers, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest,
+    DrawingBatchRequest, IAttribLocations, IDataBuffers, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest,
     RenderMaterial
 } from "./graphics";
 import { WebGlCache } from "./webglCache";
 import { IBaseRendererOptions, IDataManager, IIoCContainer, IObjectFactory, IObjectIdentifier, IRenderer, RendererEvents } from "./interfaces";
 import { DefaultIoCContainer } from "./iocContainer";
 
-const DataProcessingErrorType: ErrorType = "dataProcessing";
 const RenderingErrorType: ErrorType = "rendering"
 
 export abstract class BaseRenderer<TParentEvent extends string = never> extends Disposable<TParentEvent | RendererEvents> implements IRenderer<TParentEvent> {
@@ -72,7 +71,7 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
     dataManager: IDataManager;
     objectIdentifier: IObjectIdentifier;
 
-    constructor(graphics: IGraphics, dataLoader: IDataLoader, options: IBaseRendererOptions) {
+    constructor(graphics: IGraphics, dataLoader: IDataLoader, options: IBaseRendererOptions = {}) {
         super();
         this.graphics = graphics;
         this.dataLoader = dataLoader;
@@ -175,7 +174,11 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
         this.objectIdentifier = null;
     }
 
-    draw(currentTime: number) {
+    draw(currentTime?: number) {
+        if (!currentTime) {
+            currentTime = this.now();
+        }
+
         try {
             this.processCallbacks("beforeUpdate");
 
@@ -233,10 +236,22 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
         }
     }
 
-    protected now() {
-        return window.performance && window.performance.now ? window.performance.now() : Date.now();
+    start() {
+        this.lastTime = this.now();
+        this.timeElapsed = 0;
+        this.lastDeltaTime = 1;
+
+        this.sceneCamera.attachToRenderer(this);
+        Float44.copy(this.sceneCamera.getViewMatrix(), this.viewMatrix);
+        Float44.invert(this.viewMatrix, this.invViewMatrix);
+
+        var aspect = this.width / this.height;
+        Float44.perspective(Math.PI / 180 * this.fov, aspect, 0.1, 2000, this.projectionMatrix);
     }
 
+    protected abstract now(): number;
+
+    // TODO: Figure something out for the node stack here.
     resize(width: number, height: number) {
         this.height = height;
         this.width = width;
@@ -247,7 +262,9 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
 
     switchCamera(newCamera: ICamera) {
         newCamera.attachToRenderer(this);
-        this.sceneCamera.dispose();
+        if (this.sceneCamera) {
+            this.sceneCamera.dispose();
+        }
         this.sceneCamera = newCamera;
     }
 
@@ -336,23 +353,9 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
         return texture;
     }
 
-    private async processTexture(fileId: FileIdentifier, imgData: string, opts?: ITextureOptions) {
-        return new Promise<ITexture>((res, rej) => {
-            const img = new Image();
-            img.onload = () => {
-                const texture = this.graphics.createTextureFromImg(img, opts);
-                texture.fileId = fileId;
-                res(texture);
-            }
-            img.onerror = (evt, src, line, col, err) => {
-                this.errorHandler?.(DataProcessingErrorType, "TEXTURE-" + fileId, err ? err : new Error("Unable to process image data for file: " + fileId));
-                res(this.getUnknownTexture());
-            }
-            img.src = imgData;
-        });
-    }
+    protected abstract processTexture(fileId: FileIdentifier, imgData: Blob, opts?: ITextureOptions): Promise<ITexture>;
 
-    getShaderProgram(requester: IDisposable, key: string, vertexShader: string, fragmentShader: string): IShaderProgram {
+    getShaderProgram(requester: IDisposable, key: string, vertexShader: string, fragmentShader: string, attribLocations?: IAttribLocations): IShaderProgram {
         const id = this.objectIdentifier.createIdentifier(requester);
         requester.once("disposed", () => {
             this.graphicsCache.removeOwner(cacheKey, id);
@@ -364,7 +367,7 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
             return this.graphicsCache.get(cacheKey);
         }
 
-        const program = this.graphics.createShaderProgram(vertexShader, fragmentShader);
+        const program = this.graphics.createShaderProgram(vertexShader, fragmentShader, attribLocations);
         this.graphicsCache.store(cacheKey, program);
         this.graphicsCache.addOwner(cacheKey, id);
         return program;

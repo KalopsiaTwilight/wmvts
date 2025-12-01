@@ -5,20 +5,18 @@ import { FileIdentifier } from "@app/metadata";
 
 import { 
     ColorMask, ITexture, IShaderProgram, M2BlendModeToEGxBlend,
-    RenderMaterial, DrawingBatchRequest, IDataBuffers, BufferDataType
+    RenderMaterial, DrawingBatchRequest, IDataBuffers, BufferDataType,
+    IDataTexture
 } from "@app/rendering/graphics";
 import { IDataManager, IIoCContainer, IRenderer } from "@app/rendering/interfaces";
 
 import { WorldPositionedObject } from "../worldPositionedObject";
 
 import { IBoneData, IM2Model, ISkinnedObject, M2ModelEvents, ParticleColorOverrides } from "./interfaces";
-import fragmentShaderProgramText from "./m2Model.frag";
-import vertexShaderProgramText from "./m2Model.vert";
-import { getM2PixelShaderId, getM2VertexShaderId } from "./m2Shaders";
-
 import { M2ParticleEmitter } from "./particleEmitter/m2ParticleEmitter";
 import { M2RibbonEmitter } from "./ribbonEmitter/m2RibbonEmitter";
 import { AnimationState } from "./animatedValue";
+import { M2ShaderBuilder } from "./m2ShaderBuilder";
 
 const MAX_BONES = 256;
 
@@ -51,8 +49,8 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
     ribbonEmitters: M2RibbonEmitter[];
 
     // graphics data
-    shaderProgram: IShaderProgram;
     bonePositionBuffer: Float32Array;
+    bonePositionTexture: IDataTexture;
     dataBuffers: IDataBuffers;
 
     animationState: AnimationState;
@@ -126,8 +124,8 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
 
     override attachToRenderer(renderer: IRenderer): void {
         super.attachToRenderer(renderer);
-        this.shaderProgram = this.renderer.getShaderProgram(this, "M2", vertexShaderProgramText, fragmentShaderProgramText);
 
+        this.bonePositionTexture = this.renderer.graphics.createDataTexture(4);
         if (this.fileId) {
             this.dataManager.getM2ModelFile(this.fileId).then(this.onModelLoaded.bind(this));
         }
@@ -204,10 +202,7 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
             return;
         }
 
-        const numBones = Math.min(MAX_BONES, this.modelData.bones.length);
-        for (let i = 0; i < numBones; i++) {
-            this.bonePositionBuffer.set(this.boneData[i].positionMatrix, 16 * i);
-        }
+        this.updateBonePositions();
 
         for (let i = 0; i < this.textureUnitData.length; i++) {
             const texUnitData = this.textureUnitData[i];
@@ -261,11 +256,15 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
     }
 
     useAnimation(id: number) {
-        this.animationState.useAnimation(id);
+        this.once("modelDataLoaded", () => {
+            this.animationState.useAnimation(id);
+        })
     }
 
     pauseAnimation() {
-        this.animationState.isPaused = true;
+        this.once("modelDataLoaded", () => {
+            this.animationState.isPaused = true;
+        })
     }
 
     resumeAnimation() {
@@ -318,6 +317,15 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
     setParticleColorOverride(overrides: ParticleColorOverrides) {
         this.particleColorOverrides = overrides;
         // TODO: Reload particle emitters if necessary
+    }
+
+    private updateBonePositions() {
+        const numBones = Math.min(MAX_BONES, this.modelData.bones.length);
+        for (let i = 0; i < numBones; i++) {
+            this.bonePositionBuffer.set(this.boneData[i].positionMatrix, 16 * i);
+        }
+
+        this.bonePositionTexture.setData(this.bonePositionBuffer, 16, numBones);
     }
 
     // Referenced from https://github.com/Deamon87/WebWowViewerCpp/blob/master/wowViewerLib/src/engine/managers/animationManager.cpp#L398
@@ -650,12 +658,12 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
         this.dataBuffers = this.renderer.getDataBuffers(this, "M2-" + this.fileId, (graphics) => {
             const vertexIndexBuffer = graphics.createVertexIndexBuffer(true);
             const vertexDataBuffer = graphics.createVertexDataBuffer([
-                { index: this.shaderProgram.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: 48, offset: 0 },
-                { index: this.shaderProgram.getAttribLocation('a_normal'), size: 3, type: BufferDataType.Float, normalized: false, stride: 48, offset: 12 },
-                { index: this.shaderProgram.getAttribLocation('a_bones'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: 48, offset: 24},
-                { index: this.shaderProgram.getAttribLocation('a_boneWeights'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: 48, offset: 28 },
-                { index: this.shaderProgram.getAttribLocation('a_texcoord1'), size: 2, type: BufferDataType.Float, normalized: false, stride: 48, offset: 32 },
-                { index: this.shaderProgram.getAttribLocation('a_texcoord2'), size: 2, type: BufferDataType.Float, normalized: false, stride: 48, offset: 40 },
+                { index: M2ShaderBuilder.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: 48, offset: 0 },
+                { index: M2ShaderBuilder.getAttribLocation('a_normal'), size: 3, type: BufferDataType.Float, normalized: false, stride: 48, offset: 12 },
+                { index: M2ShaderBuilder.getAttribLocation('a_bones'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: 48, offset: 24},
+                { index: M2ShaderBuilder.getAttribLocation('a_boneWeights'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: 48, offset: 28 },
+                { index: M2ShaderBuilder.getAttribLocation('a_texcoord1'), size: 2, type: BufferDataType.Float, normalized: false, stride: 48, offset: 32 },
+                { index: M2ShaderBuilder.getAttribLocation('a_texcoord2'), size: 2, type: BufferDataType.Float, normalized: false, stride: 48, offset: 40 },
             ], true);
             
 
@@ -744,7 +752,9 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
         }
 
         this.processCallbacks("texturesLoaded");
-        this.processCallbacks("loaded");
+        if (this.isLoaded) {
+            this.processCallbacks("loaded");
+        }
     }
 
     private onBoneFileLoaded(data: WoWBoneFileData | null) {
@@ -808,10 +818,14 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
             }
         }
 
+        const shaderKey = M2ShaderBuilder.getShaderName(texUnit.shaderId, texUnit.textureCount);
+        const [vsText, fragText] = M2ShaderBuilder.getShaderProgramTexts(texUnit.shaderId, texUnit.textureCount);
+        const shaderProg = this.renderer.getShaderProgram(this, shaderKey, vsText, fragText, M2ShaderBuilder.getAttribLocations());
+
         const material = this.modelData.materials[texUnit.materialIndex];
         const blendMode = M2BlendModeToEGxBlend(material.blendingMode);
         // TODO: Consider smaller shader programs per material VS/PS
-        renderMaterial.useShaderProgram(this.shaderProgram);
+        renderMaterial.useShaderProgram(shaderProg);
         renderMaterial.useBackFaceCulling((4 & material.flags) == 0);
         renderMaterial.useCounterClockWiseFrontFaces(!this.isMirrored);
         renderMaterial.useBlendMode(blendMode);
@@ -819,14 +833,13 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
         renderMaterial.useDepthWrite((WoWMaterialFlags.DepthWrite & material.flags) == 0);
         renderMaterial.useColorMask(ColorMask.Alpha | ColorMask.Blue | ColorMask.Green | ColorMask.Red);
         renderMaterial.useUniforms({
-            "u_boneMatrices": this.bonePositionBuffer,
+            "u_numBones": Math.min(MAX_BONES, this.modelData.bones.length),
+            "u_boneMatrices": this.bonePositionTexture,
             "u_modelMatrix": this.worldModelMatrix,
             "u_textureTransformMatrix1": texUnitData.textureMatrices[0],
             "u_textureTransformMatrix2": texUnitData.textureMatrices[1],
             "u_color": texUnitData.color,
-            "u_vertexShader": getM2VertexShaderId(texUnit.shaderId, texUnit.textureCount),
             "u_blendMode": blendMode,
-            "u_pixelShader": getM2PixelShaderId(texUnit.shaderId, texUnit.textureCount),
             "u_unlit": 0 != (WoWMaterialFlags.Unlit & material.flags),
             "u_texture1": textures[0],
             "u_texture2": textures[1],

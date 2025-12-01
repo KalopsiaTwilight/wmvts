@@ -39,11 +39,11 @@ export function isDisposable(obj: any): obj is IDisposable {
     return obj && typeof(obj.dispose) === 'function';
 }
 
-export type ErrorType = "dataFetching" | "dataProcessing" | "rendering";
+export type ErrorType = "dataFetching" | "imgProcessing" | "dataProcessing" | "rendering";
 export type ErrorHandlerFn = (type: ErrorType, objectId: string|null, error: Error) => void;
 export interface IDataLoader {
     loadBoneFile(fileId: FileIdentifier): Promise<WoWBoneFileData|Error>
-    loadTexture(fileId: FileIdentifier): Promise<string|Error> 
+    loadTexture(fileId: FileIdentifier): Promise<Blob|Error> 
     loadItemvisualMetadata(visualId: RecordIdentifier): Promise<ItemVisualMetadata|Error>
     loadCharacterMetadata(modelId: RecordIdentifier): Promise<CharacterMetadata|Error>;
     loadItemMetadata(displayId: RecordIdentifier): Promise<ItemMetadata|Error>;

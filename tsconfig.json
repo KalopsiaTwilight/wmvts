@@ -20,6 +20,9 @@
         "./src/types"
       ]
     },
-    "include": ["src/**/*", "demo/testModel"]
+    "include": ["src/**/*"],
+    "ts-node": {
+      "require": ["tsconfig-paths/register", "./tsNode/register-loader.js"]
+    }
   }
   

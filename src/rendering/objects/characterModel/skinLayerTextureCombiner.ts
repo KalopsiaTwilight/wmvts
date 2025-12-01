@@ -21,7 +21,6 @@ export class SkinLayerTextureCombiner extends Disposable implements IDisposable 
     textureType: number;
 
     blackTexture: ITexture;
-    alphaTexture: ITexture;
 
     blendProgram: IShaderProgram;
 
@@ -48,7 +47,6 @@ export class SkinLayerTextureCombiner extends Disposable implements IDisposable 
         this.height = height;
 
         this.blackTexture = this.renderer.getSolidColorTexture([0,0,0,0]);
-        this.alphaTexture = this.renderer.getSolidColorTexture([0,0,0,1]);
 
         this.blendProgram = this.renderer.getShaderProgram(this, "SKIN_BLEND", vsProgramText, fsProgramText);
         this.dataBuffers = this.renderer.getDataBuffers(this, "SKIN-RECT", (graphics) => {
@@ -82,8 +80,6 @@ export class SkinLayerTextureCombiner extends Disposable implements IDisposable 
         this.renderer = null;
         this.blackTexture.dispose();
         this.blackTexture = null;
-        this.alphaTexture.dispose();
-        this.alphaTexture = null;
         this.frameBuffer.dispose();
         this.frameBuffer = null;
         this.outputTexture.dispose();

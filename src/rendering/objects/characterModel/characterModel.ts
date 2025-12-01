@@ -36,8 +36,8 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
     customizationGeosets: { [key: number]: number};
 
     private textureLayerBaseFileIds: { [key: string]: [number, number, number] }
-    private textureLayerBaseTextures: { [key: string]: [ITexture, ITexture, ITexture] }
-    private textureLayerCombiners: { [key: string]: SkinLayerTextureCombiner }
+    textureLayerBaseTextures: { [key: string]: [ITexture, ITexture, ITexture] }
+    textureLayerCombiners: { [key: string]: SkinLayerTextureCombiner }
     private skinnedModels: { [key: FileIdentifier]: IM2Model }
     private inventory: CharacterInventory;
     private texturePickingStrategy: ITexturePickingStrategy;
@@ -350,6 +350,9 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
 
         this.updateSkinTextures();
         this.processCallbacks("skinTexturesLoaded");
+        if (this.isLoaded) {
+            this.processCallbacks("loaded");
+        }
     }
 
     private updateSkinTextures() {

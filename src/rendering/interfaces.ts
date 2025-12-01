@@ -4,7 +4,7 @@ import { CharacterMetadata, FileIdentifier, ItemMetadata, LiquidTypeMetadata, Re
 import { ErrorHandlerFn, IDataLoader, IDisposable, IProgressReporter } from "@app/interfaces";
 
 
-import { DrawingBatchRequest, IDataBuffers, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest, RenderMaterial } from "./graphics";
+import { DrawingBatchRequest, IAttribLocations, IDataBuffers, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest, RenderMaterial } from "./graphics";
 import { IModelPickingStrategy, ITexturePickingStrategy } from "./strategies";
 import { ICharacterModel, IItemModel, IM2Model, ITextureVariantModel, IWMOModel } from "./objects";
 
@@ -12,7 +12,6 @@ export type RendererEvents = "beforeDraw" | "afterDraw" | "beforeUpdate" | "afte
 
 export interface IBaseRendererOptions {
     progress?: IProgressReporter,
-    container?: HTMLElement,
     errorHandler?: ErrorHandlerFn,
     cameraFov?: number;
 
@@ -55,7 +54,7 @@ export interface IRenderer<TParentEvent extends string = never> extends IDisposa
     getSolidColorTexture(color: Float4): ITexture;
     getUnknownTexture(): ITexture;
     getTexture(requestor: IDisposable, fileId: FileIdentifier, opts?: ITextureOptions): Promise<ITexture>;
-    getShaderProgram(requestor: IDisposable, key: string, vertexShader: string, fragmentShader: string): IShaderProgram;
+    getShaderProgram(requestor: IDisposable, key: string, vertexShader: string, fragmentShader: string, attribLocations?: IAttribLocations): IShaderProgram;
     getDataBuffers(requestor: IDisposable, key: string, createFn: (graphics: IGraphics) => IDataBuffers): IDataBuffers;
     
     getSceneBoundingBox(): AABB;
@@ -69,7 +68,7 @@ export interface IDataManager {
     getCharacterMetadata(modelId: RecordIdentifier): Promise<CharacterMetadata | null>;
     getItemMetadata(displayInfoId: RecordIdentifier): Promise<ItemMetadata | null>;
     getTextureVariationsMetadata(fileId: FileIdentifier): Promise<TextureVariationsMetadata | null>;
-    getTextureImageData(fileId: FileIdentifier): Promise<string | null>
+    getTextureImageData(fileId: FileIdentifier): Promise<Blob | null>
     getBoneFileData(fileId: FileIdentifier): Promise<WoWBoneFileData | null>;
 }
 

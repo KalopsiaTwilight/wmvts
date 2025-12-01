@@ -1,11 +1,15 @@
 import {  Float44 } from "@app/math";
-import { IDataLoader } from "@app/interfaces";
+import { ErrorType, IDataLoader } from "@app/interfaces";
 
 import { IBaseRendererOptions, IRenderer } from "./interfaces";
 import { BaseRenderer } from "./baseRenderer";
-import { IGraphics } from "./graphics";
+import { IGraphics, ITexture, ITextureOptions } from "./graphics";
+import { FileIdentifier } from "@app/metadata";
+
+const ImgProcessingErrorType: ErrorType = "imgProcessing";
 
 export interface IBrowserRendererOptions extends IBaseRendererOptions {
+    container?: HTMLElement,
 }
 
 export class BrowserRenderer extends BaseRenderer implements IRenderer {
@@ -35,17 +39,8 @@ export class BrowserRenderer extends BaseRenderer implements IRenderer {
         super.dispose();
     }
 
-    start() {
-        this.lastTime = this.now();
-        this.timeElapsed = 0;
-        this.lastDeltaTime = 1;
-
-        this.sceneCamera.attachToRenderer(this);
-        Float44.copy(this.sceneCamera.getViewMatrix(), this.viewMatrix);
-        Float44.invert(this.viewMatrix, this.invViewMatrix);
-
-        var aspect = this.width / this.height;
-        Float44.perspective(Math.PI / 180 * this.fov, aspect, 0.1, 2000, this.projectionMatrix);
+    override start() {
+        super.start();
         const engine = this;
         const drawFrame = () => {
             if (engine.isDisposing) {
@@ -87,6 +82,26 @@ export class BrowserRenderer extends BaseRenderer implements IRenderer {
 
     disableDebugPortals() {
         this.debugPortals = false;
+    }
+
+    protected now(): number {
+        return window.performance && window.performance.now ? window.performance.now() : Date.now();
+    }
+
+    protected processTexture(fileId: FileIdentifier, imgData: Blob, opts?: ITextureOptions) {
+        return new Promise<ITexture>((res, rej) => {
+            const img = new Image();
+            img.onload = () => {
+                const texture = this.graphics.createTextureFromImg(img, opts);
+                texture.fileId = fileId;
+                res(texture);
+            }
+            img.onerror = (evt, src, line, col, err) => {
+                this.errorHandler?.(ImgProcessingErrorType, "TEXTURE-" + fileId, err ? err : new Error("Unable to process image data for file: " + fileId));
+                res(this.getUnknownTexture());
+            }
+            img.src = window.URL.createObjectURL(imgData);
+        });
     }
 
     private setupDebugElements() {

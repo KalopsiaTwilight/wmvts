@@ -17,7 +17,8 @@ uniform mat4 u_projectionMatrix;
 uniform vec4 u_color;
 uniform int u_vertexShader;
 
-uniform mat4 u_boneMatrices[MAX_BONES];
+uniform int u_numBones;
+uniform sampler2D u_boneMatrices;
 
 varying vec3 v_normal;
 varying vec4 v_color;
@@ -76,6 +77,16 @@ highp mat4 transpose(in highp mat4 inputMatrix) {
     );
 }
 
+mat4 getBoneMatrix(float index) {
+    float row = (index + 0.5) / float(u_numBones);
+    return mat4(
+        texture2D(u_boneMatrices, vec2(0.5/4., row)),
+        texture2D(u_boneMatrices, vec2(1.5/4., row)),
+        texture2D(u_boneMatrices, vec2(2.5/4., row)),
+        texture2D(u_boneMatrices, vec2(3.5/4., row))
+    );
+}
+
 vec2 posToTexCoord(vec3 pos, vec3 normal) {
     vec3 reflection = reflect(normalize(pos), normal);
     return normalize(reflection).xy * 0.5 + vec2(0.5);
@@ -91,7 +102,7 @@ void main(void) {
     if (length(a_boneWeights) > 0.0) {
         boneTransformMatrix =  mat4(0.0);
         for (int i = 0; i < 4; i++) {
-            boneTransformMatrix += u_boneMatrices[int(a_bones[i])] * a_boneWeights[i];
+            boneTransformMatrix += getBoneMatrix(a_bones[i]) * a_boneWeights[i];
         }
     }
 

@@ -4,7 +4,7 @@ import { IRenderer } from "../interfaces";
 import { IWorldPositionedObject, RenderObjectEvents } from "./interfaces";
 import { RenderObject } from "./renderObject";
 
-export abstract class WorldPositionedObject<TEvent extends string = RenderObjectEvents> extends RenderObject<TEvent> implements IWorldPositionedObject<TEvent> {
+export abstract class WorldPositionedObject<TEvent extends string = never> extends RenderObject<TEvent> implements IWorldPositionedObject<TEvent> {
     parent?: IWorldPositionedObject;
     children: IWorldPositionedObject[];
 
@@ -13,12 +13,6 @@ export abstract class WorldPositionedObject<TEvent extends string = RenderObject
     invWorldModelMatrix: Float44;
     localBoundingBox: AABB;
     worldBoundingBox: AABB;
-
-    renderer: IRenderer;
-
-    get isAttachedToRenderer() {
-        return this.renderer != null;
-    }
 
     constructor() {
         super();

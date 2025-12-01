@@ -11,6 +11,14 @@
             "url": "http://localhost:8080",
             "webRoot": "${workspaceFolder}",
             "preLaunchTask": "npm: dev"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug Node",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["run", "node-dev"],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

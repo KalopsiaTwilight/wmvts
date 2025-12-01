@@ -1,4 +1,4 @@
-import { createProgramInfo, createTexture, ProgramInfo, setUniforms } from "twgl.js";
+import { createProgramInfo, createProgramInfoFromProgram, createTexture, ProgramInfo, setUniforms } from "twgl.js";
 
 import { Float4 } from "@app/math";
 import { Disposable } from "@app/disposable";
@@ -8,13 +8,17 @@ import { IGraphics, IVertexDataBuffer, IVertexIndexBuffer, IShaderProgram,
     GxBlend, ColorMask, BufferDataType,
     ITextureOptions,
     IFrameBuffer,
-    IDataBuffers
+    IDataBuffers,
+    IAttribLocations,
+    RawImageData,
+    IDataTexture
 } from "./abstractions";
 import { CachedGraphics } from "./cachedGraphics";
 
 export class WebGlGraphics extends CachedGraphics implements IGraphics {
     gl: WebGLRenderingContext;
     glVaoExt: OES_vertex_array_object;
+    glFloatTextures: OES_texture_float
 
     lastUsedVertexDataBuffer: IVertexDataBuffer;
     lastUsedVertexIndexBuffer: IVertexIndexBuffer;
@@ -24,6 +28,7 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
         super();
         this.gl = gl;
         this.glVaoExt = gl.getExtension("OES_vertex_array_object");
+        this.glFloatTextures = this.gl.getExtension("OES_texture_float");
     }
 
     override startFrame(width: number, height: number): void {
@@ -195,10 +200,34 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
         return result;
     }
 
+    createDataTexture(width: number): IDataTexture {
+        if (!this.glFloatTextures) {
+            throw new Error("This function requires the OES_texture_float extension for WebGL");
+        }
+
+        return new WebGlDataTexture(this.gl, width);
+    }
+
     createTextureFromImg(img: HTMLImageElement, opts: ITextureOptions): ITexture {
         const result = new WebGLTextureAbstraction(this.gl, createTexture(this.gl, {
             premultiplyAlpha: opts?.preMultiplyAlpha ? opts.preMultiplyAlpha : 0,
             src: img,
+            auto: true,
+            wrapS: opts?.clampS ? this.gl.CLAMP_TO_EDGE : this.gl.REPEAT,
+            wrapT: opts?.clampT ? this.gl.CLAMP_TO_EDGE : this.gl.REPEAT,
+            
+        }));
+        result.width = img.width;
+        result.height = img.height;
+        return result;
+    }
+
+    createTextureFromRawImgData(img: RawImageData, opts?: ITextureOptions): ITexture {
+        const result = new WebGLTextureAbstraction(this.gl, createTexture(this.gl, {
+            premultiplyAlpha: opts?.preMultiplyAlpha ? opts.preMultiplyAlpha : 0,
+            src: img.pixelData,
+            width: img.width,
+            height: img.height,
             auto: true,
             wrapS: opts?.clampS ? this.gl.CLAMP_TO_EDGE : this.gl.REPEAT,
             wrapT: opts?.clampT ? this.gl.CLAMP_TO_EDGE : this.gl.REPEAT,
@@ -224,8 +253,8 @@ export class WebGlGraphics extends CachedGraphics implements IGraphics {
         ), dynamic);
     }
 
-    createShaderProgram(vertexShader: string, fragmentShader: string): IShaderProgram {
-        return new WebGLShaderProgram(this.gl, vertexShader, fragmentShader);
+    createShaderProgram(vertexShader: string, fragmentShader: string, attribLocations?: IAttribLocations): IShaderProgram {
+        return new WebGLShaderProgram(this.gl, vertexShader, fragmentShader, attribLocations);
     }
 
     createDataBuffers(ib?: IVertexIndexBuffer, vb?: IVertexDataBuffer): IDataBuffers {
@@ -459,10 +488,12 @@ export class WebGLShaderProgram extends Disposable implements IShaderProgram
     programInfo: ProgramInfo;
     lastUniforms: IUniformsData;
 
-    constructor(gl: WebGLRenderingContext, vertexShader: string, fragmentShader: string) {
+    constructor(gl: WebGLRenderingContext, vsText: string, fsText: string, attribLocations?: IAttribLocations) {
         super();
         this.gl = gl
-        this.programInfo = createProgramInfo(gl, [vertexShader, fragmentShader])
+        this.programInfo = createProgramInfo(gl, [vsText, fsText], {
+            attribLocations,
+        })
         if (!this.programInfo)
             throw "Failed to create program";
     }
@@ -626,5 +657,67 @@ export class WebGlFrameBuffer extends Disposable implements IFrameBuffer {
         this.gl.deleteFramebuffer(this.glFrameBuffer);
         this.glFrameBuffer = null;
         this.gl = null;
+    }
+}
+
+export class WebGlDataTexture extends Disposable implements IDataTexture {
+    gl: WebGLRenderingContext;
+    texture: WebGLTexture;
+    width: number;
+
+    constructor(gl: WebGLRenderingContext, width: number) {
+        super();
+
+        this.gl = gl;
+        this.texture = this.gl.createTexture();
+        this.width = width;
+        this.bind();
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+        this.unbind();
+    }
+
+    setData(data: Float32Array, numComponents: number, numElements: number): void {
+        let textureData = data;
+        if (data.length % 4 !== 0) {
+            // Ensure data is arranged in 4 byte blocks.
+            textureData = new Float32Array(numElements * 4);
+            for(let i = 0; i < numElements; i++) {
+                const srcOffset = i * numComponents;
+                const destOffset = i * 4;
+                for(let j = 0; j < numComponents; j++) {
+                    textureData[destOffset + j] = data[srcOffset + j];
+                }
+            }
+        }
+        this.bind();
+        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.width, numElements, 0, this.gl.RGBA, this.gl.FLOAT, textureData);
+        this.unbind();
+    }
+
+    bind(): void {
+        if (this.isDisposing) {
+            return;
+        }
+        
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+    }
+    
+    unbind(): void {
+        if (this.isDisposing) {
+            return;
+        }
+
+        this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+    }
+    dispose(): void {
+        if (this.isDisposing) {
+            return;
+        }
+        
+        super.dispose();
+        this.gl.deleteTexture(this.texture);
     }
 }

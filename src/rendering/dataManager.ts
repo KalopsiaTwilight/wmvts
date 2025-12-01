@@ -61,7 +61,7 @@ export class DefaultDataManager implements IDataManager {
         return this.getDataFromLoaderOrCache(key, (dl) => dl.loadBoneFile(fileId));
     }
 
-    getTextureImageData(fileId: FileIdentifier): Promise<string | null> {
+    getTextureImageData(fileId: FileIdentifier): Promise<Blob | null> {
         const key = "IMG-" + fileId;
         return this.getDataFromLoaderOrCache(key, (dl) => dl.loadTexture(fileId));
     }

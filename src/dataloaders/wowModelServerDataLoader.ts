@@ -131,7 +131,7 @@ export class WoWModelServerDataProvider implements IDataLoader {
         }
     }
 
-    async loadTexture(fileId: number): Promise<string|Error> {
+    async loadTexture(fileId: number): Promise<Blob|Error> {
         const url = `${this.rootPath}/modelviewer/textures/${fileId}.webp`;
         try {
             const resp = await fetch(url);
@@ -142,7 +142,7 @@ export class WoWModelServerDataProvider implements IDataLoader {
 
             const data = await resp.blob();
             
-            return window.URL.createObjectURL(data);
+            return data;
         } catch(err) {
             return err;
         }

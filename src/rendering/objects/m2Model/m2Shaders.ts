@@ -1,7 +1,7 @@
 // See https://wowdev.wiki/M2/.skin#Texture_units
 // Logic based off Deamon87's WebWowViewerCpp
 
-enum M2PixelShader {
+export enum M2PixelShader {
     Combiners_Opaque = 0,
     Combiners_Mod = 1,
     Combiners_Opaque_Mod = 2,
@@ -41,7 +41,7 @@ enum M2PixelShader {
     NewUnkCombiner = 36
 };
 
-enum M2VertexShader {
+export enum M2VertexShader {
     Diffuse_T1 = 0,
     Diffuse_Env = 1,
     Diffuse_T1_T2 = 2,

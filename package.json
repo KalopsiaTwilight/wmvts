@@ -10,17 +10,21 @@
     "build": "npm run standalone && npm run library",
     "library": "webpack -c webpack/webpack.library.config.js",
     "standalone": "webpack -c webpack/webpack.standalone.config.js",
-    "node-dev": "ts-node --files demo/node/index.ts"
+    "node-dev": "ts-node --files demo/node/render_image_to_file.ts"
   },
   "author": "KalopsiaTwilight",
   "license": "MIT",
   "keywords": [],
   "devDependencies": {
+    "@types/gl": "^6.0.5",
     "@types/pako": "^2.0.3",
+    "gl": "^8.1.6",
     "html-webpack-plugin": "^5.6.3",
     "raw-loader": "^4.0.2",
+    "sharp": "^0.34.5",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "tsconfig-paths-webpack-plugin": "^4.2.0",
     "typescript": "^5.7.3",
     "webpack": "^5.98.0",

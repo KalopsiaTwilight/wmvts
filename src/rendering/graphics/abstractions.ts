@@ -85,6 +85,15 @@ export interface IShaderProgram extends IBindable {
     useUniforms(uniforms: IUniformsData): void
 }
 
+export interface IDataBuffers extends IBindable {
+    setIndexBuffer(ib: IVertexIndexBuffer): void;
+    addVertexDataBuffer(vb: IVertexDataBuffer): void;
+}
+
+export interface IDataTexture extends IBindable {
+    setData(data: Float32Array, components: number, numElements: number): void;
+}
+
 export interface IVertexAttributePointer {
     index: number;
     size: number;
@@ -105,9 +114,15 @@ export interface ITextureOptions {
     clampT?: boolean,
 }
 
-export interface IDataBuffers extends IBindable {
-    setIndexBuffer(ib: IVertexIndexBuffer): void;
-    addVertexDataBuffer(vb: IVertexDataBuffer): void;
+export interface IAttribLocations {
+    [key: string]: number;
+}
+
+
+export interface RawImageData {
+    pixelData: Uint8Array;
+    width: number;
+    height: number;
 }
 
 export interface IGraphics {
@@ -134,12 +149,14 @@ export interface IGraphics {
     drawIndexedTriangleStrip(offset: number, count: number): void;
 
     createTextureFromImg(img: HTMLImageElement, opts?: ITextureOptions): ITexture;
+    createTextureFromRawImgData(data: RawImageData, opts?: ITextureOptions): ITexture;
     createSolidColorTexture(color: Float4): ITexture;
     createEmptyTexture(width: number, height: number): ITexture;
+    createDataTexture(width: number): IDataTexture;
 
     createVertexIndexBuffer(dynamic: boolean): IVertexIndexBuffer;
     createVertexDataBuffer(pointers: IVertexAttributePointer[], dynamic: boolean): IVertexDataBuffer;
-    createShaderProgram(vertexShader: string, fragmentShader: string): IShaderProgram;
+    createShaderProgram(vertexShader: string, fragmentShader: string, attribLocations?: IAttribLocations): IShaderProgram;
     createFrameBuffer(width: number, height: number): IFrameBuffer;
     createDataBuffers(indexBuffer?: IVertexIndexBuffer, dataBuffer?: IVertexDataBuffer): IDataBuffers;
 

@@ -1,4 +1,4 @@
-import { Disposable } from "@app/disposable";
+import { Disposable } from "../../disposable";
 import { IRenderer } from "../interfaces";
 import { IRenderObject, RenderObjectEvents } from "./interfaces";
 

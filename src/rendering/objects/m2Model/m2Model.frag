@@ -134,15 +134,17 @@ void main(void) {
         specular = tex3.rgb * glowOpacity;
     } else if ( u_pixelShader == 26 ) { 
         //Combiners_Mod_Dual_Crossfade
-        materialColor = v_color.rgb * 2.0 * mix(mix(tex1, texture2D(u_texture2, v_texCoord1), vec4(clamp(u_textureWeights.g, 0.0, 1.0))), texture2D(u_texture3,v_texCoord1), vec4(clamp(u_textureWeights.b, 0.0, 1.0))).rgb;
-        discardAlpha = mix(mix(tex1, texture2D(u_texture2, v_texCoord1), vec4(clamp(u_textureWeights.g, 0.0, 1.0))), texture2D(u_texture3,v_texCoord1), vec4(clamp(u_textureWeights.b, 0.0, 1.0))).a;
+        vec4 crossFaded = mix(mix(tex1, texture2D(u_texture2, v_texCoord1), vec4(clamp(u_textureWeights.g, 0.0, 1.0))), texture2D(u_texture3, v_texCoord1), vec4(clamp(u_textureWeights.b, 0.0, 1.0)));
+        materialColor = v_color.rgb * 2.0 * crossFaded.rgb;
+        discardAlpha = crossFaded.a;
     } else if ( u_pixelShader == 27 ) { 
         //Combiners_Opaque_Mod2xNA_Alpha_Alpha
         materialColor = v_color.rgb * 2.0 * mix(mix(tex1.rgb * tex2.rgb * 2.0, tex3.rgb, vec3(tex3.a)), tex1.rgb, vec3(tex1.a));
     } else if ( u_pixelShader == 28 ) { 
         //Combiners_Mod_Masked_Dual_Crossfade
-        materialColor = v_color.rgb * 2.0 * mix(mix(tex1, texture2D(u_texture2, v_texCoord1), vec4(clamp(u_textureWeights.g, 0.0, 1.0))), texture2D(u_texture3, v_texCoord1), vec4(clamp(u_textureWeights.b, 0.0, 1.0))).rgb;
-        discardAlpha = mix(mix(tex1, texture2D(u_texture2, v_texCoord1), vec4(clamp(u_textureWeights.g, 0.0, 1.0))), texture2D(u_texture3, v_texCoord1), vec4(clamp(u_textureWeights.b, 0.0, 1.0))).a * texture2D(u_texture4, v_texCoord2).a;
+        vec4 crossFaded = mix(mix(tex1, texture2D(u_texture2, v_texCoord1), vec4(clamp(u_textureWeights.g, 0.0, 1.0))), texture2D(u_texture3, v_texCoord1), vec4(clamp(u_textureWeights.b, 0.0, 1.0)));
+        materialColor = v_color.rgb * 2.0 * crossFaded.rgb;
+        discardAlpha = crossFaded.a * texture2D(u_texture4, v_texCoord2).a;
     } else if ( u_pixelShader == 29 ) { 
         //Combiners_Opaque_Alpha
         materialColor = v_color.rgb * 2.0 * mix(tex1.rgb, tex2.rgb, vec3(tex2.a));
