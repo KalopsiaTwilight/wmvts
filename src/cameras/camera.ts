@@ -1,7 +1,8 @@
-import { Disposable } from "@app/disposable";
 import { CallbackFn, ICamera } from "@app/interfaces";
 import { Float3, Float4, Float44 } from "@app/math"
 import { IRenderer } from "@app/rendering";
+
+import { Disposable } from "../disposable";
 
 export class Camera extends Disposable implements ICamera {
     resizeCallbackFn: CallbackFn<IRenderer>;

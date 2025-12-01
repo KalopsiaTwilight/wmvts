@@ -1,4 +1,4 @@
-import { IM2Model, M2ModelEvents } from "../m2Model";
+import { IM2Model } from "../m2Model";
 
 export type TextureVariantModelEvents  = "textureVariationsLoaded";
 

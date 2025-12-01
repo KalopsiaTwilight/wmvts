@@ -1,7 +1,8 @@
 import { Float3, Float4, Float44 } from "@app/math"
 import { IRenderer } from "@app/rendering";
 import { CallbackFn, ICamera } from "@app/interfaces";
-import { Disposable } from "@app/disposable";
+
+import { Disposable } from "../disposable";
 
 enum MovementState {
     None = 0,

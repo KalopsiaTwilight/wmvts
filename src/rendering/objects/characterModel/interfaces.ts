@@ -1,5 +1,5 @@
 import { RecordIdentifier } from "@app/metadata";
-import { IM2Model } from "@app/rendering";
+import { IM2Model } from "../m2Model";
 
 export type CharacterModelEvents = "characterMetadataLoaded" | "skinTexturesLoaded"
 export interface ICharacterModel<TParentEvent extends string = never> extends IM2Model<TParentEvent | CharacterModelEvents> {

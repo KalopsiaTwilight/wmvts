@@ -1,6 +1,7 @@
 import { IRenderer } from "@app/rendering";
-import { IDisposable } from "@app/interfaces";
 import { AABB, Float3, Float4, Float44 } from "@app/math";
+
+import { IDisposable } from "../../interfaces";
 
 
 export type RenderObjectEvents = "loaded"

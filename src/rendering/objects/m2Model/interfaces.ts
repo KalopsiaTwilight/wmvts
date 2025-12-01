@@ -1,7 +1,9 @@
 import { Float44, Float3 } from "@app/math";
-import { ITexture, IWorldPositionedObject } from "@app/rendering";
 import { WoWModelData } from "@app/modeldata";
 import { FileIdentifier } from "@app/metadata";
+import { ITexture } from "@app/rendering/graphics";
+
+import { IWorldPositionedObject } from "../interfaces";
 
 export interface IBoneData {
     hasUpdatedThisTick: boolean;

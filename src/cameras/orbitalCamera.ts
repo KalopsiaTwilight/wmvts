@@ -1,8 +1,8 @@
 import { Float3, Float44 } from "@app/math"
 import { IRenderer } from "@app/rendering";
-
-import { Disposable } from "@app/disposable";
 import { CallbackFn, ICamera } from "@app/interfaces";
+
+import { Disposable } from "../disposable";
 
 export enum DragOperation {
     None,
