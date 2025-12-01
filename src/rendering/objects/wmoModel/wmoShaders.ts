@@ -1,4 +1,4 @@
-enum WMOPixelShader {
+export enum WMOPixelShader {
     Diffuse = 0,
     Specular = 1,
     Metal = 2,
@@ -23,7 +23,7 @@ enum WMOPixelShader {
     None = 21,
 }
 
-enum WMOVertexShader {
+export enum WMOVertexShader {
     DiffuseT1 = 0,
     DiffuseT1Refl = 1,
     DiffuseT1EnvT2 = 2,

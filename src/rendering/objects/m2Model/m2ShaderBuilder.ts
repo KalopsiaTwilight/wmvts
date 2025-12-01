@@ -380,6 +380,7 @@ discardAlpha = tex1.a;
 materialColor = v_color.rgb * 2.0 * (tex1 * tex2 * tex3).rgb;
 discardAlpha = (tex1 * tex2 * tex3).a;
 `;
+            default: throw new Error("Unknown M2 Pixel shader: " + ps);
         }
     }
 
@@ -498,7 +499,7 @@ v_texCoord1 = (u_textureTransformMatrix1 * vec4(a_texcoord1, 0., 1.)).xy;
 v_color = vec4(clampedColor.rgb * 0.5, clampedColor.a);
 v_texCoord1 = (u_textureTransformMatrix1 * vec4(a_texcoord1, 0., 1.)).xy;
 `
-            default: throw Error("Unknown vertex shader requested: " + vs);
+            default: throw Error("Unknown M2 vertex shader: " + vs);
         }
     }
 }

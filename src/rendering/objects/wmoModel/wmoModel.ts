@@ -15,13 +15,11 @@ import { IDataManager, IIoCContainer, IObjectFactory, IRenderer } from "@app/ren
 import { WorldPositionedObject } from "../worldPositionedObject";
 import { IM2Model } from "../m2Model";
 
-import { getWMOPixelShader, getWMOVertexShader } from "./wmoShaders";
-import fragmentShaderProgramText from "./wmoModel.frag";
-import vertexShaderProgramText from "./wmoModel.vert";
 import portalFragmentShaderProgramText from "./wmoPortal.frag";
 import portalVertexShaderProgramText from "./wmoPortal.vert";
 import { WMOLiquid } from "./wmoLiquid";
 import { IWMOModel, WMOModelEvents } from "./interfaces";
+import { WmoShaderBuilder } from "./wmoShaderBuilder";
 
 export interface PortalMapData {
     index: number;
@@ -58,7 +56,6 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
     activeDoodads: IM2Model[];
     lodGroupMap: number[];
 
-    shaderProgram: IShaderProgram;
     groupDatabuffers: IDataBuffers[]
 
     portalsByGroup: { [key: number]: WoWWorldModelPortalRef[] }
@@ -103,7 +100,6 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
 
     override attachToRenderer(env: IRenderer): void {
         super.attachToRenderer(env);
-        this.shaderProgram = this.renderer.getShaderProgram(this, "WMO", vertexShaderProgramText, fragmentShaderProgramText);
         this.portalShader = this.renderer.getShaderProgram(this, "WMOPortal", portalVertexShaderProgramText, portalFragmentShaderProgramText);
 
         if (this.fileId) {
@@ -206,7 +202,6 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
         this.activeDoodads = null;
         this.lodGroupMap = null;
 
-        this.shaderProgram = null;
         this.groupDatabuffers = null;
 
         this.portalsByGroup = null;
@@ -689,13 +684,13 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
 
                 const vertexDataSize = 56;
                 const vertexDataBuffer = graphics.createVertexDataBuffer([
-                    { index: this.shaderProgram.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 0 },
-                    { index: this.shaderProgram.getAttribLocation('a_normal'), size: 3, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 12 },
-                    { index: this.shaderProgram.getAttribLocation('a_color1'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: vertexDataSize, offset: 24 },
-                    { index: this.shaderProgram.getAttribLocation('a_color2'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: vertexDataSize, offset: 28 },
-                    { index: this.shaderProgram.getAttribLocation('a_texCoord1'), size: 2, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 32 },
-                    { index: this.shaderProgram.getAttribLocation('a_texCoord2'), size: 2, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 40 },
-                    { index: this.shaderProgram.getAttribLocation('a_texCoord3'), size: 2, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 48 },
+                    { index: WmoShaderBuilder.getAttribLocation('a_position'), size: 3, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 0 },
+                    { index: WmoShaderBuilder.getAttribLocation('a_normal'), size: 3, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 12 },
+                    { index: WmoShaderBuilder.getAttribLocation('a_color1'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: vertexDataSize, offset: 24 },
+                    { index: WmoShaderBuilder.getAttribLocation('a_color2'), size: 4, type: BufferDataType.UInt8, normalized: false, stride: vertexDataSize, offset: 28 },
+                    { index: WmoShaderBuilder.getAttribLocation('a_texCoord1'), size: 2, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 32 },
+                    { index: WmoShaderBuilder.getAttribLocation('a_texCoord2'), size: 2, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 40 },
+                    { index: WmoShaderBuilder.getAttribLocation('a_texCoord3'), size: 2, type: BufferDataType.Float, normalized: false, stride: vertexDataSize, offset: 48 },
                 ], true);
 
                 const numVertices = group.vertices.length;
@@ -703,7 +698,7 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
                 const buffer = new Uint8Array(bufferSize);
                 const writer = new BinaryWriter(buffer.buffer);
 
-                // TODO: Use seperate programs for various parameters so less data can be written
+                // TODO: Bind seperate buffers for this so less data can be written?
                 for (let j = 0; j < group.vertices.length; j++) {
                     writer.writeFloatLE(group.vertices[j][0]);
                     writer.writeFloatLE(group.vertices[j][1]);
@@ -775,8 +770,11 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
         for (let i = 0; i < this.modelData.materials.length; i++) {
             const material = this.modelData.materials[i];
             const blendMode = M2BlendModeToEGxBlend(material.blendMode);
-            const vs = getWMOVertexShader(material.shader);
-            const ps = getWMOPixelShader(material.shader);
+
+            const shaderName = WmoShaderBuilder.getShaderName(material.shader);
+            const [vsText, fsText] = WmoShaderBuilder.getShaderProgramTexts(material.shader);
+            const shaderProg = this.renderer.getShaderProgram(this, shaderName, vsText, fsText, WmoShaderBuilder.getAttribLocations());
+
             const unlit = (material.flags & WoWWorldModelMaterialMaterialFlags.Unlit) ? true : false
             const doubleSided = (material.flags & WoWWorldModelMaterialMaterialFlags.Unculled) != 0;
 
@@ -787,12 +785,10 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
             renderMaterial.useDepthTest(true);
             renderMaterial.useDepthWrite(true);
             renderMaterial.useColorMask(ColorMask.Alpha | ColorMask.Red | ColorMask.Blue | ColorMask.Green);
-            renderMaterial.useShaderProgram(this.shaderProgram);
+            renderMaterial.useShaderProgram(shaderProg);
             renderMaterial.useUniforms({
                 "u_modelMatrix": this.worldModelMatrix,
                 "u_cameraPos": this.renderer.cameraPosition,
-                "u_pixelShader": ps,
-                "u_vertexShader": vs,
                 "u_blendMode": material.blendMode,
                 "u_unlit": unlit,
                 "u_texture1": this.loadedTextures[material.texture1],
