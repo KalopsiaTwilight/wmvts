@@ -15,6 +15,12 @@ export interface ICallbackable<TEvent extends string>
      * @param callback The callback function to execute.
      */
     once(event: TEvent, callback: CallbackFn<this>): void
+    
+    /**
+     * Returns a Promise that completes whenever the event fires fires for the first time and immediately fires if the event has already occured.
+     * @param event The name of the event.
+     */
+    onceAsync(event: TEvent): Promise<this>
     /**
      * Sets up a callback that executes whenever the event fires and immediately fires if the event has already occured.
      * @param event The name of the event.

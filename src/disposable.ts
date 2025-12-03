@@ -20,6 +20,10 @@ export abstract class Disposable<TParentEvent extends string = never> implements
         this.addCallback(event, callback, true);
     }
 
+    onceAsync(event: TParentEvent | DisposableEvents): Promise<this> {
+        return new Promise<this>((res) => this.once(event, res));   
+    }
+
     off(event: TParentEvent | DisposableEvents, callback: (obj: this) => void) {
         this.removeCallback(event, callback);
     }
