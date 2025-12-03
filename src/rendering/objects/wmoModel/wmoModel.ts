@@ -221,7 +221,7 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
     }
 
     get isLoaded() {
-        return this.isModelDataLoaded && this.isTexturesLoaded;
+        return this.isModelDataLoaded && this.isTexturesLoaded && this.children.every(x => x.isLoaded);
     }
 
     private onModelLoaded(data: WoWWorldModelData) {
@@ -261,6 +261,8 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
             } 
         }
         const refs = this.getDoodadSetRefs();
+
+        const loadingPromises: Promise<IM2Model>[] = [];
         for (let i = 0; i < this.modelData.groups.length; i++) {
             const group = this.modelData.groups[i];
             this.groupDoodads[i] = [];
@@ -280,10 +282,18 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
                     doodadModel.once("disposed", () => {
                         this.groupDoodads[i] = this.groupDoodads[i].filter(x => !x.isDisposing);
                     })
+                    loadingPromises.push(doodadModel.onceAsync("loaded"));
                     this.groupDoodads[i].push(doodadModel);
                 }
             }
         }
+
+        Promise.all(loadingPromises).then(() => {
+            this.processCallbacks("doodadsLoaded");
+            if (this.isLoaded) {
+                this.processCallbacks("loaded")
+            }
+        })
     }
 
     private loadTextures() {
@@ -314,7 +324,9 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
             this.setupMaterials();
             this.isTexturesLoaded = true;
             this.processCallbacks("texturesLoaded");
-            this.processCallbacks("loaded");
+            if (this.isLoaded) {
+                this.processCallbacks("loaded");
+            }
         })
     }
 
