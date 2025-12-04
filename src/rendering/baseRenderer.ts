@@ -44,7 +44,6 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
 
     // Working data
     isDisposing: boolean;
-    lastTime: number;
     lastDeltaTime: number;
     timeElapsed: number;
 
@@ -66,16 +65,16 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
     sceneBoundingBox: AABB;
 
     // IoC
-    iocContainer: IIoCContainer;
-    objectFactory: IObjectFactory;
     dataManager: IDataManager;
     objectIdentifier: IObjectIdentifier;
 
-    constructor(graphics: IGraphics, dataLoader: IDataLoader, options: IBaseRendererOptions = {}) {
+    constructor(options: IBaseRendererOptions) {
         super();
-        this.graphics = graphics;
-        this.dataLoader = dataLoader;
+        this.graphics = options.graphics;
+        this.dataLoader = options.dataLoader;
         this.progress = options.progress;
+        this.dataManager = options.dataManager;
+        this.objectIdentifier = options.objectIdentifier;
         this.dataLoader.useProgressReporter(options.progress);
         this.errorHandler = options.errorHandler;
 
@@ -112,15 +111,8 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
         this.debugPortals = false;
         this.doodadRenderDistance = 300;
 
-        // TODO: Make this configurable
-        this.iocContainer = new DefaultIoCContainer(this.dataLoader, this.errorHandler, this.progress);
-        this.objectFactory = this.iocContainer.getObjectFactory();
-        this.dataManager = this.iocContainer.getDataManager();
-        this.objectIdentifier = this.iocContainer.getObjectIdentifier();
-
         // Set up working data
         this.lastDeltaTime = 0;
-        this.lastTime = 0;
         this.timeElapsed = 0;
     }
 
@@ -168,23 +160,13 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
         this.sceneObjects = null;
         this.sceneBoundingBox = null;
 
-        this.iocContainer = null;
-        this.objectFactory = null;
         this.dataManager = null;
         this.objectIdentifier = null;
     }
 
-    draw(currentTime?: number) {
-        if (!currentTime) {
-            currentTime = this.now();
-        }
-
+    draw(deltaTime: number) {
         try {
             this.processCallbacks("beforeUpdate");
-
-            const deltaTime = (currentTime - this.lastTime);
-            this.lastTime = currentTime;
-
             // Update camera
             this.sceneCamera.update(deltaTime);
             Float44.copy(this.sceneCamera.getViewMatrix(), this.viewMatrix);
@@ -237,7 +219,6 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
     }
 
     start() {
-        this.lastTime = this.now();
         this.timeElapsed = 0;
         this.lastDeltaTime = 1;
 
@@ -249,9 +230,6 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
         Float44.perspective(Math.PI / 180 * this.fov, aspect, 0.1, 2000, this.projectionMatrix);
     }
 
-    protected abstract now(): number;
-
-    // TODO: Figure something out for the node stack here.
     resize(width: number, height: number) {
         this.height = height;
         this.width = width;

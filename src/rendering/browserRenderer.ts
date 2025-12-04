@@ -1,7 +1,7 @@
 import {  Float44 } from "@app/math";
 import { ErrorType, IDataLoader } from "@app/interfaces";
 
-import { IBaseRendererOptions, IRenderer } from "./interfaces";
+import { IBaseRendererOptions, IDataManager, IObjectIdentifier, IRenderer } from "./interfaces";
 import { BaseRenderer } from "./baseRenderer";
 import { IGraphics, ITexture, ITextureOptions } from "./graphics";
 import { FileIdentifier } from "@app/metadata";
@@ -13,6 +13,7 @@ export interface IBrowserRendererOptions extends IBaseRendererOptions {
 }
 
 export class BrowserRenderer extends BaseRenderer implements IRenderer {
+    lastTime: number;
     // Some stats
     framesDrawn: number;
 
@@ -26,8 +27,8 @@ export class BrowserRenderer extends BaseRenderer implements IRenderer {
     fpsElement?: HTMLParagraphElement;
     batchesElement?: HTMLParagraphElement;
 
-    constructor(graphics: IGraphics, dataLoader: IDataLoader, options: IBrowserRendererOptions) {
-        super(graphics, dataLoader, options);
+    constructor(options: IBrowserRendererOptions) {
+        super(options);
         this.containerElement = options.container;
 
         this.framesDrawn = 0;
@@ -42,6 +43,7 @@ export class BrowserRenderer extends BaseRenderer implements IRenderer {
     override start() {
         super.start();
         const engine = this;
+        engine.lastTime = this.now();
         const drawFrame = () => {
             if (engine.isDisposing) {
                 return;
@@ -61,7 +63,8 @@ export class BrowserRenderer extends BaseRenderer implements IRenderer {
                     this.batchesElement.textContent = "Batches: " + this.drawRequests.length;
                 }
             })
-            engine.draw(now);
+            engine.draw(now - engine.lastTime);
+            engine.lastTime = now;
             
             window.requestAnimationFrame(drawFrame)
         }
@@ -84,7 +87,7 @@ export class BrowserRenderer extends BaseRenderer implements IRenderer {
         this.debugPortals = false;
     }
 
-    protected now(): number {
+    now(): number {
         return window.performance && window.performance.now ? window.performance.now() : Date.now();
     }
 

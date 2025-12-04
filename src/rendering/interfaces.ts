@@ -1,16 +1,21 @@
 import { AABB, Float3, Float4, Float44, Frustrum, IPseudoRandomNumberGenerator } from "@app/math";
 import { WoWBoneFileData, WoWModelData, WoWWorldModelData } from "@app/modeldata";
 import { CharacterMetadata, FileIdentifier, ItemMetadata, LiquidTypeMetadata, RecordIdentifier, TextureVariationsMetadata } from "@app/metadata";
-import { ErrorHandlerFn, IDataLoader, IDisposable, IProgressReporter } from "@app/interfaces";
+import { ErrorHandlerFn, ICamera, IDataLoader, IDisposable, IProgressReporter } from "@app/interfaces";
 
 
 import { DrawingBatchRequest, IAttribLocations, IDataBuffers, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest, RenderMaterial } from "./graphics";
 import { IModelPickingStrategy, ITexturePickingStrategy } from "./strategies";
-import { ICharacterModel, IItemModel, IM2Model, ITextureVariantModel, IWMOModel } from "./objects";
+import { ICharacterModel, IItemModel, IM2Model, IRenderObject, ITextureVariantModel, IWMOModel } from "./objects";
 
 export type RendererEvents = "beforeDraw" | "afterDraw" | "beforeUpdate" | "afterUpdate" | "sceneBoundingBoxUpdate"
 
 export interface IBaseRendererOptions {
+    graphics: IGraphics;
+    dataLoader: IDataLoader;
+    dataManager: IDataManager; 
+    objectIdentifier: IObjectIdentifier;
+
     progress?: IProgressReporter,
     errorHandler?: ErrorHandlerFn,
     cameraFov?: number;
@@ -42,10 +47,32 @@ export interface IRenderer<TParentEvent extends string = never> extends IDisposa
     cameraPosition: Float3;
     // various rendering settings
     timeElapsed: number;
+    
+    // Light settings
+    ambientColor: Float4;
+    lightColor: Float4;
+    lightDir: Float3;
 
-    // TODO: Do these belong here?
-    debugPortals: boolean;
+    // Water settings
+    oceanCloseColor: Float4;
+    oceanFarColor: Float4;
+    riverCloseColor: Float4;
+    riverFarColor: Float4;
+    waterAlphas: Float4;
+
+    // Rendering settings
+    fov: number;
+    width: number;
+    height: number;
+    clearColor: Float4;
     doodadRenderDistance: number;
+    debugPortals: boolean;
+    
+    addSceneObject(object: IRenderObject): void;
+    removeSceneObject(object: IRenderObject): void;
+
+    resize(width: number, height: number): void;
+    switchCamera(newCamera: ICamera): void;
 
     submitDrawRequest(request: DrawingBatchRequest): void;
     submitOtherGraphicsRequest(request: RenderingBatchRequest): void;

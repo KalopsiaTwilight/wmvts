@@ -1,4 +1,4 @@
-import { WoWModelViewer, WoWModelServerDataProvider, SimpleProgressReporter, FirstPersonCamera, IM2Model } from "../../src/index"
+import { BrowserWoWModelViewer, WoWModelServerDataProvider, SimpleProgressReporter, FirstPersonCamera, EquipmentSlot, IM2Model } from "../../src"
 
 // Create a simple document layout, you can ignore this stuff for reference. This is mostly used for testing the viewer in various layout configurations.
 
@@ -55,7 +55,7 @@ flexElement.append(animSelectLabel);
 // This is the basic modelviewer configuration:
 
 var progress = new SimpleProgressReporter(containerElement);
-const viewer = new WoWModelViewer({
+const viewer = new BrowserWoWModelViewer({
     dataLoader: new WoWModelServerDataProvider("https://localhost:7074"),
     progressReporter: progress,
     onError: console.error,
@@ -102,7 +102,7 @@ const model = viewer.addCharacterModel(2);
 // const model = viewer.addWMOModel(3507293); // Tower with multiple doodadsets
 
 // Once added to the scene, character models can be equipped & customized like so:
-model.equipItem(18, 141459);
+model.equipItem(EquipmentSlot.Tabard, 141459);
 model.setCustomizationChoice(16, 141)
 
 // Callbacks can be used to retrieve model data when it's available

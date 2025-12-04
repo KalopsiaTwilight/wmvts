@@ -1,5 +1,5 @@
 import { ErrorType, IDataLoader } from "@app/interfaces";
-import { IBaseRendererOptions, IRenderer } from "./interfaces";
+import { IBaseRendererOptions, IDataManager, IObjectIdentifier, IRenderer } from "./interfaces";
 import { BaseRenderer } from "./baseRenderer";
 import { IGraphics, ITextureOptions, RawImageData } from "./graphics";
 import { FileIdentifier } from "@app/metadata";
@@ -16,8 +16,8 @@ export interface INodeRendererOptions extends IBaseRendererOptions {
 export class NodeRenderer extends BaseRenderer implements IRenderer {
     getImageDataFn: GetImageDataFn;
 
-    constructor(graphics: IGraphics, dataLoader: IDataLoader, options: INodeRendererOptions) {
-        super(graphics, dataLoader, options);
+    constructor(options: INodeRendererOptions) {
+        super(options);
 
         this.getImageDataFn = options.getImageDataFn;
     }

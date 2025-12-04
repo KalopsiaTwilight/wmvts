@@ -1,5 +1,4 @@
 export * from "./interfaces"
-export * from "./viewer"
 export * from "./rendering"
 export * from "./modeldata"
 export * from "./dataloaders/wowModelServerDataLoader"
@@ -8,3 +7,7 @@ export * from "./baseProgressReporter"
 export * from "./cameras"
 export * from "./math"
 export * from "./disposable"
+
+export * from "./browserViewer"
+export * from "./baseViewer"
+export * from "./nodeViewer"
