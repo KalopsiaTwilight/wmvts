@@ -2,11 +2,12 @@
 import { TextureVariationsMetadata } from "@app/metadata";
 import { WoWTextureType } from "@app/modeldata";
 import { ITexture } from "@app/rendering/graphics";
-import { IIoCContainer, IRenderer } from "@app/rendering/interfaces";
+import { IDataManager, IRenderer } from "@app/rendering/interfaces";
 
 import { M2Model } from "../m2Model";
 
 import { ITextureVariantModel, TextureVariantModelEvents } from "./interfaces";
+import { IPseudoRandomNumberGenerator } from "@app/math";
 
 export class TextureVariantModel<TParentEvent extends string = never> extends M2Model<TParentEvent | TextureVariantModelEvents> implements ITextureVariantModel{
 
@@ -14,8 +15,8 @@ export class TextureVariantModel<TParentEvent extends string = never> extends M2
 
     loadedTextures: ITexture[]
 
-    constructor(iocContainer: IIoCContainer) {
-        super(iocContainer);
+    constructor(dataManager: IDataManager, rng: IPseudoRandomNumberGenerator) {
+        super(dataManager, rng);
     }
     
     useTextureVariation(index: number) {

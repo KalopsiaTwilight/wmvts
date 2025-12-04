@@ -34,14 +34,14 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
     private objectFactory: IObjectFactory;
     private dataManager: IDataManager;
 
-    constructor(iocContainer: IIoCContainer) {
+    constructor(dataManager: IDataManager, objectFactory: IObjectFactory, texturePickingStrategy: ITexturePickingStrategy, modelPickingStrategy: IModelPickingStrategy) {
         super();
         this.sectionTextures = { };
 
-        this.texturePickingStrategy = iocContainer.getTexturePickingStrategy();
-        this.modelPickingStrategy = iocContainer.getModelPickingStrategy();
-        this.objectFactory = iocContainer.getObjectFactory();
-        this.dataManager = iocContainer.getDataManager();
+        this.texturePickingStrategy = texturePickingStrategy;
+        this.modelPickingStrategy = modelPickingStrategy;
+        this.objectFactory = objectFactory;
+        this.dataManager = dataManager;
     }
     
     override attachToRenderer(renderer: IRenderer): void {

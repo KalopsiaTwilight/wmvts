@@ -1,5 +1,5 @@
 import { WoWBoneData, WoWBoneFileData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureUnitData } from "@app/modeldata";
-import { Float4, Float3, Float44, AABB } from "@app/math"
+import { Float4, Float3, Float44, AABB, IPseudoRandomNumberGenerator } from "@app/math"
 import { BinaryWriter, distinct } from "@app/utils";
 import { FileIdentifier } from "@app/metadata";
 
@@ -32,7 +32,7 @@ interface TextureUnitData {
 const BATCH_IDENTIFIER = "M2";
 
 export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldPositionedObject<TParentEvent | M2ModelEvents> implements IM2Model<TParentEvent> {
-    iocContainer: IIoCContainer;
+    rng: IPseudoRandomNumberGenerator;
     dataManager: IDataManager;
 
     fileId: FileIdentifier;
@@ -65,7 +65,7 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
     isMirrored: boolean;
 
 
-    constructor(iocContainer: IIoCContainer) {
+    constructor(dataManager: IDataManager, rng: IPseudoRandomNumberGenerator) {
         super();
         this.isModelDataLoaded = false;
         this.isTexturesLoaded = false;
@@ -78,8 +78,8 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
 
         this.children = [];
         this.particleColorOverrides = [null, null, null];
-        this.iocContainer = iocContainer;
-        this.dataManager = iocContainer.getDataManager();
+        this.rng = rng;
+        this.dataManager = dataManager;
     }
 
     get isLoaded() {

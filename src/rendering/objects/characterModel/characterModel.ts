@@ -6,7 +6,7 @@ import {
     RecordIdentifier
 } from "@app/metadata";
 import { ITexture } from "@app/rendering/graphics";
-import { IIoCContainer, IObjectFactory, IRenderer } from "@app/rendering/interfaces";
+import { IDataManager, IIoCContainer, IObjectFactory, IRenderer } from "@app/rendering/interfaces";
 import { ITexturePickingStrategy } from "@app/rendering/strategies";
 
 import { IM2Model, M2Model } from "../m2Model";
@@ -14,6 +14,7 @@ import { IM2Model, M2Model } from "../m2Model";
 import { SkinLayerTextureCombiner } from "./skinLayerTextureCombiner";
 import { CharacterModelEvents, EquipmentSlot, GeoSet, ICharacterModel, TextureSection } from "./interfaces"
 import { CharacterInventory } from "./characterInventory";
+import { IPseudoRandomNumberGenerator } from "@app/math";
 
 
 const DEFAULT_GEOSET_IDS = [1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 2, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
@@ -43,13 +44,13 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
     private texturePickingStrategy: ITexturePickingStrategy;
     private objectFactory: IObjectFactory;
 
-    constructor(iocContainer: IIoCContainer) {
-        super(iocContainer);
+    constructor(dataManager: IDataManager, rng: IPseudoRandomNumberGenerator, objectFactory: IObjectFactory, texturePickingStrategy: ITexturePickingStrategy) {
+        super(dataManager, rng);
         this.class = 0;
 
-        this.inventory = new CharacterInventory(this, iocContainer);
-        this.texturePickingStrategy = iocContainer.getTexturePickingStrategy();
-        this.objectFactory = iocContainer.getObjectFactory();
+        this.inventory = new CharacterInventory(this, objectFactory);
+        this.texturePickingStrategy = texturePickingStrategy;
+        this.objectFactory = objectFactory;
     }
     
     override attachToRenderer(renderer: IRenderer): void {

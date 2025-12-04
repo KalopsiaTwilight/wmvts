@@ -74,7 +74,7 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
     private objectFactory: IObjectFactory;
     private dataManager: IDataManager;
 
-    constructor(iocContainer: IIoCContainer) {
+    constructor(dataManager: IDataManager, objectFactory: IObjectFactory) {
         super();
         this.isModelDataLoaded = false;
         this.isTexturesLoaded = false;
@@ -94,8 +94,8 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
         this.localCamera = Float3.zero();
         this.localCameraFrustrum = Frustrum.zero();
 
-        this.objectFactory = iocContainer.getObjectFactory();
-        this.dataManager = iocContainer.getDataManager();
+        this.objectFactory = objectFactory;
+        this.dataManager = dataManager;
     }
 
     override attachToRenderer(env: IRenderer): void {

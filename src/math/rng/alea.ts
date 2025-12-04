@@ -31,39 +31,43 @@ export class AleaPrngGenerator implements IPseudoRandomNumberGenerator {
     s2: number;
     
     constructor(seed: string|number) {
-        let n = 0xefc8249d;
-        const mash = (data: number|string) => {
-            data = String(data);
-            for (var i = 0; i < data.length; i++) {
-                n += data.charCodeAt(i);
-                var h = 0.02519603282416938 * n;
-                n = h >>> 0;
-                h -= n;
-                h *= n;
-                n = h >>> 0;
-                h -= n;
-                n += h * 0x100000000; // 2^32
-            }
-            return (n >>> 0) * 2.3283064365386963e-10; // 2^-32
-        };
+        this.setSeed(seed);
+    }
 
+    setSeed(seed: string|number) {
+        this.n = 0xefc8249d;
         this.c = 1;
-        this.s0 = mash(' ');
-        this.s1 = mash(' ');
-        this.s2 = mash(' ');
+        this.s0 = this.mash(' ');
+        this.s1 = this.mash(' ');
+        this.s2 = this.mash(' ');
 
-        this.s0 -= mash(seed);
+        this.s0 -= this.mash(seed);
         if (this.s0 < 0) {
             this.s0 += 1;
         }
-        this.s1 -= mash(seed);
+        this.s1 -= this.mash(seed);
         if (this.s1 < 0) {
             this.s1 += 1;
         }
-        this.s2 -= mash(seed);
+        this.s2 -= this.mash(seed);
         if (this.s2 < 0) {
             this.s2 += 1;
         }
+    }
+
+    private mash(data: number|string) {
+        data = String(data);
+        for (var i = 0; i < data.length; i++) {
+            this.n += data.charCodeAt(i);
+            var h = 0.02519603282416938 * this.n;
+            this.n = h >>> 0;
+            h -= this.n;
+            h *= this.n;
+            this.n = h >>> 0;
+            h -= this.n;
+            this.n += h * 0x100000000; // 2^32
+        }
+        return (this.n >>> 0) * 2.3283064365386963e-10; // 2^-32
     }
 
     getInt() {

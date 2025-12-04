@@ -147,7 +147,7 @@ export class M2ParticleEmitter extends Disposable implements IDisposable {
         this.parent = parent;
         this.m2data = emitterData;
         this.exp2Data = exp2Data;
-        this.rng = parent.iocContainer.getRandomNumberGenerator();
+        this.rng = parent.rng;
         this.emitterModelMatrix = Float44.identity();
         this.previousPosition = Float3.zero();
         this.zOrder = 0;
@@ -618,7 +618,7 @@ export class M2ParticleEmitter extends Disposable implements IDisposable {
 
     // This calculates the various trackstates
     private fillTimedParticleData(particle: ParticleData, preRenderData: ParticlePreRenderData) {
-        const rng = this.parent.iocContainer.getRandomNumberGenerator(particle.seed);
+        this.rng.setSeed(particle.seed)
 
         let percentTime = particle.age / this.particleGenerator.getMaxLifespan();
         percentTime = Math.max(0, Math.min(1, percentTime));
@@ -644,7 +644,7 @@ export class M2ParticleEmitter extends Disposable implements IDisposable {
         }
         // ChooseRandomTexture
         else if (0x10000 & this.m2data.flags) {
-            let randCell = Math.floor((this.textureIndexMask + 1) * rng.getFloat())
+            let randCell = Math.floor((this.textureIndexMask + 1) * this.rng.getFloat())
             ageValues.headCell = randCell;
         }
         else {
@@ -654,11 +654,11 @@ export class M2ParticleEmitter extends Disposable implements IDisposable {
         ageValues.tailCell = ageValues.tailCell + this.randomizedTextureIndexMask & this.textureIndexMask;
         // ScaleVary affects x and y independently
         if (this.m2data.flags & 0x80000) {
-            ageValues.scale[0] = Math.max(1 + rng.getSignedFloat() * this.m2data.scaleVary[0], 0.000099999997) * ageValues.scale[0];
-            ageValues.scale[1] = Math.max(1 + rng.getSignedFloat() * this.m2data.scaleVary[1], 0.000099999997) * ageValues.scale[1];
+            ageValues.scale[0] = Math.max(1 + this.rng.getSignedFloat() * this.m2data.scaleVary[0], 0.000099999997) * ageValues.scale[0];
+            ageValues.scale[1] = Math.max(1 + this.rng.getSignedFloat() * this.m2data.scaleVary[1], 0.000099999997) * ageValues.scale[1];
         }
         else {
-            let scaleVary = Math.max(1 + rng.getSignedFloat() * this.m2data.scaleVary[0], 0.000099999997);
+            let scaleVary = Math.max(1 + this.rng.getSignedFloat() * this.m2data.scaleVary[0], 0.000099999997);
             ageValues.scale[0] = scaleVary * ageValues.scale[0];
             ageValues.scale[1] = scaleVary * ageValues.scale[1];
         }
@@ -799,17 +799,17 @@ export class M2ParticleEmitter extends Disposable implements IDisposable {
     }
 
     private calculateSpin(particle: ParticleData) {
-        const rng = this.parent.iocContainer.getRandomNumberGenerator(particle.seed);
+        this.rng.setSeed(particle.seed)
         let baseSpin = this.m2data.baseSpin,
             deltaSpin = this.m2data.spin,
             spinVary = this.m2data.spinVary,
             baseSpinVary = this.m2data.baseSpinVary;
         if (baseSpin != 0 || spinVary != 0) {
             if (baseSpinVary != 0) {
-                baseSpin = baseSpin + rng.getSignedFloat() * baseSpinVary;
+                baseSpin = baseSpin + this.rng.getSignedFloat() * baseSpinVary;
             }
             if (spinVary != 0) {
-                deltaSpin = deltaSpin + rng.getSignedFloat() * spinVary;
+                deltaSpin = deltaSpin + this.rng.getSignedFloat() * spinVary;
             }
         }
         return { deltaSpin, baseSpin };

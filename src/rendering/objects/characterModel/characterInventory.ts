@@ -4,7 +4,7 @@ import { Disposable } from "@app/disposable";
 import { WoWAttachmentData } from "@app/modeldata";
 import { Float44 } from "@app/math";
 import { IDisposable } from "@app/interfaces";
-import { IIoCContainer, IObjectFactory } from "@app/rendering/interfaces";
+import { IObjectFactory } from "@app/rendering/interfaces";
 import { ITexture } from "@app/rendering/graphics";
 
 import { IItemModel } from "../itemModel";
@@ -87,11 +87,11 @@ export class CharacterInventory extends Disposable implements IDisposable {
         return true;
     }
 
-    constructor(parent: CharacterModel, iocContainer: IIoCContainer) {
+    constructor(parent: CharacterModel, objectFactory: IObjectFactory) {
         super();
         this.parent = parent;
         this.inventoryData = { };
-        this.objectFactory = iocContainer.getObjectFactory();
+        this.objectFactory = objectFactory;
     }
 
     hasItemInSlot(slot: EquipmentSlot): boolean {
