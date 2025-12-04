@@ -411,6 +411,28 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
         return material;
     }
 
+    getLightingUniforms() {
+        return `
+uniform vec4 u_ambientColor;
+uniform vec4 u_lightColor;
+uniform vec3 u_lightDir;        
+`;
+    }
+
+    getLightingFunction() {
+        return `
+vec3 light(vec3 normal, vec3 color) {
+    // Simple ambient + diffuse lighting
+    // color = (ambient + diffuse) * objectColor 
+    vec4 lightColor = u_ambientColor;
+    float diffStrength = max(0.0, dot(v_normal, u_lightDir));
+    lightColor += u_lightColor * diffStrength;
+    lightColor = clamp(lightColor, vec4(0,0,0,0), vec4(1,1,1,1));
+    return color * lightColor.rgb;
+}        
+`;
+    }
+
     getSceneBoundingBox() {
         return this.sceneBoundingBox;
     }

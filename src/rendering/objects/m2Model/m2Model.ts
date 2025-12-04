@@ -4,7 +4,7 @@ import { BinaryWriter, distinct } from "@app/utils";
 import { FileIdentifier } from "@app/metadata";
 
 import { 
-    ColorMask, ITexture, IShaderProgram, M2BlendModeToEGxBlend,
+    ColorMask, ITexture, M2BlendModeToEGxBlend,
     RenderMaterial, DrawingBatchRequest, IDataBuffers, BufferDataType,
     IDataTexture
 } from "@app/rendering/graphics";
@@ -817,10 +817,7 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
                 }
             }
         }
-
-        const shaderKey = M2ShaderBuilder.getShaderName(texUnit.shaderId, texUnit.textureCount);
-        const [vsText, fragText] = M2ShaderBuilder.getShaderProgramTexts(texUnit.shaderId, texUnit.textureCount);
-        const shaderProg = this.renderer.getShaderProgram(this, shaderKey, vsText, fragText, M2ShaderBuilder.getAttribLocations());
+        const shaderProg = M2ShaderBuilder.getShaderProgram(this.renderer, this, texUnit.shaderId, texUnit.textureCount);
 
         const material = this.modelData.materials[texUnit.materialIndex];
         const blendMode = M2BlendModeToEGxBlend(material.blendingMode);

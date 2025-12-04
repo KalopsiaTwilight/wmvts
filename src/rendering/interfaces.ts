@@ -51,6 +51,8 @@ export interface IRenderer<TParentEvent extends string = never> extends IDisposa
     submitOtherGraphicsRequest(request: RenderingBatchRequest): void;
 
     getBaseMaterial(): RenderMaterial;
+    getLightingUniforms(): string;
+    getLightingFunction(): string;
     getSolidColorTexture(color: Float4): ITexture;
     getUnknownTexture(): ITexture;
     getTexture(requestor: IDisposable, fileId: FileIdentifier, opts?: ITextureOptions): Promise<ITexture>;

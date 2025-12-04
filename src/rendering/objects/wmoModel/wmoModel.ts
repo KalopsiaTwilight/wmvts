@@ -783,10 +783,7 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
             const material = this.modelData.materials[i];
             const blendMode = M2BlendModeToEGxBlend(material.blendMode);
 
-            const shaderName = WmoShaderBuilder.getShaderName(material.shader);
-            const [vsText, fsText] = WmoShaderBuilder.getShaderProgramTexts(material.shader);
-            const shaderProg = this.renderer.getShaderProgram(this, shaderName, vsText, fsText, WmoShaderBuilder.getAttribLocations());
-
+            const shaderProg = WmoShaderBuilder.getShaderProgram(this.renderer, this, material.shader);
             const unlit = (material.flags & WoWWorldModelMaterialMaterialFlags.Unlit) ? true : false
             const doubleSided = (material.flags & WoWWorldModelMaterialMaterialFlags.Unculled) != 0;
 

@@ -1,7 +1,9 @@
-import { IAttribLocations } from "@app/rendering/graphics";
+import { IAttribLocations, IShaderProgram } from "@app/rendering/graphics";
 import { WMOShader } from "@app/modeldata";
 
 import { getWMOPixelShader, getWMOVertexShader, WMOPixelShader, WMOVertexShader } from "./wmoShaders";
+import { IRenderer } from "@app/rendering/interfaces";
+import { IRenderObject } from "../interfaces";
 
 const wmoAttributeLocations: IAttribLocations = {
     "a_position": 0,
@@ -18,6 +20,12 @@ export class WmoShaderBuilder {
         return wmoAttributeLocations;
     }
 
+    static getShaderProgram(renderer: IRenderer, obj: IRenderObject, shaderId: number): IShaderProgram {
+        const key = this.getShaderName(shaderId);
+        const [vsText, fragText] = this.getShaderProgramTexts(renderer, shaderId);
+        return renderer.getShaderProgram(obj, key, vsText, fragText, this.getAttribLocations())
+    }
+
     static getShaderName(shaderId: WMOShader): string {
         const vertexShader = getWMOVertexShader(shaderId);
         const pixelShader = getWMOPixelShader(shaderId);
@@ -25,12 +33,12 @@ export class WmoShaderBuilder {
         return "WMO-" + WMOVertexShader[vertexShader] + "-" + WMOPixelShader[pixelShader];
     }
 
-    static getShaderProgramTexts(shaderId: number): [string, string] {
+    static getShaderProgramTexts(renderer: IRenderer, shaderId: number): [string, string] {
         const vertexShader = getWMOVertexShader(shaderId);
         const pixelShader = getWMOPixelShader(shaderId);
 
         const vsText = this.getVertProgramText(vertexShader);
-        const fragText = this.getFragProgramText(pixelShader);
+        const fragText = this.getFragProgramText(renderer, pixelShader);
 
         return [vsText, fragText];
     }
@@ -92,16 +100,13 @@ void main() {
 `;
     }
 
-    private static getFragProgramText(ps: WMOPixelShader) {
+    private static getFragProgramText(renderer: IRenderer, ps: WMOPixelShader) {
         return `
 precision mediump float;
 
 uniform vec3 u_cameraPos;
 
-// Simple lighting params
-uniform vec4 u_ambientColor;
-uniform vec4 u_lightColor;
-uniform vec3 u_lightDir;
+${renderer.getLightingUniforms()}
 
 uniform int u_blendMode;
 uniform bool u_unlit;
@@ -119,6 +124,8 @@ varying vec3 v_normal;
 varying vec3 v_position;
 
 float saturate(float v) { return clamp(v, 0.0, 1.0); }
+
+${renderer.getLightingFunction()}
 
 vec3 calculateSpecular(float texAlpha) {
     vec3 normal = normalize(v_normal);
@@ -152,12 +159,7 @@ void main() {
     ${this.getPixelShaderText(ps)}
 
     if (!u_unlit) {
-        vec4 lightColor = u_ambientColor;
-        float diffStrength = max(0.0, dot(v_normal, u_lightDir));
-        lightColor += u_lightColor * diffStrength;
-        lightColor = clamp(lightColor, vec4(0,0,0,0), vec4(1,1,1,1));
-        outputColor.rgb = materialColor * lightColor.rgb;
-        outputColor.a = 1.0;
+        outputColor = vec4(light(v_normal, materialColor), 1.0);
     } else {
         outputColor = vec4(materialColor, 1.0);
     }

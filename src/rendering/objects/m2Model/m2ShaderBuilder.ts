@@ -1,5 +1,8 @@
-import { IAttribLocations } from "@app/rendering/graphics";
+import { IAttribLocations, IShaderProgram } from "@app/rendering/graphics";
+import { IRenderer } from "@app/rendering/interfaces";
+
 import { getM2PixelShaderId, getM2VertexShaderId, M2PixelShader, M2VertexShader } from "./m2Shaders"
+import { IRenderObject } from "../interfaces";
 
 const m2AttributeLocations: IAttribLocations = {
     "a_position": 0,
@@ -15,6 +18,12 @@ export class M2ShaderBuilder {
         return m2AttributeLocations;
     }
 
+    static getShaderProgram(renderer: IRenderer, obj: IRenderObject, shaderId: number, textureCount: number): IShaderProgram {
+        const key = this.getShaderName(shaderId, textureCount);
+        const [vsText, fragText] = this.getShaderProgramTexts(renderer, shaderId, textureCount);
+        return renderer.getShaderProgram(obj, key, vsText, fragText, this.getAttribLocations())
+    }
+
     static getShaderName(shaderId: number, textureCount: number): string {
         const vertexShader = getM2VertexShaderId(shaderId, textureCount);
         const pixelShader = getM2PixelShaderId(shaderId, textureCount);
@@ -22,13 +31,13 @@ export class M2ShaderBuilder {
         return "M2-" + M2VertexShader[vertexShader] + "-" + M2PixelShader[pixelShader];
     }
 
-    static getShaderProgramTexts(shaderId: number, textureCount: number): [string, string] {
+    static getShaderProgramTexts(renderer: IRenderer, shaderId: number, textureCount: number): [string, string] {
         const vertexShader = getM2VertexShaderId(shaderId, textureCount);
         const pixelShader = getM2PixelShaderId(shaderId, textureCount);
 
         const vsParams = this.getVertexShaderParams(vertexShader);
         const vsText = this.getVertProgramText(vertexShader, vsParams.numTexCoords, vsParams.hasEdgeScan, vsParams.hasPtt);
-        const fragText = this.getFragProgramText(pixelShader, vsParams.numTexCoords);
+        const fragText = this.getFragProgramText(renderer, pixelShader, vsParams.numTexCoords);
 
         return [vsText, fragText];
     }
@@ -175,7 +184,7 @@ void main(void) {
 `;
     }
 
-    private static getFragProgramText(ps: M2PixelShader, numTexCoords: number) {
+    private static getFragProgramText(renderer: IRenderer, ps: M2PixelShader, numTexCoords: number) {
         return `precision mediump float;
 
 varying vec3 v_normal;
@@ -186,14 +195,15 @@ ${numTexCoords >= 3 ? "varying vec2 v_texCoord3;" : ""}
 
 uniform int u_blendMode;
 uniform bool u_unlit;
-uniform vec4 u_ambientColor;
-uniform vec4 u_lightColor;
-uniform vec3 u_lightDir;
+${renderer.getLightingUniforms()}
+
 uniform sampler2D u_texture1;
 uniform sampler2D u_texture2;
 uniform sampler2D u_texture3;
 uniform sampler2D u_texture4;
 uniform vec4 u_textureWeights;
+
+${renderer.getLightingFunction()}
         
 void main(void) {
     vec4 outputColor = vec4(1.0);
@@ -221,13 +231,7 @@ ${this.getPixelShaderText(ps)}
 
     outputColor.rgb = materialColor;
     if (!u_unlit) {
-        // Simple ambient + diffuse lighting
-        // color = (ambient + diffuse) * objectColor 
-        vec4 lightColor = u_ambientColor;
-        float diffStrength = max(0.0, dot(v_normal, u_lightDir));
-        lightColor += u_lightColor * diffStrength;
-        lightColor = clamp(lightColor, vec4(0,0,0,0), vec4(1,1,1,1));
-        outputColor.rgb *= lightColor.rgb;
+        outputColor.rgb = light(v_normal, outputColor.rgb);
     }
     outputColor += vec4(specular, 0.0);
     
