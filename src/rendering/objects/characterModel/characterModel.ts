@@ -315,9 +315,10 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
             return;
         }
 
+        this.textureLayerBaseFileIds = { };
+        this.textureLayerBaseTextures = { };
         const toLoad: string[] = [];
         for(const key in newSkinLayers) {
-            // TODO: Should this be inited somewhere else?
             const layer = this.customizationData.textureLayers[parseInt(key, 10)];
             const material = this.customizationData.modelMaterials.find(x => x.textureType === layer.textureType)
             if (!this.textureLayerCombiners[layer.textureType]) {
@@ -328,13 +329,15 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
             this.textureLayerBaseTextures[key] = [null, null, null];
             toLoad.push(key);
         }
+
         const promises = [];
         for(const key of toLoad) {
             for(let j = 0; j < 3; j++) {
                 const fileId = newSkinLayers[key][j];
                 if (fileId) {
                     promises.push(this.renderer.getTexture(this, fileId).then((texture) => {
-                        if (this.textureLayerBaseFileIds[key][j] === texture.fileId) {
+                        const currentFileIds = this.textureLayerBaseFileIds[key];
+                        if (currentFileIds && currentFileIds[j] === texture.fileId) {
                             this.textureLayerBaseTextures[key][j] = texture;
                         }
                     }))
