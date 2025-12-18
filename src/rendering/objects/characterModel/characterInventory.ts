@@ -328,7 +328,7 @@ export class CharacterInventory extends Disposable implements IDisposable {
         }
         const bottomSlots = [EquipmentSlot.Body, EquipmentSlot.Legs];
         let shouldDrawBottom = true;
-        for(const slot of topSlots) {
+        for(const slot of bottomSlots) {
             shouldDrawBottom = shouldDrawBottom && !(this.inventoryData[slot] && !!this.inventoryData[slot].model1.sectionTextures[TextureSection.UpperLeg])
         }
         return [shouldDrawBottom, shouldDrawTop];
