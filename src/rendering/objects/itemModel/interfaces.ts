@@ -16,6 +16,13 @@ export interface IItemModel<ParentEvent extends string = never> extends IWorldPo
     component2Texture?: ITexture;
     sectionTextures: { [key: number]: [ITexture, ITexture, ITexture] };
 
-    equipTo<TParentEvent extends string>(character: ICharacterModel<TParentEvent>): void;
+    character?: ICharacterModel;
+
+    equipTo(character: ICharacterModel): void;
     loadDisplayInfoId(displayInfoId: RecordIdentifier): void;
+    setItemVisual(itemVisualId: RecordIdentifier): void;
+
+    classId: number;
+    subClassId: number;
+    inventoryType: number;
 }

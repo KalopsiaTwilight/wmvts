@@ -60,12 +60,12 @@ export abstract class WorldPositionedObject<TEvent extends string = never> exten
 
     updateModelMatrixFromParent() {
         Float44.copy(this.localModelMatrix, this.worldModelMatrix);
-        let parent = this.parent;
-        while (parent) {
-            Float44.multiply(this.worldModelMatrix, parent.worldModelMatrix, this.worldModelMatrix);
-            parent = parent.parent;
-        }
+        Float44.multiply(this.parent.worldModelMatrix, this.worldModelMatrix, this.worldModelMatrix);
         Float44.invert(this.worldModelMatrix, this.invWorldModelMatrix);
+
+        for(const child of this.children) {
+            child.updateModelMatrixFromParent();
+        }
     }
     
     setModelMatrix(position: Float3|null, rotation: Float4|null, scale: Float3|null) {
@@ -81,20 +81,12 @@ export abstract class WorldPositionedObject<TEvent extends string = never> exten
         }
         
         this.updateModelMatrixFromParent();
-
-        for(const child of this.children) {
-            child.updateModelMatrixFromParent();
-        }
     }
 
     setModelMatrixFromMatrix(matrix: Float44) {
         Float44.copy(matrix, this.localModelMatrix);
         
         this.updateModelMatrixFromParent();
-
-        for(const child of this.children) {
-            child.updateModelMatrixFromParent();
-        }
     }
 
     addChild<TChild extends RenderObjectEvents>(obj: IWorldPositionedObject<TChild>) {

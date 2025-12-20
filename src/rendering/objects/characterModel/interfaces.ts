@@ -1,5 +1,6 @@
 import { RecordIdentifier } from "@app/metadata";
 import { IM2Model } from "../m2Model";
+import { IItemModel } from "../itemModel";
 
 export type CharacterModelEvents = "characterMetadataLoaded" | "skinTexturesLoaded"
 export interface ICharacterModel<TParentEvent extends string = never> extends IM2Model<TParentEvent | CharacterModelEvents> {
@@ -9,7 +10,10 @@ export interface ICharacterModel<TParentEvent extends string = never> extends IM
     class: number;
 
     setCustomizationChoice(optionId: number, choiceId: number): void;
-    equipItem(slot: EquipmentSlot, displayId1: number, displayId2?: number): void;
+
+    equipItem(slot: EquipmentSlot, displayId1: number): IItemModel;
+    equipItem(slot: EquipmentSlot, displayId1: number, displayId2: number): [IItemModel, IItemModel];
+    equipItem(slot: EquipmentSlot, displayId1: number, displayId2?: number): IItemModel | IItemModel[];
     unequipItem(slot: EquipmentSlot): void;
 }
 

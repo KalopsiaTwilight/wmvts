@@ -2,6 +2,7 @@ import { FileIdentifier, RecordIdentifier } from "@app/metadata";
 import { ICache, IIoCContainer, IObjectFactory } from "./interfaces";
 import { CharacterModel, ItemModel, M2Model, TextureVariantModel, WMOModel } from "./objects";
 import { SimpleCache } from "./simpleCache";
+import { ItemVisualModel } from "./objects/itemVisual";
 
 export class DefaultObjectFactory implements IObjectFactory {
     private iocContainer: IIoCContainer;
@@ -39,6 +40,12 @@ export class DefaultObjectFactory implements IObjectFactory {
     createTextureVariantModel(id: FileIdentifier) {
         const model = new TextureVariantModel(this.iocContainer.getDataManager(), this.iocContainer.getRandomNumberGenerator());
         model.loadFileId(id);
+        return model;
+    }
+
+    createItemVisual(id: RecordIdentifier) {
+        const model = new ItemVisualModel(this.iocContainer.getDataManager(), this.iocContainer.getObjectFactory());
+        model.loadItemVisualId(id);
         return model;
     }
 

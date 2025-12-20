@@ -6,9 +6,10 @@ import {
     RecordIdentifier
 } from "@app/metadata";
 import { ITexture } from "@app/rendering/graphics";
-import { IDataManager, IIoCContainer, IObjectFactory, IRenderer } from "@app/rendering/interfaces";
+import { IDataManager, IObjectFactory, IRenderer } from "@app/rendering/interfaces";
 import { ITexturePickingStrategy } from "@app/rendering/strategies";
 
+import { IItemModel } from "../itemModel";
 import { IM2Model, M2Model } from "../m2Model";
 
 import { SkinLayerTextureCombiner } from "./skinLayerTextureCombiner";
@@ -182,11 +183,13 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
         })
     }
 
+    equipItem(slot: EquipmentSlot, displayId1: number): IItemModel;
+    equipItem(slot: EquipmentSlot, displayId1: number, displayId2: number): [IItemModel, IItemModel];
     equipItem(slot: EquipmentSlot, displayId1: number, displayId2?: number) {
         if (this.isDisposing) {
             return;
         }
-        this.inventory.equipItem(slot, displayId1, displayId2);
+        return this.inventory.equipItem(slot, displayId1, displayId2);
     }
 
     unequipItem(slot: EquipmentSlot) {

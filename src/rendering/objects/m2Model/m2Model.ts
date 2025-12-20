@@ -1,4 +1,4 @@
-import { WoWBoneData, WoWBoneFileData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureUnitData } from "@app/modeldata";
+import { WoWAttachmentData, WoWBoneData, WoWBoneFileData, WoWBoneFlags, WoWMaterialFlags, WoWModelData, WoWTextureUnitData } from "@app/modeldata";
 import { Float4, Float3, Float44, AABB, IPseudoRandomNumberGenerator } from "@app/math"
 import { BinaryWriter, distinct } from "@app/utils";
 import { FileIdentifier } from "@app/metadata";
@@ -317,6 +317,26 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
     setParticleColorOverride(overrides: ParticleColorOverrides) {
         this.particleColorOverrides = overrides;
         // TODO: Reload particle emitters if necessary
+    }
+
+    getAttachment(id: number): WoWAttachmentData {
+        return this.modelData.attachments[this.modelData.attachmentIdLookup[id]]
+    }
+
+    getAttachments(): WoWAttachmentData[] {
+        return this.modelData.attachments;
+    }
+
+    getBone(id: number): IBoneData {
+        return this.boneData[id];
+    }
+
+    getBoneById(id: number) {
+        return this.boneData[this.modelData.boneIdLookup[id]];
+    }
+
+    getBones(): IBoneData[] {
+        return this.boneData;
     }
 
     private updateBonePositions() {

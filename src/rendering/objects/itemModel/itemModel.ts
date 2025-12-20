@@ -9,6 +9,7 @@ import { ICharacterModel } from "../characterModel";
 import { IM2Model, ParticleColorOverride, ParticleColorOverrides } from "../m2Model";
 
 import { IItemModel, ItemModelEvents } from "./interfaces";
+import { IItemVisual } from "../itemVisual";
 
 function parseIntToColor(val: number, dest: Float3) {
     return Float3.set(dest, ((val >> 16) & 255), ((val >> 8) & 255), ((val >> 0) & 255));
@@ -33,6 +34,7 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
     private modelPickingStrategy: IModelPickingStrategy;
     private objectFactory: IObjectFactory;
     private dataManager: IDataManager;
+    private itemVisual: IItemVisual;
 
     constructor(dataManager: IDataManager, objectFactory: IObjectFactory, texturePickingStrategy: ITexturePickingStrategy, modelPickingStrategy: IModelPickingStrategy) {
         super();
@@ -53,6 +55,18 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
 
     override get isLoaded(): boolean {
         return this.itemMetadata != null && this.texturesLoaded && this.componentsLoaded;
+    }
+
+    get classId(): number {
+        return this.itemMetadata?.classId;
+    }
+
+    get subClassId(): number {
+        return this.itemMetadata?.subclassId;
+    }
+
+    get inventoryType(): number {
+        return this.itemMetadata?.inventoryType;
     }
 
     loadDisplayInfoId(displayInfoId: RecordIdentifier) {
@@ -80,6 +94,10 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
         if (this.component2) {
             this.component2.update(deltaTime);
         }
+
+        if (this.itemVisual) {
+            this.itemVisual.update(deltaTime);
+        }
     }
 
     draw(): void {
@@ -94,9 +112,13 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
         if (this.component2) {
             this.component2.draw();
         }
+
+        if (this.itemVisual) {
+            this.itemVisual.draw();
+        }
     }
 
-    equipTo<TParentEvent extends string>(character: ICharacterModel<TParentEvent>) {
+    equipTo(character: ICharacterModel) {
         if (this.isDisposing) {
             return;
         }
@@ -105,6 +127,20 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
         this.parent = character;
         this.character.addChild(this);
         this.updateModelMatrixFromParent();
+    }
+
+    
+    setItemVisual(itemVisualId: RecordIdentifier) {
+        if (this.itemVisual) {
+            if (this.itemVisual.itemVisualId === itemVisualId) {
+                return;
+            }
+            this.itemVisual.dispose();
+        } 
+        
+        const itemVisual = this.objectFactory.createItemVisual(itemVisualId);
+        this.itemVisual = itemVisual;
+        itemVisual.attachTo(this);
     }
 
     override dispose(): void {

@@ -31,7 +31,7 @@ export class DefaultIoCContainer implements IIoCContainer {
     }
     
     getRandomNumberGenerator(seed?: number | string): IPseudoRandomNumberGenerator {
-        return this.rngFactory(seed ? seed : 0xb00b1e5);
+        return this.rngFactory(seed ? seed : 0xb00b1e5 * Math.random());
     }
 
     setTexturePickingStrategy(strategy: ITexturePickingStrategy) {

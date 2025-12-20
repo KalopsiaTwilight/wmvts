@@ -1,5 +1,5 @@
 import { Float44, Float3 } from "@app/math";
-import { WoWModelData } from "@app/modeldata";
+import { WoWAttachmentData, WoWModelData } from "@app/modeldata";
 import { FileIdentifier } from "@app/metadata";
 import { ITexture } from "@app/rendering/graphics";
 
@@ -15,6 +15,10 @@ export interface IBoneData {
 
 export interface ISkinnedObject {
     boneData: IBoneData[];
+    
+    getBone(id: number): IBoneData;
+    getBones(): IBoneData[];
+    getBoneById(id: number): IBoneData;
 }
 
 export type ParticleColorOverride = [Float3, Float3, Float3] | null;
@@ -36,6 +40,13 @@ export interface IM2Model<TParentEvent extends string = never> extends IWorldPos
     pauseAnimation(): void;
     resumeAnimation(): void;
     setAnimationSpeed(speed: number): void;
+
+    getAttachments(): WoWAttachmentData[];
+    getAttachment(id: number): WoWAttachmentData;
+
+    getBone(id: number): IBoneData;
+    getBones(): IBoneData[];
+    getBoneById(id: number): IBoneData;
 
     swapTexture(index: number, texture: ITexture): void;
     swapTextureType(type: number, texture: ITexture): void;

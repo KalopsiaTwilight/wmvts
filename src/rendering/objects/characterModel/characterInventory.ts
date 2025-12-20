@@ -113,7 +113,7 @@ export class CharacterInventory extends Disposable implements IDisposable {
             this.inventoryData[slot].attachmentMatrices = attachments.map(() => Float44.identity());
             this.parent.once("modelDataLoaded", () => {
                 const data = this.inventoryData[slot];
-                data.attachments = data.attachmentIds.map(i => this.parent.modelData.attachments.find(x => x.id === i));
+                data.attachments = data.attachmentIds.map(this.parent.getAttachment.bind(this.parent));
             })
         })
         model1.once("componentsLoaded", (model: IItemModel) => {
@@ -139,6 +139,11 @@ export class CharacterInventory extends Disposable implements IDisposable {
             attachments: [],
             attachmentMatrices: []
         }
+
+        if (displayId2) {
+            return [model1, model2];
+        }
+        return model1;
     }
 
     unequipItem(slot: EquipmentSlot) {
@@ -371,14 +376,11 @@ export class CharacterInventory extends Disposable implements IDisposable {
             return;
         }
         
-        const parentBoneData = this.parent.boneData;
-        if (!parentBoneData) {
-            return;
-        }
         for(let i = 0; i < data.attachmentIds.length; i++) {
             const attachmentData = data.attachments[i];
             if (attachmentData) {
-                Float44.translate(parentBoneData[attachmentData.bone].positionMatrix, attachmentData.position, data.attachmentMatrices[i]);
+                const bone = this.parent.getBone(attachmentData.bone);
+                Float44.translate(bone.positionMatrix, attachmentData.position, data.attachmentMatrices[i]);
 
                 const component = i === 0 ? model.component1 : model.component2;
                 if (component) {

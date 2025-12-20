@@ -6,3 +6,4 @@ export * from "./characterModel"
 export * from "./textureVariantModel"
 export * from "./itemModel";
 export * from "./background";
+export * from "./itemVisual";

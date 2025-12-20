@@ -1,6 +1,6 @@
 import { WoWBoneFileData, WoWModelData, WoWWorldModelData } from "@app/modeldata";
 import { ICache, IDataManager, IIoCContainer } from "./interfaces";
-import { CharacterMetadata, FileIdentifier, ItemMetadata, LiquidTypeMetadata, RecordIdentifier, TextureVariationsMetadata } from "@app/metadata";
+import { CharacterMetadata, FileIdentifier, ItemMetadata, ItemVisualMetadata, LiquidTypeMetadata, RecordIdentifier, TextureVariationsMetadata } from "@app/metadata";
 import { ErrorHandlerFn, ErrorType, IDataLoader, IProgressReporter } from "@app/interfaces";
 
 const DataLoadingErrorType: ErrorType = "dataFetching";
@@ -64,6 +64,11 @@ export class DefaultDataManager implements IDataManager {
     getTextureImageData(fileId: FileIdentifier): Promise<Blob | null> {
         const key = "IMG-" + fileId;
         return this.getDataFromLoaderOrCache(key, (dl) => dl.loadTexture(fileId));
+    }
+
+    getItemVisualMetadata(itemVisualId: RecordIdentifier): Promise<ItemVisualMetadata | null> {
+        const key = "ITEMVISUAL-" + itemVisualId;
+        return this.getDataFromLoaderOrCache(key, (dl) => dl.loadItemvisualMetadata(itemVisualId))
     }
     
     private async getDataFromLoaderOrCache<T>(key: string, loadFn: (x: IDataLoader) => Promise<T|Error>): Promise<T|null> {
