@@ -79,8 +79,10 @@ export class NodeWoWModelViewer extends BaseWoWModelViewer {
             return;
         }
 
-        // TODO: Figure something out for headless-gl resize
-        const headlessGlExt = this.gl.getExtension("")
+        const headlessGlExt = this.gl.getExtension("STACKGL_resize_drawingbuffer")
+        if (headlessGlExt) {
+            headlessGlExt.resize(width, height);
+        }
 
         this.width = width;
         this.height = height;
