@@ -7,6 +7,7 @@ import { IItemModel } from "../itemModel";
 
 import { IItemVisual, ItemVisualEvents, IItemVisualEffectData } from "./interfaces";
 import { IM2Model } from "../m2Model";
+import { WoWAttachmentData } from "@app/modeldata";
 
 
 export class ItemVisualModel<TParentEvent extends string = never> extends WorldPositionedObject<TParentEvent | ItemVisualEvents>
@@ -152,7 +153,14 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
                     subModel.once("disposed", () => this.dispose());
 
                     const scaleVector = Float3.create(effect.scale, effect.scale, effect.scale);
-                    const attachment = this.attachedItemComponentModel.getAttachment(i);
+
+                    let attachment: WoWAttachmentData;
+                    const attachmentId = effect.attachmentId -1;
+                    if (attachmentId !== -1) {
+                        attachment = this.attachedItemComponentModel.getAttachment(attachmentId);
+                    }
+                    // TODO: Figure out what attachmentId 0 does
+
                     this.effectdata.push({
                         model: subModel,
                         scaleVector,
@@ -161,7 +169,7 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
                     })
                     effectsLoadedPromises.push(subModel.onceAsync("loaded"));
                 }
-                // todo figure out spell effect kits?
+                // TODO: figure out spell effect kits
             }
 
             Promise.all(effectsLoadedPromises).then(() => {

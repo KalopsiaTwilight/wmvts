@@ -3,7 +3,6 @@ import { SpellVisualKitData } from "./spellVisualKit";
 
 export interface ItemVisualMetadata
 {
-    modelFileIds: FileIdentifier[];
     effects?: ItemVisualEffectsData[];
 }
 
