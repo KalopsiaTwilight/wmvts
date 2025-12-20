@@ -319,6 +319,10 @@ export class M2ParticleEmitter extends Disposable implements IDisposable {
         if (this.isDisposing) return;
         if (!this.particleGenerator) return;
 
+        if(this.parent.animationState.isPaused) {
+            return;
+        }
+
         deltaTime *= 0.001;
 
         this.updateAnimatedProps();

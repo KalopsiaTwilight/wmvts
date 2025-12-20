@@ -4,6 +4,7 @@ import { ITexture } from "@app/rendering/graphics";
 import { ICharacterModel } from "../characterModel";
 import { IWorldPositionedObject } from "../interfaces";
 import { IM2Model } from "../m2Model";
+import { IItemVisual } from "../itemVisual";
 
 export type ItemModelEvents = "metadataLoaded" | "sectionTexturesLoaded" | "componentsLoaded" 
 
@@ -20,7 +21,7 @@ export interface IItemModel<ParentEvent extends string = never> extends IWorldPo
 
     equipTo(character: ICharacterModel): void;
     loadDisplayInfoId(displayInfoId: RecordIdentifier): void;
-    setItemVisual(itemVisualId: RecordIdentifier): void;
+    setItemVisual(itemVisualId: RecordIdentifier): IItemVisual;
 
     classId: number;
     subClassId: number;

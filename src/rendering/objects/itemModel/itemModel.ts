@@ -128,7 +128,6 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
         this.character.addChild(this);
         this.updateModelMatrixFromParent();
     }
-
     
     setItemVisual(itemVisualId: RecordIdentifier) {
         if (this.itemVisual) {
@@ -141,6 +140,7 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
         const itemVisual = this.objectFactory.createItemVisual(itemVisualId);
         this.itemVisual = itemVisual;
         itemVisual.attachTo(this);
+        return itemVisual;
     }
 
     override dispose(): void {

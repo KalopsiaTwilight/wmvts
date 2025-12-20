@@ -1,4 +1,4 @@
-import { Float3, Float44 } from "@app/math";
+import { Float3 } from "@app/math";
 import { ItemVisualMetadata, RecordIdentifier } from "@app/metadata";
 import { IDataManager, IObjectFactory, IRenderer } from "@app/rendering/interfaces";
 
@@ -7,7 +7,6 @@ import { IItemModel } from "../itemModel";
 
 import { IItemVisual, ItemVisualEvents } from "./interfaces";
 import { IM2Model } from "../m2Model";
-import { WoWAttachmentData } from "@app/modeldata";
 
 
 export class ItemVisualModel<TParentEvent extends string = never> extends WorldPositionedObject<TParentEvent | ItemVisualEvents>
@@ -15,6 +14,7 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
     itemVisualId: RecordIdentifier;
     itemVisualMetadata: ItemVisualMetadata;
     attachedItemModel: IItemModel;
+    effectsLoaded: boolean;
 
     private dataManager: IDataManager;
     private objectFactory: IObjectFactory;
@@ -28,7 +28,7 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
     }
 
     get isLoaded(): boolean {
-        throw new Error("Method not implemented.");
+        return this.itemVisualMetadata != null && this.effectsLoaded;
     }
 
     override attachToRenderer(renderer: IRenderer): void {
@@ -101,6 +101,31 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
         this.objectFactory = null;
     }
 
+    pauseAnimation() {
+        this.once("effectsLoaded", () => {
+            for(const child of this.children) {
+                const m2Model = child as IM2Model;
+                m2Model.pauseAnimation();
+            }
+        })
+    }
+
+    resumeAnimation() {
+        this.once("effectsLoaded", () => {
+            for(const child of this.children) {
+                const m2Model = child as IM2Model;
+                m2Model.resumeAnimation();
+            }
+        })
+    }
+
+    protected canExecuteCallbackNow(type: TParentEvent | "loaded" | ItemVisualEvents): boolean {
+        switch(type) {
+            case "effectsLoaded": return this.effectsLoaded;
+            case "metadataLoaded": return this.itemVisualMetadata != null;
+        }
+        return super.canExecuteCallbackNow(type);
+    }
 
     private onItemVisualMetadataLoaded(metadata: ItemVisualMetadata) {
         if (!metadata) {
@@ -147,6 +172,7 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
             }
 
             Promise.all(effectsLoadedPromises).then(() => {
+                this.effectsLoaded = true;
                 this.processCallbacks("effectsLoaded");
                 this.processCallbacks("loaded");
             })

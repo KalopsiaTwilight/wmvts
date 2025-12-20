@@ -207,6 +207,10 @@ export class M2RibbonEmitter extends Disposable implements IDisposable {
     }
 
     update(deltaTime: number): void {
+        if(this.parent.animationState.isPaused) {
+            return;
+        }
+
         this.updateAnimatedProps();
         this.updatePosition();
 

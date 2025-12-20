@@ -16,4 +16,6 @@ export interface IItemVisual<ParentEvent extends string = never> extends IWorldP
 
     attachTo(item: IItemModel): void;
     loadItemVisualId(itemVisualId: RecordIdentifier): void;
+    pauseAnimation(): void;
+    resumeAnimation(): void;
 }

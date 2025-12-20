@@ -67,9 +67,12 @@ export class AnimationState extends Disposable implements IDisposable {
     }
 
     update(deltaTime: number) {
-        if (!this.isPaused) {
-            this.currentAnimActiveTime += deltaTime * this.speed;
+        if (this.isPaused) {
+            return;
         }
+
+        this.currentAnimActiveTime += deltaTime * this.speed;
+
         for(let i = 0; i < this.globalTimers.length; i++) {
             this.globalTimers[i] += deltaTime;
             if (this.globalLoops[i] > 0) {
