@@ -33,6 +33,7 @@ export interface IM2Model<TParentEvent extends string = never> extends IWorldPos
     modelData: WoWModelData
 
     attachTo(model: ISkinnedObject): void;
+    addAttachedModel(model: IWorldPositionedObject, attachment: WoWAttachmentData): void;
     setParticleColorOverride(overrides: ParticleColorOverrides): void;
 
     getAnimations(): number[];

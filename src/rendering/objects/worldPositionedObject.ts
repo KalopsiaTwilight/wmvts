@@ -13,6 +13,7 @@ export abstract class WorldPositionedObject<TEvent extends string = never> exten
     invWorldModelMatrix: Float44;
     localBoundingBox: AABB;
     worldBoundingBox: AABB;
+    scale: Float3;
 
     constructor() {
         super();
@@ -22,6 +23,7 @@ export abstract class WorldPositionedObject<TEvent extends string = never> exten
 
         this.localBoundingBox = AABB.create(Float3.zero(), Float3.zero());
         this.worldBoundingBox = AABB.create(Float3.zero(), Float3.zero());
+        this.scale = Float3.one();
 
         this.invWorldModelMatrix = Float44.invert(this.worldModelMatrix);
     }
@@ -77,6 +79,7 @@ export abstract class WorldPositionedObject<TEvent extends string = never> exten
             Float44.multiply(this.localModelMatrix, Float44.fromQuat(rotation), this.localModelMatrix);
         }
         if (scale != null) {
+            this.scale = scale;
             Float44.scale(this.localModelMatrix, scale, this.localModelMatrix);
         }
         
@@ -84,7 +87,7 @@ export abstract class WorldPositionedObject<TEvent extends string = never> exten
     }
 
     setModelMatrixFromMatrix(matrix: Float44) {
-        Float44.copy(matrix, this.localModelMatrix);
+        Float44.scale(matrix, this.scale, this.localModelMatrix);
         
         this.updateModelMatrixFromParent();
     }

@@ -5,7 +5,7 @@ import { IDataManager, IObjectFactory, IRenderer } from "@app/rendering/interfac
 import { WorldPositionedObject } from "../worldPositionedObject";
 import { IItemModel } from "../itemModel";
 
-import { IItemVisual, ItemVisualEvents, IItemVisualEffectData } from "./interfaces";
+import { IItemVisual, ItemVisualEvents } from "./interfaces";
 import { IM2Model } from "../m2Model";
 import { WoWAttachmentData } from "@app/modeldata";
 
@@ -15,7 +15,6 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
     itemVisualId: RecordIdentifier;
     itemVisualMetadata: ItemVisualMetadata;
     attachedItemModel: IItemModel;
-    effectdata: IItemVisualEffectData[];
 
     private dataManager: IDataManager;
     private objectFactory: IObjectFactory;
@@ -26,7 +25,6 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
 
         this.objectFactory = objectFactory;
         this.dataManager = dataManager;
-        this.effectdata = [];
     }
 
     get isLoaded(): boolean {
@@ -74,23 +72,9 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
         if (this.isDisposing) {
             return;
         }
-
-        if (!this.attachedItemModel || !this.attachedItemComponentModel || !this.attachedItemModel.character) {
-            return;
-        }
-
         
-        for (const effect of this.effectdata) {
-            const attachmentData = effect.attachment;
-            if (attachmentData) {
-                const bone = this.attachedItemComponentModel.getBone(attachmentData.bone);
-
-                Float44.translate(bone.positionMatrix, attachmentData.position, effect.attachmentMatrix);
-                Float44.scale(effect.attachmentMatrix, effect.scaleVector, effect.attachmentMatrix);
-                effect.model.setModelMatrixFromMatrix(effect.attachmentMatrix);
-            }
-
-            effect.model.update(deltaTime);
+        for (const child of this.children) {
+            child.update(deltaTime);
         }
     }
 
@@ -99,8 +83,8 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
             return;
         }
 
-        for (const effect of this.effectdata) {
-            effect.model.draw();
+        for (const child of this.children) {
+            child.draw();
         }
     }
 
@@ -115,10 +99,6 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
         this.itemVisualMetadata = null;
         this.dataManager = null;
         this.objectFactory = null;
-        for (const effect of this.effectdata) {
-            effect.model.dispose();
-        }
-        this.effectdata = null;
     }
 
 
@@ -137,7 +117,6 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
         }
 
         this.itemVisualMetadata = metadata;
-        this.effectdata = [];
 
         this.attachedItemModel.once("componentsLoaded", () => {
             const effectsLoadedPromises: Promise<IM2Model>[] = [];
@@ -153,20 +132,15 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
                     subModel.once("disposed", () => this.dispose());
 
                     const scaleVector = Float3.create(effect.scale, effect.scale, effect.scale);
+                    subModel.scale = scaleVector;
 
-                    let attachment: WoWAttachmentData;
                     const attachmentId = effect.attachmentId -1;
                     if (attachmentId !== -1) {
-                        attachment = this.attachedItemComponentModel.getAttachment(attachmentId);
+                        const attachment = this.attachedItemComponentModel.getAttachment(attachmentId);
+                        this.attachedItemComponentModel.addAttachedModel(subModel, attachment);
                     }
                     // TODO: Figure out what attachmentId 0 does
 
-                    this.effectdata.push({
-                        model: subModel,
-                        scaleVector,
-                        attachment,
-                        attachmentMatrix: Float44.identity()
-                    })
                     effectsLoadedPromises.push(subModel.onceAsync("loaded"));
                 }
                 // TODO: figure out spell effect kits

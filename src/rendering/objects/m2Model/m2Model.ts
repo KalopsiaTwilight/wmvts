@@ -17,6 +17,7 @@ import { M2ParticleEmitter } from "./particleEmitter/m2ParticleEmitter";
 import { M2RibbonEmitter } from "./ribbonEmitter/m2RibbonEmitter";
 import { AnimationState } from "./animatedValue";
 import { M2ShaderBuilder } from "./m2ShaderBuilder";
+import { IWorldPositionedObject } from "../interfaces";
 
 const MAX_BONES = 256;
 
@@ -27,6 +28,12 @@ interface TextureUnitData {
     material: RenderMaterial,
     textureWeights: Float4;
     textureMatrices: Float44[];
+}
+
+interface IAttachedModelData {
+    model: IWorldPositionedObject;
+    attachment: WoWAttachmentData;
+    attachmentMatrix: Float44;
 }
 
 const BATCH_IDENTIFIER = "M2";
@@ -48,22 +55,21 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
     particleColorOverrides: ParticleColorOverrides;
     ribbonEmitters: M2RibbonEmitter[];
 
+    animationState: AnimationState;
+    boneData: IBoneData[];
+    attachedToModel?: ISkinnedObject;
+    attachedModels: IAttachedModelData[];
+    textureUnitData: TextureUnitData[]
+
     // graphics data
     bonePositionBuffer: Float32Array;
     bonePositionTexture: IDataTexture;
     dataBuffers: IDataBuffers;
-
-    animationState: AnimationState;
     textureObjects: { [key: FileIdentifier]: ITexture };
-
-    textureUnitData: TextureUnitData[]
-    boneData: IBoneData[];
-    attachedToModel?: ISkinnedObject;
 
     modelViewMatrix: Float44;
     invModelViewMatrix: Float44;
     isMirrored: boolean;
-
 
     constructor(dataManager: IDataManager, rng: IPseudoRandomNumberGenerator) {
         super();
@@ -75,6 +81,8 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
         this.modelViewMatrix = Float44.identity();
         this.invModelViewMatrix = Float44.identity();
         this.bonePositionBuffer = new Float32Array(16 * MAX_BONES);
+
+        this.attachedModels = [];
 
         this.children = [];
         this.particleColorOverrides = [null, null, null];
@@ -120,6 +128,7 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
         this.attachedToModel = null;
         this.modelViewMatrix = null;
         this.invModelViewMatrix = null;
+        this.attachedModels = null;
     }
 
     override attachToRenderer(renderer: IRenderer): void {
@@ -190,6 +199,14 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
         }
         for (let i = 0; i < this.modelData.ribbonEmitters.length; i++) {
             this.ribbonEmitters[i].update(deltaTime);
+        }
+
+        for(const attachedModel of this.attachedModels) {
+            const { attachment, model, attachmentMatrix } = attachedModel;
+
+            const bone = this.getBone(attachment.bone);
+            Float44.translate(bone.positionMatrix, attachment.position, attachmentMatrix);
+            model.setModelMatrixFromMatrix(attachmentMatrix);
         }
     }
 
@@ -337,6 +354,12 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
 
     getBones(): IBoneData[] {
         return this.boneData;
+    }
+    
+    addAttachedModel(model: IWorldPositionedObject, attachment: WoWAttachmentData) {
+        this.attachedModels.push({
+            model, attachment, attachmentMatrix: Float44.identity()
+        })
     }
 
     private updateBonePositions() {

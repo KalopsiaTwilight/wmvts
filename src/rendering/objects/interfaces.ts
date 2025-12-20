@@ -25,6 +25,7 @@ export interface IWorldPositionedObject<TEvent extends string = never> extends I
     invWorldModelMatrix: Float44;
     localBoundingBox: AABB;
     worldBoundingBox: AABB;
+    scale: Float3;
 
     updateModelMatrixFromParent(): void;
     setModelMatrix(position: Float3|null, rotation: Float4|null, scale: Float3|null): void;

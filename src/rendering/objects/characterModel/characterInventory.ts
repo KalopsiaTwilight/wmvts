@@ -1,8 +1,6 @@
 
 import { InventoryType, ItemFeatureFlag } from "@app/metadata";
 import { Disposable } from "@app/disposable";
-import { WoWAttachmentData } from "@app/modeldata";
-import { Float44 } from "@app/math";
 import { IDisposable } from "@app/interfaces";
 import { IObjectFactory } from "@app/rendering/interfaces";
 import { ITexture } from "@app/rendering/graphics";
@@ -17,9 +15,6 @@ export interface EquippedItemData {
     displayId1: number;
     displayId2?: number;
 
-    attachmentIds: number[],
-    attachments: WoWAttachmentData[];
-    attachmentMatrices: Float44[];
     model1: IItemModel
     model2?: IItemModel;
 } 
@@ -107,16 +102,19 @@ export class CharacterInventory extends Disposable implements IDisposable {
 
         const model1 = this.objectFactory.createItemModel(displayId1);
         model1.equipTo(this.parent);
-        model1.once("metadataLoaded", (model: IItemModel) => {
-            const attachments = this.getAttachmentIdsForSlot(slot, model.itemMetadata.inventoryType);
-            this.inventoryData[slot].attachmentIds = attachments;
-            this.inventoryData[slot].attachmentMatrices = attachments.map(() => Float44.identity());
-            this.parent.once("modelDataLoaded", () => {
-                const data = this.inventoryData[slot];
-                data.attachments = data.attachmentIds.map(this.parent.getAttachment.bind(this.parent));
-            })
-        })
         model1.once("componentsLoaded", (model: IItemModel) => {
+            this.parent.once("modelDataLoaded", () => {
+                const attachments = this.getAttachmentIdsForSlot(slot, model.itemMetadata.inventoryType);
+
+                const attachment1 = this.parent.getAttachment(attachments[0])
+                this.parent.addAttachedModel(model.component1, attachment1);
+
+                if (attachments.length > 1 && model.component2) {
+                    const attachment2 = this.parent.getAttachment(attachments[1])
+                    this.parent.addAttachedModel(model.component2, attachment2);
+                }
+            })
+            
             this.updateAttachmentGeosets(slot, model);
         })
         model1.once("sectionTexturesLoaded", (model: IItemModel) => {
@@ -128,6 +126,22 @@ export class CharacterInventory extends Disposable implements IDisposable {
         if (displayId2) {
             model2 = this.objectFactory.createItemModel(displayId2);
             model2.equipTo(this.parent);
+            
+            model2.once("componentsLoaded", (model: IItemModel) => {
+                this.parent.once("modelDataLoaded", () => {
+                    const attachments = this.getAttachmentIdsForSlot(slot, model.itemMetadata.inventoryType);
+
+                    const attachment1 = this.parent.getAttachment(attachments[0])
+                    this.parent.addAttachedModel(model.component1, attachment1);
+
+                    if (attachments.length > 1 && model.component2) {
+                        const attachment2 = this.parent.getAttachment(attachments[1])
+                        this.parent.addAttachedModel(model.component2, attachment2);
+                    }
+                })
+                
+                this.updateAttachmentGeosets(slot, model);
+            })
         }
 
         this.inventoryData[slot] = {
@@ -135,9 +149,6 @@ export class CharacterInventory extends Disposable implements IDisposable {
             displayId2,
             model1,
             model2,
-            attachmentIds: [],
-            attachments: [],
-            attachmentMatrices: []
         }
 
         if (displayId2) {
@@ -166,14 +177,9 @@ export class CharacterInventory extends Disposable implements IDisposable {
                 continue;
             }
 
-            
             // TODO: Kinda ugly to do everything twice for different shoulder transmogs. Maybe consider override in itemmodel?
-            this.updateComponentAttachments(data, data.model1);
             data.model1.update(deltaTime);
-
-
             if (data.model2) {
-                this.updateComponentAttachments(data, data.model2);
                 data.model2.update(deltaTime);
             }
         }
@@ -367,25 +373,6 @@ export class CharacterInventory extends Disposable implements IDisposable {
             } 
             if (attachmentGeosetGroup[i] > 0) {
                 component.toggleGeoset(groupVal + attachmentGeosetGroup[i] + 1, true);
-            }
-        }
-    }
-
-    private updateComponentAttachments(data: EquippedItemData, model: IItemModel) {
-        if (this.isDisposing) {
-            return;
-        }
-        
-        for(let i = 0; i < data.attachmentIds.length; i++) {
-            const attachmentData = data.attachments[i];
-            if (attachmentData) {
-                const bone = this.parent.getBone(attachmentData.bone);
-                Float44.translate(bone.positionMatrix, attachmentData.position, data.attachmentMatrices[i]);
-
-                const component = i === 0 ? model.component1 : model.component2;
-                if (component) {
-                    component.setModelMatrixFromMatrix(data.attachmentMatrices[i]);
-                }
             }
         }
     }
