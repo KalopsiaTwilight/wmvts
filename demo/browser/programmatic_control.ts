@@ -1,4 +1,4 @@
-import { Background, Camera, CharacterModel, NodeRenderer, RawImageData, WebGlGraphics, WoWModelServerDataProvider } from "../../src";
+import { Camera, NodeWoWModelViewer, RawImageData, WoWModelServerDataProvider } from "../../src";
 
 async function main() {
     console.log("Initializing graphics layer...");
@@ -12,28 +12,31 @@ async function main() {
     canvas.width = width;
     canvas.height = height;
 
-    let gl = canvas.getContext("webgl", { alpha: true, premultipliedAlpha: false })!;
-
+    const createGl = () => {
+        return canvas.getContext("webgl", { alpha: true, premultipliedAlpha: false })!;
+    }
+    
     console.log("Setting up renderer...");
     const dataLoader = new WoWModelServerDataProvider("https://localhost:7074");
-    const graphics = new WebGlGraphics(gl);
-    const renderer = new NodeRenderer(graphics, dataLoader, {
-        getImageDataFn: getImageData,
-        errorHandler: console.error 
-    });
+    const viewer = new NodeWoWModelViewer({
+        getImgData: getImageData,
+        createGl,
+        width: width,
+        height: height,
+        dataLoader: dataLoader,
+        scene: {
+            cameraFov: 90
+        }
+    })
     
-    renderer.fov = 90;
     const camera = new Camera(false);
     camera.setPosition([1.5, 1.0, 0])
     camera.setRotation([0, -Math.PI/2, Math.PI]);
-    renderer.switchCamera(camera);
-    renderer.resize(width, height);
+    viewer.useCamera(camera);
+    viewer.resize(width, height);
     
-    const model = new CharacterModel(renderer.iocContainer);
-    renderer.addSceneObject(model);
-
+    const model = viewer.addCharacterModel(2);
     model.pauseAnimation();
-    model.loadModelId(2);
     model.equipItem(18, 141459);
 
     console.log("Loading model...");
@@ -45,13 +48,8 @@ async function main() {
 
     console.log("Starting to draw...");
 
-    const background = new Background();
-    renderer.addSceneObject(background);
-    background.useTexture(model.textureLayerCombiners["1"].outputTexture);
-
-    renderer.start();
     for(let i = 0; i < 20; i++) {
-        renderer.draw();
+        viewer.draw(0)
         await sleep(5000);
     }
 
