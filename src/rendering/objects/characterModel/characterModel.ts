@@ -20,12 +20,6 @@ import { IPseudoRandomNumberGenerator } from "@app/math";
 
 const DEFAULT_GEOSET_IDS = [1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 2, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 
-interface TextureSectionTextureData {
-    priority: number;
-    slot: EquipmentSlot;
-    textures: [ITexture, ITexture, ITexture]
-}
-
 export class CharacterModel<TParentEvent extends string = never> extends M2Model<TParentEvent | CharacterModelEvents> implements ICharacterModel<TParentEvent> {
     modelId: RecordIdentifier;
     race: number;
