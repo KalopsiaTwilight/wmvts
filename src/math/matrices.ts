@@ -276,22 +276,22 @@ export namespace Float44 {
             return dest;
         }
 
-        input[0] = dest[0];
-        input[1] = dest[4];
-        input[2] = dest[8];
-        input[3] = dest[12];
-        input[4] = dest[1];
-        input[5] = dest[5];
-        input[6] = dest[9];
-        input[7] = dest[13];
-        input[8] = dest[2];
-        input[9] = dest[6];
-        input[10] = dest[10];
-        input[11] = dest[14];
-        input[12] = dest[3];
-        input[13] = dest[7];
-        input[14] = dest[11];
-        input[15] = dest[15];
+        dest[0] = input[0];
+        dest[1] = input[4];
+        dest[2] = input[8];
+        dest[3] = input[12];
+        dest[4] = input[1];
+        dest[5] = input[5];
+        dest[6] = input[9];
+        dest[7] = input[13];
+        dest[8] = input[2];
+        dest[9] = input[6];
+        dest[10] = input[10];
+        dest[11] = input[14];
+        dest[12] = input[3];
+        dest[13] = input[7];
+        dest[14] = input[11];
+        dest[15] = input[15];
         return input;
     }
 
