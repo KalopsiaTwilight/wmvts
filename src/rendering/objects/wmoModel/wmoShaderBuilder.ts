@@ -100,6 +100,7 @@ void main() {
 `;
     }
 
+    // TODO: Specular calculation is based on lighting but lighting is an engine property
     private static getFragProgramText(renderer: IRenderer, ps: WMOPixelShader) {
         return `
 precision mediump float;
@@ -129,11 +130,23 @@ ${renderer.getLightingFunction()}
 
 vec3 calculateSpecular(float texAlpha) {
     vec3 normal = normalize(v_normal);
+
+    vec3 sunDir = vec3(0.);
+    vec3 sunColor = vec3(0.);
+
+    if (u_applyInteriorLighting) {
+        sunDir = -u_interiorDirectColorDir;
+        sunColor = u_interiorDirectColor.rgb;
+    } else {
+        sunDir = u_exteriorDirectColorDir;
+        sunColor = u_exteriorDirectColor.rgb;
+    }
+
     vec3 eyeDir = normalize(u_cameraPos - v_position.xyz);
-    vec3 halfDir = normalize(u_lightDir + eyeDir);
-    float attenuationDir = saturate(dot(normal, u_lightDir));
-    float spec = (1.25 * pow(saturate(dot(normal, halfDir)), 8.0));
-    vec3 specTerm = ((((vec3(mix(pow((1.0 - saturate(dot(u_lightDir, halfDir))), 5.0), 1.0, texAlpha)) * spec) * u_lightColor.rgb) * attenuationDir));
+    vec3 halfDir = normalize(sunDir + eyeDir);
+    float attenuationDir = saturate(dot(normal, sunDir));
+    float spec = 1.25 * pow(saturate(dot(normal, halfDir)), 8.0);
+    vec3 specTerm = vec3(mix(pow((1.0 - saturate(dot(sunDir, halfDir))), 5.0), 1.0, texAlpha)) * spec * sunColor.rgb * attenuationDir;
     return specTerm;
 }
 
@@ -158,14 +171,8 @@ void main() {
 
     ${this.getPixelShaderText(ps)}
 
-    if (!u_unlit) {
-        outputColor = vec4(light(v_normal, materialColor), 1.0);
-    } else {
-        outputColor = vec4(materialColor, 1.0);
-    }
-    outputColor += vec4(specular, 0.0);
-    outputColor += vec4(emissiveColor, 0);
-
+    outputColor.rgb = light(!u_unlit, materialColor, v_normal, v_color1.rgb, specular, emissiveColor);
+    
     gl_FragColor = outputColor;
 }
 `

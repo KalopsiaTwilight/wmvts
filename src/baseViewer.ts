@@ -1,10 +1,10 @@
 import { IDataLoader, IProgressReporter, ErrorHandlerFn, ICamera  } from "./interfaces";
 import { 
-    IRenderObject, WebGlGraphics, IWMOModel, IM2Model, ICharacterModel, IItemModel, 
-    ITextureVariantModel, BrowserRenderer, IObjectFactory, IDataManager, IObjectIdentifier, 
+    IRenderObject, IWMOModel, IM2Model, ICharacterModel, IItemModel, 
+    ITextureVariantModel, IObjectFactory, IDataManager, IObjectIdentifier, 
     IRenderer 
 } from "./rendering";
-import { Camera, FirstPersonCamera, OrbitalCamera, RotatingCamera } from "./cameras";
+import { Camera, RotatingCamera } from "./cameras";
 import { Float4, Float3 } from "./math";
 import { FileIdentifier, RecordIdentifier } from "./metadata";
 import { DefaultIoCContainer, RngFactory } from "./rendering/iocContainer";
@@ -18,9 +18,10 @@ export interface IBaseWoWModelViewerOptions {
     scene?: {
         backgroundColor?: Float4,
         cameraFov?: number;
-        lightDirection?: Float3;
-        lightColor?: Float4;
-        ambientColor?: Float4;
+        sunDirection?: Float3;
+        interiorSunDirection?: Float3;
+        exteriorAmbientColor?: Float4;
+        exteriorDirectColor?: Float4;
         oceanCloseColor?: Float4;
         oceanFarColor?: Float4;
         riverCloseColor?: Float4;
@@ -124,20 +125,26 @@ export abstract class BaseWoWModelViewer {
         this.renderer.resize(this.width, this.height);
     }
 
-    useLightDirection(newLightDir: Float3) {
-        Float3.copy(Float3.normalize(newLightDir), this.renderer.lightDir);
-    }
-
-    useLightColor(lightColor: Float4) {
-        Float4.copy(lightColor, this.renderer.lightColor);
-    }
-    
-    useAmbientColor(ambientColor: Float4) {
-        Float4.copy(ambientColor, this.renderer.ambientColor);
-    }
-
     useClearColor(color: Float4) {
         Float4.copy(color, this.renderer.clearColor);
+    }
+
+    useSunDirection(dir: Float3) {
+        Float3.copy(dir, this.renderer.sunDir);
+        Float3.normalize(dir, this.renderer.exteriorDirectColorDir);
+    }
+
+    useExteriorAmbientColor(color: Float4) {
+        Float4.copy(color, this.renderer.exteriorAmbientColor);
+    }
+
+    useExteriorDirectColor(color: Float4) {
+        Float4.copy(color, this.renderer.exteriorDirectColor);
+    }
+
+    useInteriorSunDirection(dir: Float3) {
+        Float3.copy(dir, this.renderer.interiorSunDir);
+        Float3.normalize(dir, this.renderer.interiorDirectColorDir);
     }
 
     useOceanCloseColor(color: Float4) {

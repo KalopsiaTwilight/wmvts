@@ -81,12 +81,13 @@ export class BrowserWoWModelViewer extends BaseWoWModelViewer {
             progress: this.options.progressReporter,
             container: this.viewerContainer,
             errorHandler: this.options.onError,
-            ambientColor: this.options.scene?.ambientColor,
             cacheTtl: this.options.misc?.cacheTtl,
             cameraFov: this.options.scene?.cameraFov,
             clearColor: this.options.scene?.backgroundColor,
-            lightColor: this.options.scene?.lightColor,
-            lightDirection: this.options.scene?.lightDirection
+            interiorSunDir: this.options.scene?.interiorSunDirection,
+            sunDir: this.options.scene?.sunDirection,
+            exteriorAmbientColor: this.options.scene?.exteriorAmbientColor,
+            exteriorDirectColor: this.options.scene?.exteriorDirectColor,
         });
         this.resize(this.width, this.height);
         this.renderer.sceneCamera = this.options.scene?.camera ?? new Camera();

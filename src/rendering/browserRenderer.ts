@@ -1,9 +1,8 @@
-import {  Float44 } from "@app/math";
-import { ErrorType, IDataLoader } from "@app/interfaces";
+import { ErrorType } from "@app/interfaces";
 
-import { IBaseRendererOptions, IDataManager, IObjectIdentifier, IRenderer } from "./interfaces";
+import { IBaseRendererOptions, IRenderer } from "./interfaces";
 import { BaseRenderer } from "./baseRenderer";
-import { IGraphics, ITexture, ITextureOptions } from "./graphics";
+import {  ITexture, ITextureOptions } from "./graphics";
 import { FileIdentifier } from "@app/metadata";
 
 const ImgProcessingErrorType: ErrorType = "imgProcessing";

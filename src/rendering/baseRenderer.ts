@@ -9,8 +9,7 @@ import {
     RenderMaterial
 } from "./graphics";
 import { WebGlCache } from "./webglCache";
-import { IBaseRendererOptions, IDataManager, IIoCContainer, IObjectFactory, IObjectIdentifier, IRenderer, RendererEvents } from "./interfaces";
-import { DefaultIoCContainer } from "./iocContainer";
+import { IBaseRendererOptions, IDataManager, IObjectIdentifier, IRenderer, RendererEvents } from "./interfaces";
 
 const RenderingErrorType: ErrorType = "rendering"
 
@@ -30,10 +29,17 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
     doodadRenderDistance: number;
     debugPortals: boolean;
 
-    // Light settings
-    ambientColor: Float4;
-    lightColor: Float4;
-    lightDir: Float3;
+    // Light Settings
+    sunDir: Float3;
+    exteriorAmbientColor: Float4;
+    exteriorDirectColor: Float4;
+    exteriorDirectColorDir: Float3;
+
+    interiorSunDir: Float3;
+    personalInteriorSunDir: Float4;
+    interiorAmbientColor: Float4;
+    interiorDirectColor: Float4;
+    interiorDirectColorDir: Float3;
 
     // Water settings
     oceanCloseColor: Float4;
@@ -97,14 +103,23 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
 
         this.clearColor = options.clearColor ? options.clearColor : Float4.create(0.1, 0.1, 0.1, 1);
         this.fov = options.cameraFov ? options.cameraFov : 60;
-        this.ambientColor = options.ambientColor ? options.ambientColor : Float4.create(1 / 3, 1 / 3, 1 / 3, 1);
-        this.lightColor = options.lightColor ? options.lightColor : Float4.one()
-        this.lightDir = Float3.normalize(options.lightDirection ? options.lightDirection : [0, 0, 1]);
 
-        this.oceanCloseColor = options.oceanCloseColor ? options.oceanCloseColor : Float4.create(17 / 255, 75 / 255, 89 / 255, 1);
-        this.oceanFarColor = options.oceanFarColor ? options.oceanFarColor : Float4.create(0, 29 / 255, 41 / 255, 1);
-        this.riverCloseColor = options.riverCloseColor ? options.riverCloseColor : Float4.create(41 / 255, 76 / 255, 81 / 255, 1);
-        this.riverFarColor = options.riverFarColor ? options.riverFarColor : Float4.create(26 / 255, 46 / 255, 51 / 255, 1),
+        // default lighting settings
+        this.sunDir = options.sunDir ? options.sunDir : Float3.create(-0.30822, -0.30822, -0.9);
+        this.exteriorAmbientColor = options.exteriorAmbientColor ? options.exteriorAmbientColor : Float4.create(127/255, 149/255, 170/255, 1); // #7F95AA  // #36586C for night
+        this.exteriorDirectColor = options.exteriorDirectColor ? options.exteriorDirectColor : Float4.create(106/255, 86/255, 66/255, 1); // #6A5642 // #244664 for night
+        this.exteriorDirectColorDir = Float3.normalize(this.sunDir);
+
+        this.interiorSunDir = options.interiorSunDir ? options.interiorSunDir : Float3.create(-0.30822, -0.30822, -0.9);
+        this.personalInteriorSunDir = Float4.zero();
+        this.interiorAmbientColor = Float4.zero();
+        this.interiorDirectColor = Float4.zero();
+        this.interiorDirectColorDir = Float3.normalize(this.interiorSunDir);
+
+        this.oceanCloseColor = options.oceanCloseColor ? options.oceanCloseColor : Float4.create(17 / 255, 75 / 255, 89 / 255, 1); // #114B59
+        this.oceanFarColor = options.oceanFarColor ? options.oceanFarColor : Float4.create(0, 29 / 255, 41 / 255, 1); // #001D29
+        this.riverCloseColor = options.riverCloseColor ? options.riverCloseColor : Float4.create(41 / 255, 76 / 255, 81 / 255, 1); // #294C51
+        this.riverFarColor = options.riverFarColor ? options.riverFarColor : Float4.create(26 / 255, 46 / 255, 51 / 255, 1), // #1A2E33
             this.waterAlphas = options.waterAlphas ? options.waterAlphas : Float4.create(0.3, 0.8, 0.5, 1)
 
         // Set opts to defaults
@@ -128,9 +143,17 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
         this.errorHandler = null;
         this.sceneCamera = null;
 
-        this.ambientColor = null;
-        this.lightColor = null;
-        this.lightDir = null;
+        // Light settings
+        this.sunDir = null;
+        this.exteriorAmbientColor = null;
+        this.exteriorDirectColor = null;
+        this.exteriorDirectColorDir = null;
+
+        this.interiorSunDir = null;
+        this.personalInteriorSunDir = null;
+        this.interiorAmbientColor = null;
+        this.interiorDirectColor = null;
+        this.exteriorDirectColorDir = null;
         
         // Water settings
         this.oceanCloseColor = null;
@@ -376,37 +399,94 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
             "u_viewMatrix": this.viewMatrix,
             "u_projectionMatrix": this.projectionMatrix,
 
-            "u_ambientColor": this.ambientColor,
-            "u_lightColor": this.lightColor,
-            "u_lightDir": this.lightDir,
+            // TODO: Implement interior lighting
+            "u_applyInteriorLighting": false,
+            "u_interiorAmbientColor": this.interiorAmbientColor,
+            "u_interiorDirectColor": this.interiorDirectColor,
+            "u_interiorDirectColorDir": this.interiorDirectColorDir,
+            "u_personalInteriorSunDir": this.personalInteriorSunDir,
+
+            "u_exteriorAmbientColor": this.exteriorAmbientColor,
+            "u_exteriorDirectColor": this.exteriorDirectColor,
+            "u_exteriorDirectColorDir": this.exteriorDirectColorDir,
 
             "u_oceanCloseColor": this.oceanCloseColor,
             "u_oceanFarColor": this.oceanFarColor,
             "u_riverCloseColor": this.riverCloseColor,
             "u_riverFarColor": this.riverFarColor,
-            "u_waterAlphas": this.waterAlphas
+            "u_waterAlphas": this.waterAlphas,
         });
+
         return material;
     }
 
     getLightingUniforms() {
         return `
-uniform vec4 u_ambientColor;
-uniform vec4 u_lightColor;
-uniform vec3 u_lightDir;        
+uniform bool u_applyInteriorLighting;
+uniform vec4 u_interiorAmbientColor;
+uniform vec4 u_interiorDirectColor;
+uniform vec3 u_interiorDirectColorDir;
+uniform vec4 u_personalInteriorSunDir;
+
+uniform vec4 u_exteriorAmbientColor; 
+uniform vec4 u_exteriorDirectColor;
+uniform vec3 u_exteriorDirectColorDir;     
 `;
     }
 
     getLightingFunction() {
         return `
-vec3 light(vec3 normal, vec3 color) {
-    // Simple ambient + diffuse lighting
-    // color = (ambient + diffuse) * objectColor 
-    vec4 lightColor = u_ambientColor;
-    float diffStrength = max(0.0, dot(v_normal, u_lightDir));
-    lightColor += u_lightColor * diffStrength;
-    lightColor = clamp(lightColor, vec4(0,0,0,0), vec4(1,1,1,1));
-    return color * lightColor.rgb;
+vec3 calcAmbientLight(vec3 ambient, vec3 precomputedLight, float normalDotLight) {
+    vec3 lightColor = vec3(0.0, 0.0, 0.0);
+    vec3 ambientLight = ambient.rgb + precomputedLight;
+    vec3 skyColor = ambientLight * 1.1;
+    vec3 groundColor = ambientLight * 0.7;
+    lightColor = mix(groundColor, skyColor, 0.5 + 0.5 * normalDotLight);
+    return lightColor;
+}
+
+vec3 light(
+    bool applyLight,
+    vec3 materialColor,
+    vec3 vNormal,
+    vec3 preComputedLight,
+    vec3 specular,
+    vec3 emissive
+) {
+    vec3 result = materialColor;
+    if (applyLight) {
+        vec3 lightColor = vec3(0.0, 0.0, 0.0);
+        vec3 diffuseLight = vec3(0.0, 0.0, 0.0);
+        vec3 normal = normalize(vNormal);
+
+        if (u_applyInteriorLighting) {
+            vec3 interiorSunDir = mix(u_interiorDirectColorDir, u_personalInteriorSunDir.xyz,u_personalInteriorSunDir.w);
+            float normalDotLight = clamp(dot(normal, interiorSunDir), 0.0, 1.0);
+
+            lightColor = calcAmbientLight(
+                u_interiorAmbientColor.rgb,
+                preComputedLight,
+                normalDotLight
+            );
+            diffuseLight = u_interiorDirectColor.xyz * normalDotLight;
+        }
+        else {
+            float normalDotLight = clamp(dot(normal, normalize(-u_exteriorDirectColorDir)), 0.0, 1.0);
+
+            lightColor = calcAmbientLight(
+                u_exteriorAmbientColor.rgb,
+                preComputedLight,
+                normalDotLight
+            );
+            diffuseLight = u_exteriorDirectColor.xyz * normalDotLight;
+        }
+
+        vec3 gammaDiffuseTerm = materialColor * (lightColor + diffuseLight);
+        vec3 emmisiveTerm = emissive;
+        result = gammaDiffuseTerm + emmisiveTerm;
+    }
+
+    return result + specular;
 }        
 `;
     }

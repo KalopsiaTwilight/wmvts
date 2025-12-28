@@ -229,11 +229,7 @@ ${this.getPixelShaderText(ps)}
         outputColor.a = discardAlpha * v_color.a;
     }
 
-    outputColor.rgb = materialColor;
-    if (!u_unlit) {
-        outputColor.rgb = light(v_normal, outputColor.rgb);
-    }
-    outputColor += vec4(specular, 0.0);
+    outputColor.rgb = light(!u_unlit, materialColor, v_normal, vec3(0.), specular, vec3(0.));
     
     gl_FragColor = outputColor;
 }

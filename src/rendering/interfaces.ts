@@ -22,9 +22,10 @@ export interface IBaseRendererOptions {
 
     clearColor?: Float4;
 
-    lightDirection?: Float3;
-    lightColor?: Float4;
-    ambientColor?: Float4;
+    sunDir: Float3;
+    exteriorAmbientColor: Float4;
+    exteriorDirectColor: Float4;
+    interiorSunDir: Float3;
 
     oceanCloseColor?: Float4;
     oceanFarColor?: Float4;
@@ -49,9 +50,16 @@ export interface IRenderer<TParentEvent extends string = never> extends IDisposa
     timeElapsed: number;
     
     // Light settings
-    ambientColor: Float4;
-    lightColor: Float4;
-    lightDir: Float3;
+    sunDir: Float3;
+    exteriorAmbientColor: Float4;
+    exteriorDirectColor: Float4;
+    exteriorDirectColorDir: Float3;
+
+    interiorSunDir: Float3;
+    personalInteriorSunDir: Float4;
+    interiorAmbientColor: Float4;
+    interiorDirectColor: Float4;
+    interiorDirectColorDir: Float3;
 
     // Water settings
     oceanCloseColor: Float4;

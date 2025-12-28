@@ -65,9 +65,8 @@ const viewer = new BrowserWoWModelViewer({
     },
     scene: {
         cameraFov: 90,
-        ambientColor: [0.3, 0.3, 0.3, 1],
-        lightDirection: [0, 1, 1],
-        lightColor: [1, 1, 1, 1]
+        exteriorAmbientColor: [1,1,1,1],
+        exteriorDirectColor: [1, 0, 0, 1]
     },
     misc: {
         cacheTtl: 1000
@@ -76,9 +75,7 @@ const viewer = new BrowserWoWModelViewer({
 
 // Scene settings can also be changed later:
 setTimeout(() => {
-    viewer.useAmbientColor([0.3, 0.1, 0.1, 1]);
-    viewer.useLightColor([0, 1, 0, 1]);
-    viewer.useLightDirection([25, 0, 0]);
+    viewer.useExteriorDirectColor([0,1,0,1]);
     viewer.useClearColor([0, 0, 1, 0.2]);
     viewer.useCameraFov(70);
 }, 10000);
