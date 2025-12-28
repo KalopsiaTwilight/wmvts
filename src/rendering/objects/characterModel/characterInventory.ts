@@ -105,9 +105,10 @@ export class CharacterInventory extends Disposable implements IDisposable {
         model1.once("componentsLoaded", (model: IItemModel) => {
             this.parent.once("modelDataLoaded", () => {
                 const attachments = this.getAttachmentIdsForSlot(slot, model.itemMetadata.inventoryType);
-
-                const attachment1 = this.parent.getAttachment(attachments[0])
-                this.parent.addAttachedModel(model.component1, attachment1);
+                if (attachments.length > 0) {
+                    const attachment1 = this.parent.getAttachment(attachments[0])
+                    this.parent.addAttachedModel(model.component1, attachment1);
+                }
 
                 if (attachments.length > 1 && model.component2) {
                     const attachment2 = this.parent.getAttachment(attachments[1])
