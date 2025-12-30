@@ -360,6 +360,9 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
         this.attachedModels.push({
             model, attachment, attachmentMatrix: Float44.identity()
         })
+        model.once("disposed", (model) => {
+            this.attachedModels = this.attachedModels.filter(x => x.model === model);
+        })
     }
 
     private updateBonePositions() {
