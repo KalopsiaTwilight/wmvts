@@ -361,7 +361,7 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
             model, attachment, attachmentMatrix: Float44.identity()
         })
         model.once("disposed", (model) => {
-            this.attachedModels = this.attachedModels.filter(x => x.model === model);
+            this.attachedModels = this.attachedModels.filter(x => x.model !== model);
         })
     }
 
