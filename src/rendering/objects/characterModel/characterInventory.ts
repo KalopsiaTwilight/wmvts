@@ -109,9 +109,10 @@ export class CharacterInventory extends Disposable implements IDisposable {
                 }
 
                 const attachments = this.getAttachmentIdsForSlot(slot, model.itemMetadata.inventoryType);
-                if (attachments.length > 0) {
+                const component1 = slot === EquipmentSlot.Back ? model.component2 : model.component1;
+                if (attachments.length > 0 && component1) {
                     const attachment1 = this.parent.getAttachment(attachments[0])
-                    this.parent.addAttachedModel(model.component1, attachment1);
+                    this.parent.addAttachedModel(component1, attachment1);
                 }
 
                 if (attachments.length > 1 && model.component2) {
@@ -139,10 +140,12 @@ export class CharacterInventory extends Disposable implements IDisposable {
                     }
 
                     const attachments = this.getAttachmentIdsForSlot(slot, model.itemMetadata.inventoryType);
-                    if (attachments.length > 0) {
+                    const component1 = slot === EquipmentSlot.Back ? model.component2 : model.component1;
+                    if (attachments.length > 0 && component1) {
                         const attachment1 = this.parent.getAttachment(attachments[0])
-                        this.parent.addAttachedModel(model.component1, attachment1);
+                        this.parent.addAttachedModel(component1, attachment1);
                     }
+
                     if (attachments.length > 1 && model.component2) {
                         const attachment2 = this.parent.getAttachment(attachments[1])
                         this.parent.addAttachedModel(model.component2, attachment2);
