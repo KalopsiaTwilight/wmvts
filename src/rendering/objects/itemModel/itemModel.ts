@@ -299,6 +299,9 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
         }
 
         this.processCallbacks("componentsLoaded");
+        if (this.isLoaded) {
+            this.processCallbacks("loaded");
+        }
     }
 
     private onTexturesLoaded() {
@@ -307,5 +310,8 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
         }
         this.texturesLoaded = true;
         this.processCallbacks("sectionTexturesLoaded");
+        if (this.isLoaded) {
+            this.processCallbacks("loaded");
+        }
     }
 }
