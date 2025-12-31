@@ -287,6 +287,8 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
         this.sceneObjects = this.sceneObjects.filter((x) => x != object);
         if (dispose) {
             object.dispose();
+        } else {
+            object.detachFromRenderer();
         }
         this.recalculateSceneBounds();
     }

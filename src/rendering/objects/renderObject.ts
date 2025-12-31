@@ -14,6 +14,10 @@ export abstract class RenderObject<TEvent extends string = never> extends Dispos
         this.renderer = engine;
     }
 
+    detachFromRenderer(): void {
+        this.renderer = null;
+    }
+
     abstract update(deltaTime: number): void;
     abstract draw(): void;
     abstract get isLoaded(): boolean;

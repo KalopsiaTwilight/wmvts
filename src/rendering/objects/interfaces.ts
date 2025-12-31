@@ -10,6 +10,7 @@ export interface IRenderObject<TParentEvent extends string = never> extends IDis
     renderer?: IRenderer;
 
     attachToRenderer(renderer: IRenderer): void;
+    detachFromRenderer(): void;
     update(deltaTime: number): void;
     draw(): void;
 
