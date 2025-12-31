@@ -128,6 +128,19 @@ export class CharacterInventory extends Disposable implements IDisposable {
             this.parent.updateGeosets();
         });
 
+        model1.once("metadataLoaded", (model) => {
+            const inventoryType = model.itemMetadata.inventoryType;
+            if (slot === EquipmentSlot.MainHand) {
+                this.parent.setHandAnimation(true, true);
+            }
+            if (slot === EquipmentSlot.OffHand) {
+                this.parent.setHandAnimation(false, true);
+            }
+            if (slot === EquipmentSlot.Ranged && inventoryType !== InventoryType.Quiver) {
+                this.parent.setHandAnimation(false, true);
+            }
+        });
+
         let model2: IItemModel;
         if (displayId2) {
             model2 = this.objectFactory.createItemModel(displayId2);
@@ -167,12 +180,6 @@ export class CharacterInventory extends Disposable implements IDisposable {
             return [model1, model2];
         }
 
-        if (slot === EquipmentSlot.MainHand) {
-            this.parent.setHandAnimation(true, true);
-        }
-        if (slot === EquipmentSlot.OffHand) {
-            this.parent.setHandAnimation(false, true);
-        }
 
         return model1;
     }
@@ -181,6 +188,7 @@ export class CharacterInventory extends Disposable implements IDisposable {
         if (this.isDisposing) {
             return;
         }
+        const inventoryType = this.inventoryData[slot].model1.inventoryType;
         this.unloadItem(slot);
         this.parent.updateGeosets();
         this.parent.reloadSkinTextures();
@@ -188,6 +196,9 @@ export class CharacterInventory extends Disposable implements IDisposable {
             this.parent.setHandAnimation(true, false);
         }
         if (slot === EquipmentSlot.OffHand) {
+            this.parent.setHandAnimation(false, false);
+        }
+        if (slot === EquipmentSlot.Ranged && inventoryType !== InventoryType.Quiver) {
             this.parent.setHandAnimation(false, false);
         }
     }
