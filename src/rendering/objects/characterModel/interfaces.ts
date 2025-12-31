@@ -9,6 +9,8 @@ export interface ICharacterModel<TParentEvent extends string = never> extends IM
     gender: number;
     class: number;
 
+    setHandAnimation(mainHand: boolean, closed: boolean): void;
+
     setCustomizationChoice(optionId: number, choiceId: number): void;
 
     equipItem(slot: EquipmentSlot, displayId1: number): IItemModel;

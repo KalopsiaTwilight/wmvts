@@ -124,6 +124,13 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
         this.animationState = null;
         this.textureObjects = null;
         this.textureUnitData = null;
+        if (this.boneData) {
+            for(const data of this.boneData) {
+                data.boneOffsetMatrix = null;
+                data.positionMatrix = null;
+                data.animationState = null;
+            }
+        }
         this.boneData = null;
         this.attachedToModel = null;
         this.modelViewMatrix = null;
@@ -459,15 +466,16 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
         if (0x280 & bone.flags) {
             Float44.translate(animationMatrix, bone.pivot, animationMatrix);
 
-            if (this.animationState.hasAnimatedValuesForTrack(bone.translation)) {
-                const translation = this.animationState.getFloat3TrackValue(bone.translation, Float3.zero());
+            const animationState = data.animationState ? data.animationState : this.animationState;
+            if (animationState.hasAnimatedValuesForTrack(bone.translation)) {
+                const translation = animationState.getFloat3TrackValue(bone.translation, Float3.zero());
                 Float44.translate(animationMatrix, translation, animationMatrix);
 
                 isAnimated = true;
             }
 
-            if (this.animationState.hasAnimatedValuesForTrack(bone.rotation)) {
-                const rotationQuat = this.animationState.getFloat4TrackValue(bone.rotation, Float4.identity());
+            if (animationState.hasAnimatedValuesForTrack(bone.rotation)) {
+                const rotationQuat = animationState.getFloat4TrackValue(bone.rotation, Float4.identity());
                 rotationQuat[0] = -rotationQuat[0];
                 rotationQuat[1] = -rotationQuat[1];
                 rotationQuat[2] = -rotationQuat[2];
@@ -476,8 +484,8 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
                 isAnimated = true;
             }
 
-            if (this.animationState.hasAnimatedValuesForTrack(bone.scale)) {
-                const scale = this.animationState.getFloat3TrackValue(bone.scale, Float3.one());
+            if (animationState.hasAnimatedValuesForTrack(bone.scale)) {
+                const scale = animationState.getFloat3TrackValue(bone.scale, Float3.one());
                 Float44.scale(animationMatrix, scale, animationMatrix);
 
                 isAnimated = true;

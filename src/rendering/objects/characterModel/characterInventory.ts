@@ -166,6 +166,14 @@ export class CharacterInventory extends Disposable implements IDisposable {
         if (displayId2) {
             return [model1, model2];
         }
+
+        if (slot === EquipmentSlot.MainHand) {
+            this.parent.setHandAnimation(true, true);
+        }
+        if (slot === EquipmentSlot.OffHand) {
+            this.parent.setHandAnimation(false, true);
+        }
+
         return model1;
     }
 
@@ -176,6 +184,12 @@ export class CharacterInventory extends Disposable implements IDisposable {
         this.unloadItem(slot);
         this.parent.updateGeosets();
         this.parent.reloadSkinTextures();
+        if (slot === EquipmentSlot.MainHand) {
+            this.parent.setHandAnimation(true, false);
+        }
+        if (slot === EquipmentSlot.OffHand) {
+            this.parent.setHandAnimation(false, false);
+        }
     }
 
     update(deltaTime: number) {

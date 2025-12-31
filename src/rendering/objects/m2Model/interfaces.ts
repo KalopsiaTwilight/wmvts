@@ -4,6 +4,7 @@ import { FileIdentifier } from "@app/metadata";
 import { ITexture } from "@app/rendering/graphics";
 
 import { IWorldPositionedObject } from "../interfaces";
+import { AnimationState } from "./animatedValue";
 
 export interface IBoneData {
     hasUpdatedThisTick: boolean;
@@ -11,6 +12,7 @@ export interface IBoneData {
     crc: number;
     boneOffsetMatrix: Float44;
     positionMatrix: Float44;
+    animationState?: AnimationState
 }
 
 export interface ISkinnedObject {

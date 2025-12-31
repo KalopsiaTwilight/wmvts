@@ -10,13 +10,15 @@ import { IDataManager, IObjectFactory, IRenderer } from "@app/rendering/interfac
 import { ITexturePickingStrategy } from "@app/rendering/strategies";
 
 import { IItemModel } from "../itemModel";
-import { IM2Model, M2Model } from "../m2Model";
+import { AnimationState, IM2Model, M2Model } from "../m2Model";
 
 import { SkinLayerTextureCombiner } from "./skinLayerTextureCombiner";
 import { CharacterModelEvents, EquipmentSlot, GeoSet, ICharacterModel, TextureSection } from "./interfaces"
 import { CharacterInventory } from "./characterInventory";
 import { IPseudoRandomNumberGenerator } from "@app/math";
 
+const OFFHAND_BONE_IDS = [13, 14, 15, 16, 17, 88, 89];
+const MAINHAND_BONE_IDS = [8, 9, 10, 11, 12, 86, 87];
 
 const DEFAULT_GEOSET_IDS = [1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 2, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 
@@ -206,6 +208,22 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
         this.once("texturesLoaded", () => { 
             this.onGeosetUpdate();
         });
+    }
+
+    setHandAnimation(mainHand: boolean, closed: boolean) {
+        this.once("modelDataLoaded", () => {
+            const boneIds = mainHand ? MAINHAND_BONE_IDS : OFFHAND_BONE_IDS;
+            for(const boneId of boneIds) {
+                const bone = this.getBoneById(boneId);
+                if (!bone) {
+                    continue;
+                }
+                if (!bone.animationState) {
+                    bone.animationState = new AnimationState(this.modelData.animations, this.modelData.globalLoops);
+                }
+                bone.animationState.useAnimation(closed ? 15 : 0);
+            }
+        })
     }
 
     private onCharacterMetadataLoaded(data: CharacterMetadata | null) {
