@@ -211,10 +211,10 @@ export namespace Float4 {
         const cosW = Math.cos(yaw/2);
         const sinW = Math.sin(yaw/2);
 
-        dest[0] = cosU*cosV*cosW + sinU*sinV*sinW;
-        dest[1] = sinU*cosV*cosW - cosU*sinV*sinW;
-        dest[2] = cosU*sinV*cosW + sinU*cosV*sinW;
-        dest[3] = cosU*cosV*sinW - sinU*sinV*cosW;
+        dest[0] = sinU*cosV*cosW - cosU*sinV*sinW;
+        dest[1] = cosU*sinV*cosW + sinU*cosV*sinW;
+        dest[2] = cosU*cosV*sinW - sinU*sinV*cosW;
+        dest[3] = cosU*cosV*cosW + sinU*sinV*sinW;
 
         return dest;
     }
