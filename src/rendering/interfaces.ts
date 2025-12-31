@@ -77,7 +77,7 @@ export interface IRenderer<TParentEvent extends string = never> extends IDisposa
     debugPortals: boolean;
     
     addSceneObject(object: IRenderObject): void;
-    removeSceneObject(object: IRenderObject): void;
+    removeSceneObject(object: IRenderObject, dispose?: boolean): void;
 
     resize(width: number, height: number): void;
     switchCamera(newCamera: ICamera): void;

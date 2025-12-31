@@ -100,8 +100,8 @@ export abstract class BaseWoWModelViewer {
         this.renderer.addSceneObject(object);
     }
 
-    removeSceneObject(object: IRenderObject) {
-        this.renderer.removeSceneObject(object);
+    removeSceneObject(object: IRenderObject, dispose = true) {
+        this.renderer.removeSceneObject(object, dispose);
     }
 
     useStaticCamera(resizeOnSceneExpand = true): Camera {

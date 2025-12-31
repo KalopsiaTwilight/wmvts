@@ -283,9 +283,11 @@ export abstract class BaseRenderer<TParentEvent extends string = never> extends 
         this.sceneObjects.push(object);
     }
 
-    removeSceneObject(object: IRenderObject) {
+    removeSceneObject(object: IRenderObject, dispose: boolean = true) {
         this.sceneObjects = this.sceneObjects.filter((x) => x != object);
-        object.dispose();
+        if (dispose) {
+            object.dispose();
+        }
         this.recalculateSceneBounds();
     }
 
