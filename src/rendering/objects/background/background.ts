@@ -34,6 +34,10 @@ export class Background extends RenderObject implements IBackground {
 
     attachToRenderer(renderer: IRenderer): void {
         this.renderer = renderer;
+
+        if (this.isLoaded) {
+            return;
+        }
         
         this.program = this.renderer.getShaderProgram(this, "BG", vsProgramText, fsProgramText);
         this.dataBuffers = this.renderer.getDataBuffers(this, "BG-RECT", (graphics) => {

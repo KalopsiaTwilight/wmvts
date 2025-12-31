@@ -43,9 +43,11 @@ export class TextureVariantModel<TParentEvent extends string = never> extends M2
     override attachToRenderer(engine: IRenderer): void {
         super.attachToRenderer(engine);
 
-        this.once("modelDataLoaded", () => {
-            this.dataManager.getTextureVariationsMetadata(this.fileId).then(this.onTextureVariationsLoaded.bind(this));
-        })
+        if (!this.isLoaded) {
+            this.once("modelDataLoaded", () => {
+                this.dataManager.getTextureVariationsMetadata(this.fileId).then(this.onTextureVariationsLoaded.bind(this));
+            })
+        }
     }
 
     override get isLoaded(): boolean {

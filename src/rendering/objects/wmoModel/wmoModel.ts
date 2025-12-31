@@ -102,7 +102,7 @@ export class WMOModel<TParentEvent extends string = never> extends WorldPosition
         super.attachToRenderer(env);
         this.portalShader = this.renderer.getShaderProgram(this, "WMOPortal", portalVertexShaderProgramText, portalFragmentShaderProgramText);
 
-        if (this.fileId) {
+        if (this.fileId && !this.isLoaded) {
             this.dataManager.getWMOModelFile(this.fileId).then(this.onModelLoaded.bind(this))
         }
     }

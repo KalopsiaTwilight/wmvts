@@ -48,7 +48,7 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
     
     override attachToRenderer(renderer: IRenderer): void {
         super.attachToRenderer(renderer);
-        if (this.displayInfoId) {
+        if (this.displayInfoId && !this.isLoaded) {
             this.dataManager.getItemMetadata(this.displayInfoId).then(this.onItemMetadataLoaded.bind(this));
         }
     }

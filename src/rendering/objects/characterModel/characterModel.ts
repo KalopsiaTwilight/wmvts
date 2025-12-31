@@ -52,7 +52,7 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
     
     override attachToRenderer(renderer: IRenderer): void {
         super.attachToRenderer(renderer);
-        if (this.modelId) {
+        if (this.modelId && !this.isLoaded) {
             this.dataManager.getCharacterMetadata(this.modelId).then(this.onCharacterMetadataLoaded.bind(this));
         }
     }

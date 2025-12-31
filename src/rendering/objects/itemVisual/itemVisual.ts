@@ -33,7 +33,7 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
 
     override attachToRenderer(renderer: IRenderer): void {
         super.attachToRenderer(renderer);
-        if (this.itemVisualId) {
+        if (this.itemVisualId && !this.isLoaded) {
             this.dataManager.getItemVisualMetadata(this.itemVisualId).then(this.onItemVisualMetadataLoaded.bind(this));
         }
     }

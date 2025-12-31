@@ -142,7 +142,7 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
         super.attachToRenderer(renderer);
 
         this.bonePositionTexture = this.renderer.graphics.createDataTexture(4);
-        if (this.fileId) {
+        if (this.fileId && !this.isLoaded) {
             this.dataManager.getM2ModelFile(this.fileId).then(this.onModelLoaded.bind(this));
         }
     }
