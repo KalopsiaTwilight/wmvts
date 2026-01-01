@@ -1,6 +1,9 @@
 import { BrowserWoWModelViewer, WoWModelServerDataProvider, SimpleProgressReporter, FirstPersonCamera, EquipmentSlot, IM2Model } from "../../src"
 
-// Create a simple document layout, you can ignore this stuff for reference. This is mostly used for testing the viewer in various layout configurations.
+// This example shows the basic configuration / usage for the viewer in a browser context. 
+
+// First we create a simple document layout, you can ignore this stuff for reference. 
+// This is mostly used for testing the viewer in various layout configurations.
 
 // Container Height set:
 
@@ -64,19 +67,20 @@ const viewer = new BrowserWoWModelViewer({
         resizeToContainer: true,
     },
     scene: {
+        // It is recommended to use a non-transparent background color or Background object.
+        // Transparent backgrounds can cause strange artifacts to occur for particle effects with transparency.
+        backgroundColor: [0.1, 0.1, 0.1, 1],
         cameraFov: 90,
-        exteriorAmbientColor: [1,1,1,1],
-        exteriorDirectColor: [1, 0, 0, 1]
-    },
-    misc: {
-        cacheTtl: 1000
+        // Various other optional settings can also be provided, for example:
+        // exteriorAmbientColor: [1, 0, 1, 1],
+        // exteriorDirectColor: [1, 0, 0, 1]
     }
 });
 
 // Scene settings can also be changed later:
 setTimeout(() => {
-    viewer.useExteriorDirectColor([0,1,0,1]);
-    viewer.useClearColor([0, 0, 1, 0.2]);
+    viewer.useExteriorDirectColor([0, 1, 0, 1]);
+    viewer.useBackgroundColor([0, 0, 1, 0.2]);
     viewer.useCameraFov(70);
 }, 10000);
 
@@ -88,7 +92,6 @@ viewer.useCamera(camera);
 
 // Camera also be changed with utility methods like so:
 viewer.useOrbitalCamera()
-
 
 // You can add character models like so: 
 const model = viewer.addCharacterModel(2);
@@ -102,10 +105,10 @@ const model = viewer.addCharacterModel(2);
 model.equipItem(EquipmentSlot.Tabard, 141459);
 model.setCustomizationChoice(16, 141)
 
-// Callbacks can be used to retrieve model data when it's available
+// Callbacks can be used to work with model data as soon as it becomes available
 model.once("modelDataLoaded", (model: IM2Model) => {
     const anims = model.getAnimations()
-    for(const animId of anims) {
+    for (const animId of anims) {
         const optionElement = document.createElement("option");
         optionElement.value = animId.toString();
         optionElement.text = animId.toString();
@@ -117,7 +120,7 @@ model.once("modelDataLoaded", (model: IM2Model) => {
     }
 })
 
-// Use .showDebug to view information about FPS and the amount of batches submitted each .draw() call.
+// Use .showDebug to view information about FPS and the amount of batches submitted each .draw() call for debugging purposes.
 viewer.showDebug();
 
 (window as any).viewer = viewer;
