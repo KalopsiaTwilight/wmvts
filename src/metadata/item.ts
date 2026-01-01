@@ -18,6 +18,20 @@ export interface ItemMetadata
     component2?: ItemComponentData;
 }
 
+export interface ItemToDisplayInfoMetadata
+{
+    itemId: number;
+    inventoryType: InventoryType;
+    displayInfos: ItemDisplayInfoData[];
+}
+
+export interface  ItemDisplayInfoData
+{
+    displayInfoId: number;
+    itemAppearanceModifierId: number;
+    bonusIds: number[];
+}
+
 export enum InventoryType {
     Head = 1,
     Neck = 2,

@@ -1,6 +1,7 @@
 export * from "./interfaces"
 export * from "./rendering"
 export * from "./modeldata"
+export * from "./metadata"
 export * from "./dataloaders/wowModelServerDataLoader"
 export * from "./simpleProgressReporter"
 export * from "./baseProgressReporter"
