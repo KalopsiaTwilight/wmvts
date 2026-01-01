@@ -54,7 +54,7 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
     }
 
     override get isLoaded(): boolean {
-        return this.itemMetadata != null && this.texturesLoaded && this.componentsLoaded;
+        return this.itemMetadata != null && this.texturesLoaded && this.componentsLoaded && (!this.itemVisual || this.itemVisual.isLoaded);
     }
 
     get classId(): number {
@@ -138,6 +138,11 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
         } 
         
         const itemVisual = this.objectFactory.createItemVisual(itemVisualId);
+        itemVisual.once("loaded", () => {
+            if (this.isLoaded) {
+                this.processCallbacks("loaded");
+            }
+        })
         this.itemVisual = itemVisual;
         itemVisual.attachTo(this);
         return itemVisual;
@@ -267,6 +272,10 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
                     }
                 }
             }
+        }
+
+        if (metadata.itemVisual) {
+            this.setItemVisual(metadata.itemVisual);
         }
 
         this.processCallbacks("metadataLoaded")
