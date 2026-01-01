@@ -4,10 +4,18 @@ import path from "path";
 
 import { EquipmentSlot, Float4, NodeWoWModelViewer, WoWModelServerDataProvider } from "../../src";
 
+// This demo shows a basic usage of the node viewer to render a character model to file.
+
+// Node seems to distrust all self signed certificates so this is necessary to use the development WoWModelServer.
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
+// This determines the output filename for the rendered image. By default it's placed in the 'demo' directory under the name output.webp
 const outputPath = path.resolve(__dirname, "..");
 const outputFileName = path.join(outputPath, "output.webp")
+
+/*----------------------------------------\
+|  Main code for the example starts here:
+\*---------------------------------------*/
 
 async function main() {
     console.log("Initializing graphics layer...");
