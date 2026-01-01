@@ -133,7 +133,7 @@ export abstract class BaseWoWModelViewer {
         this.renderer.resize(this.width, this.height);
     }
 
-    useClearColor(color: Float4) {
+    useBackgroundColor(color: Float4) {
         Float4.copy(color, this.renderer.clearColor);
     }
 
