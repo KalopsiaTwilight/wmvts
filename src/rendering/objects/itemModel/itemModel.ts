@@ -220,7 +220,6 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
             if (modelFileId) {
                 this.component1 = this.objectFactory.createM2Model(modelFileId);
                 this.addChild(this.component1);
-                this.component1.attachTo(this.character);
                 this.component1.once("texturesLoaded", this.onComponentLoaded.bind(this))
                 if (particleColorOverride) {
                     this.component1.setParticleColorOverride(particleColorOverride);
@@ -247,7 +246,6 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
             if (modelFileId) {
                 this.component2 = this.objectFactory.createM2Model(modelFileId);
                 this.addChild(this.component2);
-                this.component2.attachTo(this.character);
                 this.component2.once("texturesLoaded", this.onComponentLoaded.bind(this))
                 if (particleColorOverride) {
                     this.component2.setParticleColorOverride(particleColorOverride);
