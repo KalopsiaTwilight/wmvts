@@ -188,6 +188,11 @@ export class CharacterInventory extends Disposable implements IDisposable {
         if (this.isDisposing) {
             return;
         }
+
+        if (!this.inventoryData[slot]) {
+            return;
+        }
+        
         const inventoryType = this.inventoryData[slot].model1.inventoryType;
         this.unloadItem(slot);
         this.parent.updateGeosets();
