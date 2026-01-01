@@ -1,4 +1,4 @@
-import { Float3, Float4, Float44 } from "@app/math"
+import { AABB, Float3, Float4, Float44 } from "@app/math"
 import { IRenderer } from "@app/rendering";
 import { CallbackFn, ICamera } from "@app/interfaces";
 
@@ -182,13 +182,17 @@ export class FirstPersonCamera extends Disposable implements ICamera {
         if (this.isDisposing) {
             return;
         }
-        
-        const sceneBB = this.renderer.getSceneBoundingBox();;
-        Float3.copy(sceneBB.max, this.position);
-        const lookDir = Float3.negate(this.position);
-        const horizontalDistance = Math.sqrt(lookDir[0] *lookDir[0] + lookDir[2]*lookDir[2])
-        this.rotation[1] = Math.atan2(lookDir[1], horizontalDistance)
-        this.rotation[2] = Math.atan2(lookDir[0], lookDir[2])
+
+        const bb = this.renderer.getSceneBoundingBox();
+        const sphereRadius = AABB.sphereRadius(bb);
+        AABB.center(bb, this.position);
+
+        const fov = this.renderer.fov;
+        const distance = sphereRadius * 2 / Math.tan(fov / 2);
+        this.position[0] += distance;
+
+        Float3.zero(this.rotation);
+        this.rotation[1] = Math.PI/2;
     }
     
     private handleKeyDown(eventArgs: KeyboardEvent) {
@@ -281,12 +285,12 @@ export class FirstPersonCamera extends Disposable implements ICamera {
             return;
         }
 
-        const rotationScale = Math.PI/180/4;
+        const rotationScale = -Math.PI/180/4;
         const deltaX = xPct * rotationScale;
         const deltaY = yPct * rotationScale;
 
         this.rotation[1] += deltaX;
-        this.rotation[2] += deltaY;
+        this.rotation[0] += deltaY;
     }
 
     private handleDragRelease() {

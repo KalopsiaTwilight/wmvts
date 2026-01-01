@@ -229,6 +229,39 @@ export namespace AABB {
         return AABB.fromVertices([a.max, a.min, b.max, b.min], 0);
     }
 
+    export function corners(aabb: AABB) {
+        return [
+            Float3.create(aabb.min[0], aabb.min[1], aabb.min[2]),
+            Float3.create(aabb.max[0], aabb.min[1], aabb.min[2]),
+            Float3.create(aabb.min[0], aabb.max[1], aabb.min[2]),
+            Float3.create(aabb.max[0], aabb.max[1], aabb.min[2]),
+            Float3.create(aabb.min[0], aabb.min[1], aabb.max[2]),
+            Float3.create(aabb.max[0], aabb.min[1], aabb.max[2]),
+            Float3.create(aabb.min[0], aabb.max[1], aabb.max[2]),
+            Float3.create(aabb.max[0], aabb.max[1], aabb.max[2])
+        ]
+    }
+
+    export function sphereRadius(aabb: AABB) {
+        const corners = AABB.corners(aabb);
+        const center = AABB.center(aabb);
+        let maxDist = -1;
+        for(const corner of corners) {
+            const dist = Float3.distance(corner, center);
+            if (dist > maxDist) {
+                maxDist = dist;
+            }
+        }
+        return maxDist;
+    }
+
+    export function center(aabb: AABB, dest?: Float3) {
+        dest = dest ? dest : Float3.zero();
+        Float3.add(aabb.max, aabb.min, dest);
+        Float3.scale(dest, 0.5, dest);
+        return dest;
+    }
+
     export function visibleInFrustrum(aabb: AABB, frustrum: Frustrum) {
         Float4.set(bbPoints[0], aabb.min[0], aabb.min[1], aabb.min[2], 1);
         Float4.set(bbPoints[1], aabb.max[0], aabb.min[1], aabb.min[2], 1);

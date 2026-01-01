@@ -284,6 +284,10 @@ export namespace Float3 {
         return create(scalar, scalar, scalar);
     }
 
+    export function distance(vecA: Float3, vecB: Float3) {
+        return Math.hypot(vecA[0] - vecB[0], vecA[1] - vecB[1], vecA[2] - vecB[2]);
+    }
+
     export function copy(input: Float3|Float4): Float3
     export function copy(input: Float3|Float4, dest?: Float3): Float3
     export function copy(input: Float3|Float4, dest?: Float4): Float4

@@ -1,5 +1,5 @@
 import { CallbackFn, ICamera } from "@app/interfaces";
-import { Float3, Float4, Float44 } from "@app/math"
+import { AABB, Float3, Float4, Float44 } from "@app/math"
 import { IRenderer } from "@app/rendering";
 
 import { Disposable } from "../disposable";
@@ -144,12 +144,16 @@ export class Camera extends Disposable implements ICamera {
             return;
         }
 
-        const boundingBox = this.renderer.getSceneBoundingBox();
-        Float3.copy(boundingBox.max, this.position);
-        const lookDir = Float3.negate(this.position);
-        const horizontalDistance = Math.sqrt(lookDir[0] *lookDir[0] + lookDir[2]*lookDir[2])
-        this.rotation[1] = Math.atan2(lookDir[1], horizontalDistance)
-        this.rotation[2] = Math.atan2(lookDir[0], lookDir[2])
+        const bb = this.renderer.getSceneBoundingBox();
+        const sphereRadius = AABB.sphereRadius(bb);
+        AABB.center(bb, this.position);
+
+        const fov = this.renderer.fov;
+        const distance = sphereRadius * 2 / Math.tan(fov / 2);
+        this.position[0] += distance;
+
+        Float3.zero(this.rotation);
+        this.rotation[1] = Math.PI/2;
 
         this.recreateViewMatrix();
     }
@@ -159,7 +163,7 @@ export class Camera extends Disposable implements ICamera {
         const rotMatrix = Float44.fromQuat(rotation);
         
         Float44.identity(this.cameraMatrix);    
-        Float44.rotateX(this.cameraMatrix, Math.PI/180*90, this.cameraMatrix);
+        Float44.rotateX(this.cameraMatrix, 90 * Math.PI / 180, this.cameraMatrix);
         Float44.translate(this.cameraMatrix, this.position, this.cameraMatrix);
         Float44.multiply(this.cameraMatrix, rotMatrix, this.cameraMatrix);
         
