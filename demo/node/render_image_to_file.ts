@@ -21,6 +21,7 @@ async function main() {
     const bgColor = Float4.scale(bgColorRGBA, 1/255);
 
     const viewer = new NodeWoWModelViewer({
+        onError: (type, id, err) => { throw err; },
         getImgData: getImageData,
         createGl: createGl,
         width: width,
