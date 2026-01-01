@@ -64,7 +64,7 @@ export class OrbitalCamera extends Disposable implements ICamera {
         this.upDir = Float3.create(0, 0, 1);
 
         this.cameraTranslation = Float3.zero();
-        this.theta = Math.PI / 2;
+        this.theta = Math.PI / 4;
         this.phi = 0;
         
         this.currentRadius = 500;
