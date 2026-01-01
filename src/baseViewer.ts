@@ -5,7 +5,7 @@ import {
     IRenderer 
 } from "./rendering";
 import { Camera, RotatingCamera } from "./cameras";
-import { Float4, Float3 } from "./math";
+import { Float4, Float3, AABB } from "./math";
 import { FileIdentifier, RecordIdentifier } from "./metadata";
 import { DefaultIoCContainer, RngFactory } from "./rendering/iocContainer";
 import { IModelPickingStrategy, ITexturePickingStrategy } from "./rendering/strategies";
@@ -64,6 +64,14 @@ export abstract class BaseWoWModelViewer {
         this.setupIOC();
         this.objectFactory = this.iocContainer.getObjectFactory();
         this.initializeRenderer();
+    }
+
+    getSceneBoundingBox(): AABB {
+        return this.renderer.getSceneBoundingBox();
+    }
+
+    getCameraFov(): number {
+        return this.renderer.fov;
     }
 
     addM2Model(fileId: FileIdentifier): IM2Model {
