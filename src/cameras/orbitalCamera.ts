@@ -1,4 +1,4 @@
-import { Float3, Float44 } from "@app/math"
+import { AABB, Float3, Float44 } from "@app/math"
 import { IRenderer } from "@app/rendering";
 import { CallbackFn, ICamera } from "@app/interfaces";
 
@@ -32,7 +32,6 @@ export class OrbitalCamera extends Disposable implements ICamera {
 
     cameraTranslation: Float3;
     currentRadius: number;
-    startingRadius: number;
     theta: number;
     phi: number;
 
@@ -66,10 +65,9 @@ export class OrbitalCamera extends Disposable implements ICamera {
 
         this.cameraTranslation = Float3.zero();
         this.theta = Math.PI / 2;
-        this.phi = 1.5 * Math.PI;
-        this.startingRadius = 500;
+        this.phi = 0;
         
-        this.currentRadius = this.startingRadius;
+        this.currentRadius = 500;
         this.minRadius = 200;
         this.maxRadius = 1000;
         this.zoomFactor = 20;
@@ -77,7 +75,7 @@ export class OrbitalCamera extends Disposable implements ICamera {
         this.zoomDecay = 0.7;
 
         // Spherical to cartesian 
-        this.position = Float3.fromSpherical(this.startingRadius, this.theta, this.phi);
+        this.position = Float3.fromSpherical(this.currentRadius, this.theta, this.phi);
         Float3.add(this.position, this.targetLocation);
 
         Float44.lookAt(this.position, this.targetLocation, this.upDir, this.cameraMatrix);
@@ -266,14 +264,16 @@ export class OrbitalCamera extends Disposable implements ICamera {
             return;
         }
 
-        const { min, max } = this.renderer.getSceneBoundingBox();
-        const diff = Float3.subtract(max, min);
-        const distance = Float3.length(diff)
+        const bb = this.renderer.getSceneBoundingBox();
+        const sphereRadius = AABB.sphereRadius(bb);
+        AABB.center(bb, this.targetLocation);
 
-        this.startingRadius = distance;
-        this.currentRadius = this.startingRadius;
-        this.minRadius = 0.25 * distance;
-        this.maxRadius = 2 * distance;
+        const fov = this.renderer.fov;
+        const minDist = sphereRadius * 2 / Math.tan(fov / 2);
+
+        this.minRadius = minDist;
+        this.currentRadius = 1.5 * minDist;
+        this.maxRadius = 3 * minDist;
         this.zoomFactor = this.maxRadius / 50;
         Float3.zero(this.cameraTranslation);
 
