@@ -85,13 +85,12 @@ setTimeout(() => {
 }, 10000);
 
 // Cameras can also be swapped out:
-const camera = new FirstPersonCamera(containerElement);
-camera.movementSpeed = 1;
-viewer.useCamera(camera);
-(window as any).camera = camera;
+const fpsCamera = new FirstPersonCamera(containerElement);
+fpsCamera.movementSpeed = 1;
+viewer.useCamera(fpsCamera);
 
 // Camera also be changed with utility methods like so:
-viewer.useOrbitalCamera()
+const orbitalCamera = viewer.useOrbitalCamera()
 
 // You can add character models like so: 
 const model = viewer.addCharacterModel(2);
@@ -125,3 +124,5 @@ viewer.showDebug();
 
 (window as any).viewer = viewer;
 (window as any).model = model;
+(window as any).fpsCamera = fpsCamera;
+(window as any).orbitalCamera = orbitalCamera;
