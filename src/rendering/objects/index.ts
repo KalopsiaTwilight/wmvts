@@ -7,3 +7,4 @@ export * from "./textureVariantModel"
 export * from "./itemModel";
 export * from "./background";
 export * from "./itemVisual";
+export * from "./spellVisualKit";

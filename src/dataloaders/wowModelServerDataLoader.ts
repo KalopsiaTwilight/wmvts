@@ -1,6 +1,6 @@
 
 import { IDataLoader, IProgressReporter } from "@app/interfaces";
-import { CharacterCustomizationMetadata, CharacterMetadata, ItemMetadata, ItemVisualMetadata, LiquidTypeMetadata, TextureVariationsMetadata } from "@app/metadata";
+import { CharacterCustomizationMetadata, CharacterMetadata, ItemMetadata, ItemVisualMetadata, LiquidTypeMetadata, SpellVisualKitMetadata, TextureVariationsMetadata } from "@app/metadata";
 import { WoWBoneFileData, WoWModelData, WoWWorldModelData } from "@app/modeldata";
 
 import { parseCM2BoneFile, parseCM2File, parseCWMOFile } from "./fileFormats";
@@ -113,7 +113,6 @@ export class WoWModelServerDataProvider implements IDataLoader {
         }
     }
 
-    
     async loadLiquidTypeMetadata(liquidId: number): Promise<LiquidTypeMetadata|Error> {
         const url = `${this.rootPath}/modelviewer/metadata/liquidtype/${liquidId}.json`;
         try {
@@ -124,6 +123,23 @@ export class WoWModelServerDataProvider implements IDataLoader {
             }
 
             const data = await resp.json() as LiquidTypeMetadata;
+            
+            return data;
+        } catch(err) {
+            return err;
+        }
+    }    
+    
+    async loadSpellVisualKitMetadata(spellVisualKitId: number): Promise<SpellVisualKitMetadata|Error> {
+        const url = `${this.rootPath}/modelviewer/metadata/spellvisualkit/${spellVisualKitId}.json`;
+        try {
+            const resp = await fetch(url);
+
+            if (!resp.ok) {
+                return new Error("Modelviewer Server returned responsecode: " + resp.status);
+            }
+
+            const data = await resp.json() as SpellVisualKitMetadata;
             
             return data;
         } catch(err) {

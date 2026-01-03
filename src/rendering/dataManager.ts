@@ -1,6 +1,6 @@
 import { WoWBoneFileData, WoWModelData, WoWWorldModelData } from "@app/modeldata";
 import { ICache, IDataManager, IIoCContainer } from "./interfaces";
-import { CharacterMetadata, FileIdentifier, ItemMetadata, ItemVisualMetadata, LiquidTypeMetadata, RecordIdentifier, TextureVariationsMetadata } from "@app/metadata";
+import { CharacterMetadata, FileIdentifier, ItemMetadata, ItemVisualMetadata, LiquidTypeMetadata, RecordIdentifier, SpellVisualKitMetadata, TextureVariationsMetadata } from "@app/metadata";
 import { ErrorHandlerFn, ErrorType, IDataLoader, IProgressReporter } from "@app/interfaces";
 
 const DataLoadingErrorType: ErrorType = "dataFetching";
@@ -69,6 +69,11 @@ export class DefaultDataManager implements IDataManager {
     getItemVisualMetadata(itemVisualId: RecordIdentifier): Promise<ItemVisualMetadata | null> {
         const key = "ITEMVISUAL-" + itemVisualId;
         return this.getDataFromLoaderOrCache(key, (dl) => dl.loadItemvisualMetadata(itemVisualId))
+    }
+
+    getSpellVisualKitMetadata(spellVisualKitId: RecordIdentifier): Promise<SpellVisualKitMetadata | null> {
+        const key = "SPELLVISUALKIT-" + spellVisualKitId;
+        return this.getDataFromLoaderOrCache(key, (dl) => dl.loadSpellVisualKitMetadata(spellVisualKitId))
     }
     
     private async getDataFromLoaderOrCache<T>(key: string, loadFn: (x: IDataLoader) => Promise<T|Error>): Promise<T|null> {

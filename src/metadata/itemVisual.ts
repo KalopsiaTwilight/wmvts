@@ -1,5 +1,4 @@
-import { FileIdentifier } from "./shared";
-import { SpellVisualKitData } from "./spellVisualKit";
+import { FileIdentifier, RecordIdentifier } from "./shared";
 
 export interface ItemVisualMetadata
 {
@@ -11,6 +10,6 @@ export interface ItemVisualEffectsData
     attachmentId: number;
     subClassId: number;
     modelFileDataId: FileIdentifier;
-    spellVisualKit?: SpellVisualKitData;
+    spellVisualKitId: RecordIdentifier;
     scale: number;
 }

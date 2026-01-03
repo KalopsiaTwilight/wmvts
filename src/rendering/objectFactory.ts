@@ -3,6 +3,7 @@ import { ICache, IIoCContainer, IObjectFactory } from "./interfaces";
 import { CharacterModel, ItemModel, M2Model, TextureVariantModel, WMOModel } from "./objects";
 import { SimpleCache } from "./simpleCache";
 import { ItemVisualModel } from "./objects/itemVisual";
+import { SpellVisualKitModel } from "./objects/spellVisualKit/spellVisualKit";
 
 export class DefaultObjectFactory implements IObjectFactory {
     private iocContainer: IIoCContainer;
@@ -46,6 +47,12 @@ export class DefaultObjectFactory implements IObjectFactory {
     createItemVisual(id: RecordIdentifier) {
         const model = new ItemVisualModel(this.iocContainer.getDataManager(), this.iocContainer.getObjectFactory());
         model.loadItemVisualId(id);
+        return model;
+    }
+
+    createSpellVisualKit(id: RecordIdentifier) {
+        const model = new SpellVisualKitModel(this.iocContainer.getDataManager(), this.iocContainer.getObjectFactory());
+        model.loadSpellVisualKitId(id);
         return model;
     }
 

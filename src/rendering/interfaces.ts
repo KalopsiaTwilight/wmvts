@@ -1,12 +1,18 @@
 import { AABB, Float3, Float4, Float44, Frustrum, IPseudoRandomNumberGenerator } from "@app/math";
 import { WoWBoneFileData, WoWModelData, WoWWorldModelData } from "@app/modeldata";
-import { CharacterMetadata, FileIdentifier, ItemMetadata, ItemVisualMetadata, LiquidTypeMetadata, RecordIdentifier, TextureVariationsMetadata } from "@app/metadata";
+import { 
+    CharacterMetadata, FileIdentifier, ItemMetadata, ItemVisualMetadata, LiquidTypeMetadata, RecordIdentifier, 
+    SpellVisualKitMetadata, TextureVariationsMetadata 
+} from "@app/metadata";
 import { ErrorHandlerFn, ICamera, IDataLoader, IDisposable, IProgressReporter } from "@app/interfaces";
 
 
-import { DrawingBatchRequest, IAttribLocations, IDataBuffers, IGraphics, IShaderProgram, ITexture, ITextureOptions, RenderingBatchRequest, RenderMaterial } from "./graphics";
+import {
+    DrawingBatchRequest, IAttribLocations, IDataBuffers, IGraphics, IShaderProgram, ITexture, ITextureOptions,
+    RenderingBatchRequest, RenderMaterial 
+} from "./graphics";
 import { IModelPickingStrategy, ITexturePickingStrategy } from "./strategies";
-import { ICharacterModel, IItemModel, IItemVisual, IM2Model, IRenderObject, ITextureVariantModel, IWMOModel } from "./objects";
+import { ICharacterModel, IItemModel, IItemVisual, IM2Model, IRenderObject, ITextureVariantModel, IWMOModel, ISpellVisualKit } from "./objects";
 
 export type RendererEvents = "beforeDraw" | "afterDraw" | "beforeUpdate" | "afterUpdate" | "sceneBoundingBoxUpdate"
 
@@ -108,6 +114,7 @@ export interface IDataManager {
     getTextureVariationsMetadata(fileId: FileIdentifier): Promise<TextureVariationsMetadata | null>;
     getTextureImageData(fileId: FileIdentifier): Promise<Blob | null>
     getBoneFileData(fileId: FileIdentifier): Promise<WoWBoneFileData | null>;
+    getSpellVisualKitMetadata(spellVisualKitId: RecordIdentifier): Promise<SpellVisualKitMetadata | null>;
 }
 
 export interface IObjectIdentifier {
@@ -134,6 +141,7 @@ export interface IObjectFactory {
     createTextureVariantModel(fileId: FileIdentifier): ITextureVariantModel;
     createCache(): ICache;
     createItemVisual(id: RecordIdentifier): IItemVisual;
+    createSpellVisualKit(id: RecordIdentifier): ISpellVisualKit;
 }
 
 export type CacheKey = number | string;

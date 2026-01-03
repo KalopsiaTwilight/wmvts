@@ -151,7 +151,7 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
                     continue;
                 }
 
-                if (effect.modelFileDataId) {
+                if (!effect.modelFileDataId) {
                     const subModel = this.objectFactory.createM2Model(effect.modelFileDataId);
                     this.addChild(subModel);
                     subModel.once("disposed", () => this.dispose());
@@ -167,6 +167,16 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
                     // TODO: Figure out what attachmentId 0 does
 
                     effectsLoadedPromises.push(subModel.onceAsync("loaded"));
+                }
+
+                if (effect.spellVisualKitId) {
+                    const spellKit = this.objectFactory.createSpellVisualKit(effect.spellVisualKitId);
+                    
+                    // TODO: Check if spell visual kit is attached to character or item model.
+                    if (this.attachedItemModel.character) {
+                        spellKit.attachTo(this.attachedItemModel.character);
+                    }
+                    this.addChild(spellKit);
                 }
                 // TODO: figure out spell effect kits
             }

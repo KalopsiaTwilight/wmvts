@@ -1,7 +1,8 @@
-import { AABB, Float44 } from "./math";
+import { Float44 } from "./math";
 import { 
     CharacterMetadata, ItemMetadata, ItemVisualMetadata, TextureVariationsMetadata, LiquidTypeMetadata, 
-    FileIdentifier, RecordIdentifier 
+    FileIdentifier, RecordIdentifier, 
+    SpellVisualKitMetadata
 } from "./metadata";
 import { WoWBoneFileData, WoWModelData, WoWWorldModelData } from "./modeldata";
 import { IRenderer } from "./rendering";
@@ -57,6 +58,7 @@ export interface IDataLoader {
     loadTextureVariationsMetadata(fileId: FileIdentifier): Promise<TextureVariationsMetadata|Error>;
     loadModelFile(fileId: FileIdentifier): Promise<WoWModelData|Error>
     loadWorldModelFile(fileId: FileIdentifier): Promise<WoWWorldModelData|Error>
+    loadSpellVisualKitMetadata(spellVisualKitId: number): Promise<SpellVisualKitMetadata|Error>;
     useProgressReporter(progress?: IProgressReporter): void;
 }
 

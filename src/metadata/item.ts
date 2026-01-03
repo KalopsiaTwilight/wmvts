@@ -1,4 +1,4 @@
-import { ModelFileData, RecordIdentifier, TextureFileData } from "./shared";
+import { ModelFileData, RecordIdentifier, TextureFileData, TransformMatrixData } from "./shared";
 
 export interface ItemMetadata
 {
@@ -10,7 +10,11 @@ export interface ItemMetadata
     attachmentGeosetGroup: number[];
     geosetGroupOverride: number;
     itemVisual: RecordIdentifier;
+    stateSpellVisualKitId: RecordIdentifier;
+    sheathedSpellVisualKitId: RecordIdentifier;
+    unsheathedSpellVisualKitId: RecordIdentifier;
     componentSections: ComponentSectionData[];
+    sheatheTransformMatrix?: TransformMatrixData;
     particleColor?: ItemParticleColorOverrideData;
     hideGeoset1?: ItemHideGeosetData[];
     hideGeoset2?: ItemHideGeosetData[];

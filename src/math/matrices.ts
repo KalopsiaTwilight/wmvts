@@ -771,4 +771,12 @@ export namespace Float44 {
 
         return dest;
     }
+
+    export function transformMatrix(translation: Float3, yaw: number, pitch: number, roll: number, scale: number, dest?: Float44) {
+        dest = dest ? dest : Float44.identity();
+        Float44.fromQuat(Float4.quatFromEulers(roll, pitch, yaw), dest)
+        Float44.translate(dest, translation, dest);
+        Float44.scale(dest, Float3.fromScalar(scale), dest);
+        return dest;
+    }
 }

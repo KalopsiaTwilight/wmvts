@@ -1,3 +1,5 @@
+import { Float3 } from "@app/math";
+
 export type FileIdentifier = number | string;
 export type RecordIdentifier = number;
 
@@ -17,4 +19,13 @@ export interface ModelFileData
     genderId: number;
     raceId: number;
     positionIndex: number;
+}
+
+export interface TransformMatrixData
+{
+    pos: Float3;
+    yaw: number;
+    pitch: number;
+    roll: number;
+    scale: number;
 }

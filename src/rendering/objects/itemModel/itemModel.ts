@@ -10,6 +10,7 @@ import { IM2Model, ParticleColorOverride, ParticleColorOverrides } from "../m2Mo
 
 import { IItemModel, ItemModelEvents } from "./interfaces";
 import { IItemVisual } from "../itemVisual";
+import { ISpellVisualKit } from "../spellVisualKit";
 
 function parseIntToColor(val: number, dest: Float3) {
     return Float3.set(dest, ((val >> 16) & 255), ((val >> 8) & 255), ((val >> 0) & 255));
@@ -25,6 +26,10 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
 
     component1?: IM2Model;
     component2?: IM2Model;
+    stateSpellVisualKit?: ISpellVisualKit;
+    unsheathedSpellVisualKit?: ISpellVisualKit;
+    sheathedSpellVisualKit?: ISpellVisualKit;
+
     sectionTextures: { [key: number]: [ITexture, ITexture, ITexture] };
 
     component1Texture?: ITexture;
@@ -98,6 +103,19 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
         if (this.itemVisual) {
             this.itemVisual.update(deltaTime);
         }
+
+        if (this.stateSpellVisualKit) {
+            this.stateSpellVisualKit.update(deltaTime);
+        }
+
+        // TODO: Handle sheathed spell visual kit
+        if (this.sheathedSpellVisualKit) {
+            // this.sheathedSpellVisualKit.update(deltaTime);
+        }
+
+        if (this.unsheathedSpellVisualKit) {
+            this.unsheathedSpellVisualKit.update(deltaTime);
+        }
     }
 
     draw(): void {
@@ -115,6 +133,19 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
 
         if (this.itemVisual) {
             this.itemVisual.draw();
+        }
+
+        if (this.stateSpellVisualKit) {
+            this.stateSpellVisualKit.draw();
+        }
+
+        // TODO: Handle sheathed spell visual kit
+        if (this.sheathedSpellVisualKit) {
+            // this.sheathedSpellVisualKit.draw();
+        }
+
+        if (this.unsheathedSpellVisualKit) {
+            this.unsheathedSpellVisualKit.draw();
         }
     }
 
@@ -164,6 +195,18 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
             this.component2.dispose();
         }
         this.component2 = null;
+        if (this.stateSpellVisualKit) {
+            this.stateSpellVisualKit.dispose();
+        }
+        this.stateSpellVisualKit = null;
+        if (this.sheathedSpellVisualKit) {
+            this.sheathedSpellVisualKit.dispose();
+        }
+        this.sheathedSpellVisualKit = null;
+        if (this.unsheathedSpellVisualKit) {
+            this.unsheathedSpellVisualKit.dispose();
+        }
+        this.unsheathedSpellVisualKit = null;
         this.sectionTextures = null;
         this.component1Texture = null;
         this.component2Texture = null;
@@ -276,6 +319,16 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
 
         if (metadata.itemVisual) {
             this.setItemVisual(metadata.itemVisual);
+        }
+
+        if (metadata.stateSpellVisualKitId) {
+            this.stateSpellVisualKit = this.objectFactory.createSpellVisualKit(metadata.stateSpellVisualKitId);
+            // TODO: Check if spell visual kit is attached to character or item model.
+            if (this.character) {
+                this.stateSpellVisualKit.attachTo(this.character);
+            } else {
+                this.stateSpellVisualKit.attachToRenderer(this.renderer);
+            }
         }
 
         this.processCallbacks("metadataLoaded")
