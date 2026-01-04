@@ -93,6 +93,9 @@ export abstract class WorldPositionedObject<TEvent extends string = never> exten
     }
 
     addChild<TChild extends RenderObjectEvents>(obj: IWorldPositionedObject<TChild>) {
+        if (obj.parent) {
+            obj.parent.children = obj.parent.children.filter(x => x !== obj);
+        }
         obj.parent = this;
         this.children.push(obj);
         if (this.isAttachedToRenderer) {
@@ -101,10 +104,11 @@ export abstract class WorldPositionedObject<TEvent extends string = never> exten
         obj.once("disposed", () => {
             this.children = this.children.filter(x => !x.isDisposing);
         })
+        obj.updateModelMatrixFromParent();
     }
 
     protected setBoundingBox(boundingBox: AABB) {
-        this.localBoundingBox = boundingBox; 
-        this.worldBoundingBox = AABB.transform(this.localBoundingBox, this.worldModelMatrix);
+        this.localBoundingBox = AABB.transform(boundingBox, this.localModelMatrix); 
+        this.worldBoundingBox = AABB.transform(boundingBox, this.worldModelMatrix);
     }
 }

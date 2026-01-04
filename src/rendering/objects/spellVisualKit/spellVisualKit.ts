@@ -168,10 +168,9 @@ export class SpellVisualKitModel<TParentEvent extends string = never> extends Wo
         const offset = Float3.copy(data.offset);
         let { yaw, pitch, roll, scale } = data;
 
-        // TODO: How to combine transform and attachment positioning: Maybe 2 seperate matrices that form localPos?
-        const transformMatrix = Float44.transformMatrix(offset, yaw, pitch, roll, scale);
-        // TODO: Check if this is necessary
-        Float44.scale(transformMatrix, Float3.fromScalar(data.spellVisualEffectName.scale));
+        Float44.transformMatrix(offset, yaw, pitch, roll, scale, this.localModelMatrix);
+        Float44.scale(this.localModelMatrix, Float3.fromScalar(data.spellVisualEffectName.scale), this.localModelMatrix);
+        this.updateModelMatrixFromParent();
 
         const attachmentId = data.attachmentId;
         if (attachmentId >= 0) {

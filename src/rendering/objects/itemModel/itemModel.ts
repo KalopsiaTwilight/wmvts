@@ -155,7 +155,6 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
         }
 
         this.character = character;
-        this.parent = character;
         this.character.addChild(this);
         this.updateModelMatrixFromParent();
     }

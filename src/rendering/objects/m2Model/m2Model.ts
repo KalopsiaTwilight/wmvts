@@ -18,6 +18,7 @@ import { M2RibbonEmitter } from "./ribbonEmitter/m2RibbonEmitter";
 import { AnimationState } from "./animatedValue";
 import { M2ShaderBuilder } from "./m2ShaderBuilder";
 import { IWorldPositionedObject } from "../interfaces";
+import { ModelAttachment } from "./modelAttachment";
 
 const MAX_BONES = 256;
 
@@ -28,12 +29,6 @@ interface TextureUnitData {
     material: RenderMaterial,
     textureWeights: Float4;
     textureMatrices: Float44[];
-}
-
-interface IAttachedModelData {
-    model: IWorldPositionedObject;
-    attachment: WoWAttachmentData;
-    attachmentMatrix: Float44;
 }
 
 const BATCH_IDENTIFIER = "M2";
@@ -57,9 +52,9 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
 
     animationState: AnimationState;
     boneData: IBoneData[];
-    attachedToModel?: ISkinnedObject;
-    attachedModels: IAttachedModelData[];
+    modelAttachments: { [key: number]: ModelAttachment }
     textureUnitData: TextureUnitData[]
+    attachedToModel?: ISkinnedObject;
 
     // graphics data
     bonePositionBuffer: Float32Array;
@@ -82,7 +77,7 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
         this.invModelViewMatrix = Float44.identity();
         this.bonePositionBuffer = new Float32Array(16 * MAX_BONES);
 
-        this.attachedModels = [];
+        this.modelAttachments = {};
 
         this.children = [];
         this.particleColorOverrides = [null, null, null];
@@ -135,13 +130,17 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
         this.attachedToModel = null;
         this.modelViewMatrix = null;
         this.invModelViewMatrix = null;
-        this.attachedModels = null;
+        for(const prop in this.modelAttachments) {
+            this.modelAttachments[prop].dispose();
+        }
+        this.modelAttachments = null;
     }
 
     override attachToRenderer(renderer: IRenderer): void {
         super.attachToRenderer(renderer);
-
-        this.bonePositionTexture = this.renderer.graphics.createDataTexture(4);
+        if (!this.bonePositionTexture) {
+            this.bonePositionTexture = this.renderer.graphics.createDataTexture(4);
+        }
         if (this.fileId && !this.isLoaded) {
             this.dataManager.getM2ModelFile(this.fileId).then(this.onModelLoaded.bind(this));
         }
@@ -208,12 +207,8 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
             this.ribbonEmitters[i].update(deltaTime);
         }
 
-        for(const attachedModel of this.attachedModels) {
-            const { attachment, model, attachmentMatrix } = attachedModel;
-
-            const bone = this.getBone(attachment.bone);
-            Float44.translate(bone.positionMatrix, attachment.position, attachmentMatrix);
-            model.setModelMatrixFromMatrix(attachmentMatrix);
+        for(const prop in this.modelAttachments) {
+            this.modelAttachments[prop].update(deltaTime);
         }
     }
 
@@ -239,6 +234,9 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
         }
         for (let i = 0; i < this.modelData.ribbonEmitters.length; i++) {
             this.ribbonEmitters[i].draw();
+        }
+        for(const prop in this.modelAttachments) {
+            this.modelAttachments[prop].draw();
         }
     }
 
@@ -364,12 +362,13 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
     }
     
     addAttachedModel(model: IWorldPositionedObject, attachment: WoWAttachmentData) {
-        this.attachedModels.push({
-            model, attachment, attachmentMatrix: Float44.identity()
-        })
-        model.once("disposed", (model) => {
-            this.attachedModels = this.attachedModels.filter(x => x.model !== model);
-        })
+        const key = attachment.id;
+        let modelAttachment = this.modelAttachments[key];
+        if (!modelAttachment) {
+            modelAttachment = new ModelAttachment(this, attachment);
+            this.modelAttachments[key] = modelAttachment;
+        }
+        modelAttachment.addChild(model);
     }
 
     private updateBonePositions() {
