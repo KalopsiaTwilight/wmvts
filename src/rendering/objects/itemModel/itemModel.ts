@@ -278,8 +278,8 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
         if (metadata.component2) {
             const position = this.itemMetadata.inventoryType === InventoryType.Shoulders ? 1 : -1;
 
-            const modelFileId = this.modelPickingStrategy(metadata.component1.modelFiles, position, race, gender, charClass);
-            const textureFileId = this.texturePickingStrategy(metadata.component1.textureFiles, race, gender, charClass)[0];
+            const modelFileId = this.modelPickingStrategy(metadata.component2.modelFiles, position, race, gender, charClass);
+            const textureFileId = this.texturePickingStrategy(metadata.component2.textureFiles, race, gender, charClass)[0];
             if (textureFileId) {
                 this.component2Texture = this.renderer.getUnknownTexture();
                 const promise = this.renderer.getTexture(this, textureFileId).then((texture) => {
