@@ -171,14 +171,12 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
 
                 if (effect.spellVisualKitId) {
                     const spellKit = this.objectFactory.createSpellVisualKit(effect.spellVisualKitId);
-                    
-                    // TODO: Check if spell visual kit is attached to character or item model.
-                    if (this.attachedItemModel.character) {
-                        spellKit.attachTo(this.attachedItemModel.character);
+                    const attachToModel = this.attachedItemComponentModel ? this.attachedItemComponentModel : this.attachedItemModel.character;
+                    if (attachToModel) {
+                        spellKit.attachTo(attachToModel);
                     }
                     this.addChild(spellKit);
                 }
-                // TODO: figure out spell effect kits
             }
 
             Promise.all(effectsLoadedPromises).then(() => {

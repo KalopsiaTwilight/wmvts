@@ -323,9 +323,9 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
 
         if (metadata.stateSpellVisualKitId) {
             this.stateSpellVisualKit = this.objectFactory.createSpellVisualKit(metadata.stateSpellVisualKitId);
-            // TODO: Check if spell visual kit is attached to character or item model.
-            if (this.character) {
-                this.stateSpellVisualKit.attachTo(this.character);
+            const attachToModel = this.component1 ? this.component1 : this.character;
+            if (attachToModel) {
+                this.stateSpellVisualKit.attachTo(attachToModel);
             } else {
                 this.stateSpellVisualKit.attachToRenderer(this.renderer);
             }
