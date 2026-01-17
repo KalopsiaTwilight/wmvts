@@ -12,7 +12,7 @@ import {
     RenderingBatchRequest, RenderMaterial 
 } from "./graphics";
 import { IModelPickingStrategy, ITexturePickingStrategy } from "./strategies";
-import { ICharacterModel, IItemModel, IItemVisual, IM2Model, IRenderObject, ITextureVariantModel, IWMOModel, ISpellVisualKit } from "./objects";
+import { ICharacterModel, IItemModel, IItemVisual, IM2Model, IRenderObject, ITextureVariantModel, IWMOModel, ISpellVisualKit, ILine } from "./objects";
 
 export type RendererEvents = "beforeDraw" | "afterDraw" | "beforeUpdate" | "afterUpdate" | "sceneBoundingBoxUpdate"
 
@@ -142,6 +142,7 @@ export interface IObjectFactory {
     createCache(): ICache;
     createItemVisual(id: RecordIdentifier): IItemVisual;
     createSpellVisualKit(id: RecordIdentifier): ISpellVisualKit;
+    createLine(width?: number): ILine;
 }
 
 export type CacheKey = number | string;

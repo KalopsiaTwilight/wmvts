@@ -83,7 +83,7 @@ export class Background extends RenderObject implements IBackground {
             return;
         }
         
-        this.isDisposing = true;
+        super.dispose();
         this.material = null;
         this.program = null;
         this.dataBuffers = null;
