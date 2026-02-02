@@ -148,8 +148,7 @@ export class Camera extends Disposable implements ICamera {
         const sphereRadius = AABB.sphereRadius(bb);
         AABB.center(bb, this.position);
 
-        const fov = this.renderer.fov;
-        const distance = sphereRadius * 2 / Math.tan(fov / 2);
+        const distance = sphereRadius * 2;
         this.position[0] += distance;
 
         Float3.zero(this.rotation);

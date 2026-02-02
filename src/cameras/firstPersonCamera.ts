@@ -185,10 +185,9 @@ export class FirstPersonCamera extends Disposable implements ICamera {
 
         const bb = this.renderer.getSceneBoundingBox();
         const sphereRadius = AABB.sphereRadius(bb);
-        AABB.center(bb, this.position);
 
-        const fov = this.renderer.fov;
-        const distance = sphereRadius * 2 / Math.tan(fov / 2);
+        const distance = sphereRadius * 2;
+        Float3.zero(this.position);
         this.position[0] += distance;
 
         Float3.zero(this.rotation);

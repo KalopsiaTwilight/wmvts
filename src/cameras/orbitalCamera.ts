@@ -240,7 +240,7 @@ export class OrbitalCamera extends Disposable implements ICamera {
             const deltaPhi = xPct * rotationScale;
             const deltaTheta = yPct *rotationScale;
 
-            this.theta = Math.min(Math.max(this.theta - deltaTheta - deltaTheta, 0.01), Math.PI);
+            this.theta = Math.min(Math.max(this.theta - deltaTheta - deltaTheta, 0.25), Math.PI - 0.25);
             this.phi -= deltaPhi;
 
             Float3.fromSpherical(this.currentRadius, this.theta, this.phi, this.position);
@@ -266,10 +266,8 @@ export class OrbitalCamera extends Disposable implements ICamera {
 
         const bb = this.renderer.getSceneBoundingBox();
         const sphereRadius = AABB.sphereRadius(bb);
-        AABB.center(bb, this.targetLocation);
 
-        const fov = this.renderer.fov;
-        const minDist = sphereRadius * 2 / Math.tan(fov / 2);
+        const minDist = sphereRadius * 2;
 
         this.minRadius = minDist;
         this.currentRadius = 1.5 * minDist;
