@@ -30,12 +30,15 @@ export class TextureVariantModel<TParentEvent extends string = never> extends M2
         }
 
         for (let i = 0; i < data.textureIds.length; i++) {
+            if (!data.textureIds[i]) {
+                continue;
+            }
             if (i >= this.modelData.textureCombos.length) {
                 break;
             }
-
+            const comboIndex = this.modelData.textureCombos[i];
             this.renderer.getTexture(this, data.textureIds[i]).then((texture) => {
-                this.swapTexture(i, texture);
+                this.swapTexture(comboIndex, texture);
             })
         }
     }
@@ -80,11 +83,10 @@ export class TextureVariantModel<TParentEvent extends string = never> extends M2
 
         this.processCallbacks("textureVariationsLoaded");
         
-        for (const textureInfo of this.modelData.textures) {
-            // Load first texture variation if any textures are undefined and have a usage type.
-            if (textureInfo.type !== WoWTextureType.None && textureInfo.textureId === 0) {
-                this.useTextureVariation(0);
-            }
+        this.useTextureVariation(0);
+
+        if (this.isLoaded) {
+            this.processCallbacks("loaded");
         }
     }
 }
