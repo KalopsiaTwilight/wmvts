@@ -38,7 +38,9 @@ export class OrbitalCamera extends Disposable implements ICamera {
     // Zoom in
     zoomFactor: number;
     minRadius: number;
+    minRadiusFactor: number;
     maxRadius: number;
+    maxRadiusFactor: number;
     currentZoom: number;
     zoomDecay: number;
 
@@ -52,7 +54,7 @@ export class OrbitalCamera extends Disposable implements ICamera {
     onTouchMove: (ev: TouchEvent) => void;;
     onTouchEnd: (ev: TouchEvent) => void;;
 
-    constructor(containerElement: HTMLElement, resizeOnSceneExpand = true) {
+    constructor(containerElement: HTMLElement, resizeOnSceneExpand = true, minRadiusFactor = 1, maxRadiusFactor = 3) {
         super();
 
         this.resizeOnSceneExpand = resizeOnSceneExpand;
@@ -69,7 +71,9 @@ export class OrbitalCamera extends Disposable implements ICamera {
         
         this.currentRadius = 500;
         this.minRadius = 200;
+        this.minRadiusFactor = minRadiusFactor;
         this.maxRadius = 1000;
+        this.maxRadiusFactor = maxRadiusFactor;
         this.zoomFactor = 20;
         this.currentZoom = 0;
         this.zoomDecay = 0.7;
@@ -267,11 +271,11 @@ export class OrbitalCamera extends Disposable implements ICamera {
         const bb = this.renderer.getSceneBoundingBox();
         const sphereRadius = AABB.sphereRadius(bb);
 
-        const minDist = sphereRadius * 2;
+        const minDist = sphereRadius;
 
-        this.minRadius = minDist;
-        this.currentRadius = 1.5 * minDist;
-        this.maxRadius = 3 * minDist;
+        this.minRadius = minDist * this.minRadiusFactor;
+        this.currentRadius = (this.maxRadiusFactor/2) * minDist;
+        this.maxRadius = this.maxRadiusFactor * minDist;
         this.zoomFactor = this.maxRadius / 50;
         Float3.zero(this.cameraTranslation);
 
