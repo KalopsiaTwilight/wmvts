@@ -123,7 +123,7 @@ export class CharacterInventory extends Disposable implements IDisposable {
             
             this.updateAttachmentGeosets(slot, model);
         })
-        model1.once("sectionTexturesLoaded", (model: IItemModel) => {
+        model1.once("loaded", (model: IItemModel) => {
             this.parent.reloadSkinTextures();
             this.parent.updateGeosets();
         });
