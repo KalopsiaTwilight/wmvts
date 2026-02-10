@@ -377,12 +377,12 @@ export class CharacterInventory extends Disposable implements IDisposable {
         let shouldDrawTop = true;
         const topSlots = [EquipmentSlot.Body, EquipmentSlot.Shirt];
         for(const slot of topSlots) {
-            shouldDrawTop = shouldDrawTop && !(this.inventoryData[slot] && !!this.inventoryData[slot].model1.sectionTextures[TextureSection.UpperTorso])
+            shouldDrawTop = shouldDrawTop && !(this.inventoryData[slot] && !!this.inventoryData[slot].model1?.sectionTextures?.[TextureSection.UpperTorso])
         }
         const bottomSlots = [EquipmentSlot.Body, EquipmentSlot.Legs];
         let shouldDrawBottom = true;
         for(const slot of bottomSlots) {
-            shouldDrawBottom = shouldDrawBottom && !(this.inventoryData[slot] && !!this.inventoryData[slot].model1.sectionTextures[TextureSection.UpperLeg])
+            shouldDrawBottom = shouldDrawBottom && !(this.inventoryData[slot] && !!this.inventoryData[slot].model1.sectionTextures?.[TextureSection.UpperLeg])
         }
         return [shouldDrawBottom, shouldDrawTop];
     }
