@@ -79,6 +79,10 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
             return;
         }
 
+        if (displayInfoId === 0) {
+            this.dispose();
+        }
+
         this.displayInfoId = displayInfoId;
         if (this.renderer) {
             this.dataManager.getItemMetadata(this.displayInfoId).then(this.onItemMetadataLoaded.bind(this));

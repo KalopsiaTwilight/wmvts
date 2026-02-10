@@ -127,7 +127,6 @@ export class CharacterInventory extends Disposable implements IDisposable {
             this.parent.reloadSkinTextures();
             this.parent.updateGeosets();
         });
-
         model1.once("metadataLoaded", (model) => {
             const inventoryType = model.itemMetadata.inventoryType;
             if (slot === EquipmentSlot.MainHand) {
@@ -174,6 +173,16 @@ export class CharacterInventory extends Disposable implements IDisposable {
             displayId2,
             model1,
             model2,
+        }
+
+        
+        model1.once("disposed", () => {
+            this.unequipItem(slot);
+        })
+        if (model2) {
+            model2.once("disposed", () => {
+                this.unequipItem(slot);
+            })
         }
 
         if (displayId2) {
