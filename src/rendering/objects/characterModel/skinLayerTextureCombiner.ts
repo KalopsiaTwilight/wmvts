@@ -112,8 +112,11 @@ export class SkinLayerTextureCombiner extends Disposable implements IDisposable 
             return;
         }
         
-        const material = new RenderMaterial();
+        if (!textures[0]) {
+            return;
+        }
 
+        const material = new RenderMaterial();
         const isUpscaled = textures[0].width < width || textures[0].height < height;
 
         const uniforms = {
