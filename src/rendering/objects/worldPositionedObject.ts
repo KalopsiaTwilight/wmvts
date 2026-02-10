@@ -62,7 +62,9 @@ export abstract class WorldPositionedObject<TEvent extends string = never> exten
 
     updateModelMatrixFromParent() {
         Float44.copy(this.localModelMatrix, this.worldModelMatrix);
-        Float44.multiply(this.parent.worldModelMatrix, this.worldModelMatrix, this.worldModelMatrix);
+        if (this.parent) {
+            Float44.multiply(this.parent.worldModelMatrix, this.worldModelMatrix, this.worldModelMatrix);
+        }
         Float44.invert(this.worldModelMatrix, this.invWorldModelMatrix);
 
         for(const child of this.children) {
