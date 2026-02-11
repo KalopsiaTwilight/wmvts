@@ -16,6 +16,8 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
     attachedItemModel: IItemModel;
     effectsLoaded: boolean;
 
+    private effectModels: IM2Model[];
+
     private dataManager: IDataManager;
     private objectFactory: IObjectFactory;
     private attachedItemComponentModel: IM2Model;
@@ -25,6 +27,7 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
 
         this.objectFactory = objectFactory;
         this.dataManager = dataManager;
+        this.effectModels = [];
     }
 
     get isLoaded(): boolean {
@@ -73,8 +76,8 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
             return;
         }
         
-        for (const child of this.children) {
-            child.update(deltaTime);
+        for (const effect of this.effectModels) {
+            effect.update(deltaTime);
         }
     }
 
@@ -83,8 +86,8 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
             return;
         }
 
-        for (const child of this.children) {
-            child.draw();
+        for (const effect of this.effectModels) {
+            effect.draw();
         }
     }
 
@@ -94,6 +97,11 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
         }
 
         super.dispose();
+
+        for(const effect of this.effectModels) {
+            effect.dispose();
+        }
+        this.effectModels = null;
         this.attachedItemModel = null;
         this.attachedItemComponentModel = null;
         this.itemVisualMetadata = null;
@@ -153,6 +161,7 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
 
                 if (effect.modelFileDataId) {
                     const subModel = this.objectFactory.createM2Model(effect.modelFileDataId);
+                    this.effectModels.push(subModel);
                     this.addChild(subModel);
                     subModel.once("disposed", () => this.dispose());
 
