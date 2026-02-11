@@ -151,7 +151,7 @@ export class ItemVisualModel<TParentEvent extends string = never> extends WorldP
                     continue;
                 }
 
-                if (!effect.modelFileDataId) {
+                if (effect.modelFileDataId) {
                     const subModel = this.objectFactory.createM2Model(effect.modelFileDataId);
                     this.addChild(subModel);
                     subModel.once("disposed", () => this.dispose());
