@@ -833,6 +833,9 @@ export class M2Model<TParentEvent extends string = M2ModelEvents> extends WorldP
     }
 
     private resetBoneFileData() {
+        if (!this.boneData) {
+            return;
+        }
         for(let i = 0; i < this.boneData.length; i++) {
             Float44.identity(this.boneData[i].boneOffsetMatrix);
         }
