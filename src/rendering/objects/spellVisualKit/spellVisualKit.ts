@@ -1,11 +1,14 @@
 import { Float3, Float44 } from "@app/math";
-import { ModelAttachVisualKitEffectData, RecordIdentifier, SpellVisualKitEffectType, SpellVisualKitMetadata } from "@app/metadata";
+import { BeamVisualKitEffectData, ModelAttachVisualKitEffectData, RecordIdentifier, SpellVisualKitEffectType, SpellVisualKitMetadata } from "@app/metadata";
 import { IDataManager, IObjectFactory, IRenderer } from "@app/rendering/interfaces";
 
 import { WorldPositionedObject } from "../worldPositionedObject";
 
 import { ISpellVisualKit, SpellVisualKitEvents } from "./interfaces";
 import { IM2Model } from "../m2Model";
+import { Positioner } from "../positioner";
+import { IWorldPositionedObject } from "../interfaces";
+import { ModelAttachEffect } from "./modelAttachEffect";
 
 
 export class SpellVisualKitModel<TParentEvent extends string = never> extends WorldPositionedObject<TParentEvent | SpellVisualKitEvents>
@@ -14,6 +17,7 @@ export class SpellVisualKitModel<TParentEvent extends string = never> extends Wo
     metadata: SpellVisualKitMetadata;
     effectsLoaded: boolean;
 
+    private effectObjects: IWorldPositionedObject[];
     private attachedToModel: IM2Model;
     private dataManager: IDataManager;
     private objectFactory: IObjectFactory;
@@ -23,6 +27,7 @@ export class SpellVisualKitModel<TParentEvent extends string = never> extends Wo
 
         this.objectFactory = objectFactory;
         this.dataManager = dataManager;
+        this.effectObjects = [];
     }
 
     get isLoaded(): boolean {
@@ -69,8 +74,8 @@ export class SpellVisualKitModel<TParentEvent extends string = never> extends Wo
             return;
         }
         
-        for (const child of this.children) {
-            child.update(deltaTime);
+        for (const obj of this.effectObjects) {
+            obj.update(deltaTime);
         }
     }
 
@@ -79,8 +84,8 @@ export class SpellVisualKitModel<TParentEvent extends string = never> extends Wo
             return;
         }
 
-        for (const child of this.children) {
-            child.draw();
+        for (const obj of this.effectObjects) {
+            obj.draw();
         }
     }
 
@@ -134,8 +139,11 @@ export class SpellVisualKitModel<TParentEvent extends string = never> extends Wo
 
         for(const effect of this.metadata.effects) {
             // TODO: Work out other effect types
-            if (effect.type === SpellVisualKitEffectType.ModelAttach) {
-                this.processModelAttachEffect(effect as ModelAttachVisualKitEffectData);
+            switch(effect.type) {
+                case SpellVisualKitEffectType.ModelAttach: 
+                    this.processModelAttachEffect(effect as ModelAttachVisualKitEffectData); break;
+                case SpellVisualKitEffectType.Beam:
+                    this.processBeamEffect(effect as BeamVisualKitEffectData); break;
             }
         }
 
@@ -143,51 +151,28 @@ export class SpellVisualKitModel<TParentEvent extends string = never> extends Wo
     }
 
     private processModelAttachEffect(data: ModelAttachVisualKitEffectData) {
-        if (!data.spellVisualEffectName) {
-            return;
-        }
+        var effect = new ModelAttachEffect(this.objectFactory);
+        effect.once("loaded", this.onEffectLoaded.bind(this));
+        this.effectObjects.push(effect);
 
-        const modelId = data.spellVisualEffectName.modelFileDataId;
-        if (modelId <= 0) {
-            return;
-        }
-
-        const model = this.objectFactory.createM2Model(modelId);
-        this.addChild(model);
-        model.once("loaded", () => {
-            this.onEffectLoaded();
-        })
-
-        if (data.spellVisualEffectName.textureFileDataId) {
-            this.renderer.getTexture(model, data.spellVisualEffectName.textureFileDataId).then((texture) => {
-                model.swapTexture(0, texture);
-            })
-        }
-
-        // TODO: Use variation values?
-        const offset = Float3.copy(data.offset);
-        let { yaw, pitch, roll, scale } = data;
-
-        Float44.transformMatrix(offset, yaw, pitch, roll, scale, this.localModelMatrix);
-        Float44.scale(this.localModelMatrix, Float3.fromScalar(data.spellVisualEffectName.scale), this.localModelMatrix);
-        this.updateModelMatrixFromParent();
-
-        const attachmentId = data.attachmentId;
+        const attachmentId = effect.loadModelAttachEffect(data);
         if (attachmentId >= 0) {
             if (this.attachedToModel) {
                 this.attachedToModel.once("modelDataLoaded", () => {
-                    this.attachedToModel.addAttachedModel(model, this.attachedToModel.getAttachment(attachmentId));
+                    this.attachedToModel.addAttachedModel(effect, this.attachedToModel.getAttachment(attachmentId));
                 })
             }
-        } 
-        
-        if (data.positioner) {
-            // TODO: Handle positioners
+        } else {
+            this.addChild(effect);
         }
     }
 
+    private processBeamEffect(data: BeamVisualKitEffectData) {
+
+    }
+
     private onEffectLoaded() {
-        this.effectsLoaded = this.children.every(x => x.isLoaded);
+        this.effectsLoaded = this.effectObjects.every(x => x.isLoaded);
         if (this.isLoaded) {
             this.processCallbacks("loaded");
         }
