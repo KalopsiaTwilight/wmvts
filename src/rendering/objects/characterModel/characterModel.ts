@@ -436,10 +436,10 @@ export class CharacterModel<TParentEvent extends string = never> extends M2Model
             const sectionNr = parseInt(section, 10) as TextureSection;
 
             // Trolls show their toes
-            if (this.race === 8 && sectionNr == 7) {
+            if (sectionNr == 7 && (this.race === 8 || this.race === 31)) {
                 continue;
             }
-            
+
             // TODO: Check if it's always layer 1
             const combiner = this.textureLayerCombiners[1];
             if (!combiner) {
