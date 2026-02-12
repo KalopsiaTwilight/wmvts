@@ -14,6 +14,8 @@ export interface ICharacterModel<TParentEvent extends string = never> extends IM
     setCustomizationChoice(optionId: number, choiceId: number): void;
 
     equipItem(slot: EquipmentSlot, displayId1: number): IItemModel;
+    equipItem(slot: EquipmentSlot, displayId1: number, displayId2: 0): IItemModel;
+    equipItem(slot: EquipmentSlot, displayId1: 0, displayId2: number): IItemModel;
     equipItem(slot: EquipmentSlot, displayId1: number, displayId2: number): [IItemModel, IItemModel];
     equipItem(slot: EquipmentSlot, displayId1: number, displayId2?: number): IItemModel | IItemModel[];
     unequipItem(slot: EquipmentSlot): void;

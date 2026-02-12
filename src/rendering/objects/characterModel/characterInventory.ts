@@ -174,7 +174,7 @@ export class CharacterInventory extends Disposable implements IDisposable {
                 this.updateAttachmentGeosets(slot, model);
             })
         }
-        
+
         if (slot == EquipmentSlot.Shoulders && displayId2 === 0 && model1) {
             model1.toggleComponent1(false);
         }
@@ -199,7 +199,10 @@ export class CharacterInventory extends Disposable implements IDisposable {
         }
 
         if (displayId2) {
-            return [model1, model2];
+            if (model1) {
+                return [model1, model2];
+            }
+            return model2;
         }
 
 
