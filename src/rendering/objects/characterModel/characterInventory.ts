@@ -100,59 +100,15 @@ export class CharacterInventory extends Disposable implements IDisposable {
         
         this.unloadItem(slot);
 
-        let model1: IItemModel;
-        if (displayId1) {
-            model1 = this.objectFactory.createItemModel(displayId1);
-            model1.equipTo(this.parent);
-            model1.once("componentsLoaded", (model: IItemModel) => {
-                this.parent.once("modelDataLoaded", () => {
-                    if (model.isDisposing) {
-                        return;
-                    }
-
-                    const attachments = this.getAttachmentIdsForSlot(slot, model.itemMetadata.inventoryType);
-                    const component1 = slot === EquipmentSlot.Back ? model.component2 : model.component1;
-                    if (attachments.length > 0 && component1) {
-                        const attachment1 = this.parent.getAttachment(attachments[0])
-                        this.parent.addAttachedModel(component1, attachment1);
-                    }
-
-                    if (attachments.length > 1 && model.component2) {
-                        const attachment2 = this.parent.getAttachment(attachments[1])
-                        this.parent.addAttachedModel(model.component2, attachment2);
-                    }
-                })
-                
-                this.updateAttachmentGeosets(slot, model);
-            })
-            model1.once("loaded", (model: IItemModel) => {
-                this.parent.reloadSkinTextures();
-                this.parent.updateGeosets();
-            });
-            model1.once("metadataLoaded", (model) => {
-                const inventoryType = model.itemMetadata.inventoryType;
-                if (slot === EquipmentSlot.MainHand) {
-                    this.parent.setHandAnimation(true, true);
-                }
-                if (slot === EquipmentSlot.OffHand) {
-                    this.parent.setHandAnimation(false, true);
-                }
-                if (slot === EquipmentSlot.Ranged && inventoryType !== InventoryType.Quiver) {
-                    this.parent.setHandAnimation(false, true);
-                }
-            });
-        }
-
-        let model2: IItemModel;
-        if (displayId2) {
-            if (model1) {
-                model1.toggleComponent1(false);
+        let models: IItemModel[] = [undefined, undefined];
+        let displayIds = [displayId1, displayId2];
+        for(let i = 0; i < displayIds.length; i++) {
+            if (!displayIds[i]) {
+                continue;
             }
-            model2 = this.objectFactory.createItemModel(displayId2);
-            model2.toggleComponent2(false);
-            model2.equipTo(this.parent);
-            
-            model2.once("componentsLoaded", (model: IItemModel) => {
+            models[i] = this.objectFactory.createItemModel(displayIds[i]);
+            models[i].equipTo(this.parent);
+            models[i].once("componentsLoaded", (model: IItemModel) => {
                 this.parent.once("modelDataLoaded", () => {
                     if (model.isDisposing) {
                         return;
@@ -173,12 +129,11 @@ export class CharacterInventory extends Disposable implements IDisposable {
                 
                 this.updateAttachmentGeosets(slot, model);
             })
-            
-            model2.once("loaded", (model: IItemModel) => {
+            models[i].once("loaded", (model: IItemModel) => {
                 this.parent.reloadSkinTextures();
                 this.parent.updateGeosets();
             });
-            model2.once("metadataLoaded", (model) => {
+            models[i].once("metadataLoaded", (model) => {
                 const inventoryType = model.itemMetadata.inventoryType;
                 if (slot === EquipmentSlot.MainHand) {
                     this.parent.setHandAnimation(true, true);
@@ -190,40 +145,37 @@ export class CharacterInventory extends Disposable implements IDisposable {
                     this.parent.setHandAnimation(false, true);
                 }
             });
+            models[i].once("disposed", () => {
+                this.unequipItem(slot);
+            })
         }
 
-        if (slot == EquipmentSlot.Shoulders && displayId2 === 0 && model1) {
-            model1.toggleComponent1(false);
+        if (displayId2) {
+            if (models[0]) {
+                models[0].toggleComponent1(false);
+            }
+            if (models[1]) {
+                models[1].toggleComponent2(false);
+            }
+        }
+        if (slot == EquipmentSlot.Shoulders && displayId2 === 0 && models[0]) {
+            models[0].toggleComponent1(false);
         }
 
         this.inventoryData[slot] = {
             displayId1,
             displayId2,
-            model1,
-            model2,
+            model1: models[0],
+            model2: models[1],
         }
 
-        
-        if (model1) {
-            model1.once("disposed", () => {
-                this.unequipItem(slot);
-            })
+        if (displayId1 && displayId2) {
+            return models;
         }
-        if (model2) {
-            model2.once("disposed", () => {
-                this.unequipItem(slot);
-            })
-        }
-
         if (displayId2) {
-            if (model1) {
-                return [model1, model2];
-            }
-            return model2;
+            return models[1];
         }
-
-
-        return model1;
+        return models[0];
     }
 
     unequipItem(slot: EquipmentSlot) {
