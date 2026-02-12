@@ -22,6 +22,8 @@ export interface IItemModel<ParentEvent extends string = never> extends IWorldPo
     equipTo(character: ICharacterModel): void;
     loadDisplayInfoId(displayInfoId: RecordIdentifier): void;
     setItemVisual(itemVisualId: RecordIdentifier): IItemVisual;
+    toggleComponent1(show: boolean): void;
+    toggleComponent2(show: boolean): void;
 
     classId: number;
     subClassId: number;

@@ -35,6 +35,9 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
     component1Texture?: ITexture;
     component2Texture?: ITexture;
 
+    displayComponent1: boolean;
+    displayComponent2: boolean;
+
     private texturePickingStrategy: ITexturePickingStrategy;
     private modelPickingStrategy: IModelPickingStrategy;
     private objectFactory: IObjectFactory;
@@ -49,6 +52,8 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
         this.modelPickingStrategy = modelPickingStrategy;
         this.objectFactory = objectFactory;
         this.dataManager = dataManager;
+        this.displayComponent1 = true;
+        this.displayComponent2 = true;
     }
     
     override attachToRenderer(renderer: IRenderer): void {
@@ -96,11 +101,11 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
             return;
         }
         
-        if (this.component1) {
+        if (this.component1 && !this.displayComponent1) {
             this.component1.update(deltaTime);
         }
 
-        if (this.component2) {
+        if (this.component2 && !this.displayComponent2) {
             this.component2.update(deltaTime);
         }
 
@@ -127,11 +132,11 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
             return;
         }
 
-        if (this.component1) {
+        if (this.component1 && this.displayComponent1) {
             this.component1.draw();
         }
 
-        if (this.component2) {
+        if (this.component2 && this.displayComponent2) {
             this.component2.draw();
         }
 
@@ -180,6 +185,14 @@ export class ItemModel<TParentEvent extends string = never> extends WorldPositio
         this.itemVisual = itemVisual;
         itemVisual.attachTo(this);
         return itemVisual;
+    }
+
+    toggleComponent1(display: boolean) {
+        this.displayComponent1 = display;
+    }
+
+    toggleComponent2(display: boolean) {
+        this.displayComponent2 = display;
     }
 
     override dispose(): void {
