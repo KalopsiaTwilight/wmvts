@@ -173,6 +173,23 @@ export class CharacterInventory extends Disposable implements IDisposable {
                 
                 this.updateAttachmentGeosets(slot, model);
             })
+            
+            model2.once("loaded", (model: IItemModel) => {
+                this.parent.reloadSkinTextures();
+                this.parent.updateGeosets();
+            });
+            model2.once("metadataLoaded", (model) => {
+                const inventoryType = model.itemMetadata.inventoryType;
+                if (slot === EquipmentSlot.MainHand) {
+                    this.parent.setHandAnimation(true, true);
+                }
+                if (slot === EquipmentSlot.OffHand) {
+                    this.parent.setHandAnimation(false, true);
+                }
+                if (slot === EquipmentSlot.Ranged && inventoryType !== InventoryType.Quiver) {
+                    this.parent.setHandAnimation(false, true);
+                }
+            });
         }
 
         if (slot == EquipmentSlot.Shoulders && displayId2 === 0 && model1) {
